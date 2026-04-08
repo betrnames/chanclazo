@@ -408,10 +408,10 @@ export default function App() {
                 </button>
                 {/* Footer */}
                 <div className="pt-2 border-t border-orange-200/60 flex flex-col items-center gap-1">
-                  <a href="https://x.com/chanclazo" target="_blank" rel="noopener noreferrer"
+                  <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 text-orange-600/60 hover:text-orange-700 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width:'12px',height:'12px'}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                    <span className="text-[10px] font-bold">@chanclazo</span>
+                    <span className="text-[10px] font-bold">@ChanclaStrike</span>
                   </a>
                   <div className="flex items-center gap-1 text-[10px] text-orange-500/60 font-medium">
                     <span>Powered by</span>
@@ -752,12 +752,12 @@ export default function App() {
           <div
             className="absolute pointer-events-none select-none"
             style={{
-              fontSize: '80px',
-              top: '10%',
-              left: '-10%',
-              animation: 'chanclaFly 0.7s cubic-bezier(0.22,1,0.36,1) forwards',
+              fontSize: '120px',
+              top: '5%',
+              left: '-15%',
+              animation: 'chanclaFly 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
               zIndex: 20,
-              filter: 'drop-shadow(0 0 20px #FF4400)',
+              filter: 'drop-shadow(0 0 30px #FF4400) drop-shadow(0 0 60px #FF000088)',
             }}
             aria-hidden
           >
@@ -767,8 +767,8 @@ export default function App() {
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'radial-gradient(ellipse at center, #FF220055 0%, transparent 70%)',
-              animation: 'hitFlash 0.5s ease-out forwards',
+              background: 'radial-gradient(ellipse at center, #FF220088 0%, transparent 70%)',
+              animation: 'hitFlash 1.0s ease-out forwards',
               zIndex: 5,
             }}
           />

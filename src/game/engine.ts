@@ -126,8 +126,8 @@ export function createGame(
   let chanclas: ChanclaState[] = [];
   let pans: PanState[] = [];
   let particles: ParticleState[] = [];
-  let survivalTime = 0;   // time within current level
-  let totalSurvival = 0;  // cumulative across levels
+  let survivalTime = 0;
+  let totalSurvival = 0;
   let score = 0;
   let combo = 0;
   let comboTimer = 0;
@@ -136,13 +136,16 @@ export function createGame(
   let rafId = 0;
   let strikeQueued = false;
   let shakeIntensity = 0;
+  let momWindupTimer = 0;        // counts DOWN from MOM_WINDUP to 0
+  let momWindupActive = false;   // true while windup is playing
+  const MOM_WINDUP = 0.7;        // seconds of windup before throw
 
   // Visual polish - vibrant low-poly style: apply initial theme + level clutter
   setLevelTheme(scene, currentLevelIndex);
   addFurniture(scene, currentLevelIndex);
 
-  // First throw delay — grace period so player can orient themselves
-  const firstThrowGrace = currentLevelIndex === 0 ? 4.0 : 2.0;
+  // First throw delay — generous grace period on Level 1
+  const firstThrowGrace = currentLevelIndex === 0 ? 7.0 : 2.5;
   let nextThrowAt = firstThrowGrace;
   let nextPanAt = 8.0; // pans start appearing a bit later
 
@@ -332,12 +335,20 @@ export function createGame(
     }
     if (player.invincibleTimer > 0) player.invincibleTimer -= dt;
 
-    // ── Mom shake + arm ───────────────────────────────────────────────────
+    // ── Mom shake + arm + windup ──────────────────────────────────────────
     if (mom.shakeTimer > 0) {
       mom.shakeTimer -= dt;
       mom.group.position.x = Math.sin(mom.shakeTimer * 35) * 0.18;
+    } else if (momWindupActive) {
+      // Windup: count down timer, pulse scale + rapid side shake
+      momWindupTimer -= dt;
+      const progress = 1.0 - Math.max(0, momWindupTimer / MOM_WINDUP); // 0→1
+      const pulse = 1.0 + Math.sin(progress * Math.PI) * 0.18;        // scale up then back
+      mom.group.scale.set(pulse, pulse, 1);
+      mom.group.position.x = Math.sin(survivalTime * 22) * 0.12 * progress;
     } else {
       mom.group.position.x = 0;
+      mom.group.scale.set(1, 1, 1);
     }
     const throwArm = mom.group.getObjectByName('throwArm');
     if (throwArm) throwArm.rotation.z = -1.1 + Math.sin(survivalTime * 3) * 0.25;
@@ -371,13 +382,10 @@ export function createGame(
       player.shieldTimer > 0,
     );
 
-  // ── Mom throw windup state ────────────────────────────────────────────────
-  let momWindupTimer = 0;
-  const MOM_WINDUP = 0.45; // seconds of windup animation before throw
-
-  // ── Spawn chanclas (dynamic scheduler) ───────────────────────────────
-    if (survivalTime >= nextThrowAt - MOM_WINDUP) {
-      // Start windup animation
+    // ── Spawn chanclas (dynamic scheduler) ───────────────────────────────
+    // Start windup animation MOM_WINDUP seconds before the actual throw
+    if (!momWindupActive && survivalTime >= nextThrowAt - MOM_WINDUP) {
+      momWindupActive = true;
       momWindupTimer = MOM_WINDUP;
     }
     if (survivalTime >= nextThrowAt) {
@@ -388,21 +396,8 @@ export function createGame(
       }
       playWhoosh(1.0 + difficulty * 0.05);
       nextThrowAt = survivalTime + nextThrowDelay(difficulty);
+      momWindupActive = false;
       momWindupTimer = 0;
-    }
-
-    // ── Mom windup animation ──────────────────────────────────────────────
-    if (momWindupTimer > 0) {
-      momWindupTimer -= dt;
-      const windupProgress = 1 - (momWindupTimer / MOM_WINDUP);
-      const pulse = 1.0 + Math.sin(windupProgress * Math.PI) * 0.12;
-      mom.group.scale.set(pulse, pulse, 1);
-      // Shake her side to side rapidly
-      if (mom.shakeTimer <= 0) {
-        mom.group.position.x = Math.sin(survivalTime * 28) * 0.08 * windupProgress;
-      }
-    } else {
-      mom.group.scale.set(1, 1, 1);
     }
 
     // ── Spawn pans ────────────────────────────────────────────────────────
