@@ -67,6 +67,7 @@ export default function App() {
   const [handle, setHandle] = useState<string>(() => localStorage.getItem('chanclazo-handle') ?? '');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showLore, setShowLore] = useState(false);
   const [, setSubmitting] = useState(false);
   const [highScore, setHighScore] = useState<number>(() => {
     return parseInt(localStorage.getItem('chanclazo-highscore') ?? '0', 10);
