@@ -1,19 +1,62 @@
 // ─── Chanclazo Sound Engine (Web Audio API — zero files needed) ───────────────
 // All sounds are synthesized procedurally. Call initAudio() once on first user
 // interaction, then call the individual play* functions anywhere in the engine.
+// Mobile note: AudioContext requires a user gesture (tap/click) to start.
+// We also attach a global touchstart listener as a safety net for iOS Safari.
 
 let ctx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let muted = false;
+let unlocked = false;
+
+// ─── iOS Safari unlock helper ─────────────────────────────────────────────────
+// iOS suspends AudioContext even after creation. We play a silent buffer on
+// the first touch to force it into 'running' state.
+function unlockAudio(): void {
+  if (unlocked || !ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(() => { unlocked = true; });
+  }
+  // Play a zero-length silent buffer — forces iOS to unlock
+  try {
+    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    src.stop(0.001);
+    unlocked = true;
+  } catch { /* ignore */ }
+}
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 export function initAudio(): void {
-  if (ctx) return; // already initialized
+  if (ctx) {
+    // Already created — just make sure it's running (iOS may have suspended it)
+    if (ctx.state === 'suspended') ctx.resume();
+    return;
+  }
   try {
-    ctx = new AudioContext();
+    // Use prefixed version for older iOS Safari
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    ctx = new AudioCtx();
     masterGain = ctx.createGain();
     masterGain.gain.value = 0.7;
     masterGain.connect(ctx.destination);
+
+    // Attach global touch/click listeners as safety net for iOS Safari
+    const unlock = () => {
+      unlockAudio();
+      document.removeEventListener('touchstart', unlock, true);
+      document.removeEventListener('touchend', unlock, true);
+      document.removeEventListener('click', unlock, true);
+    };
+    document.addEventListener('touchstart', unlock, true);
+    document.addEventListener('touchend', unlock, true);
+    document.addEventListener('click', unlock, true);
+
+    // Try to resume immediately if context starts suspended
+    if (ctx.state === 'suspended') ctx.resume();
   } catch {
     ctx = null;
   }
@@ -25,6 +68,7 @@ export function isMuted(): boolean { return muted; }
 // ─── Low-level helpers ────────────────────────────────────────────────────────
 function getCtx(): AudioContext | null {
   if (!ctx || muted) return null;
+  // Always try to resume — iOS Safari suspends frequently
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }

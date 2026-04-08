@@ -8,6 +8,7 @@ import { LEVELS } from './game/types';
 import { createGame } from './game/engine';
 import type { GameInstance } from './game/types';
 import { getTexts } from './game/i18n';
+import { initAudio } from './game/sound';
 import { createTouchState } from './game/controls';
 import type { TouchInputState } from './game/controls';
 import MobileTouchControls from './components/MobileTouchControls';
@@ -395,7 +396,7 @@ export default function App() {
                   size="lg"
                   disabled={webglError}
                   className="w-full text-xl font-black py-7 bg-orange-500 hover:bg-orange-600 text-white rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95"
-                  onClick={() => startLevel(1)}
+                  onClick={() => { initAudio(); startLevel(1); }}
                 >
                   {texts.ui.play}
                 </Button>
@@ -708,7 +709,7 @@ export default function App() {
                 <Button
                   size="lg"
                   className="w-full text-xl font-black py-6 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95"
-                  onClick={() => startLevel(1)}
+                  onClick={() => { initAudio(); startLevel(1); }}
                 >
                   PLAY AGAIN
                 </Button>
@@ -812,7 +813,7 @@ export default function App() {
                 <Button
                   size="lg"
                   className="w-full text-xl font-black py-6 bg-orange-500 hover:bg-orange-400 text-white rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95"
-                  onClick={() => startLevel(currentLevel)}
+                  onClick={() => { initAudio(); startLevel(currentLevel); }}
                 >
                   PLAY AGAIN
                 </Button>
