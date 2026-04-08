@@ -287,6 +287,27 @@ export default function App() {
             <Card className="border-2 border-orange-300/60 shadow-2xl bg-amber-50/95 backdrop-blur-sm">
               <CardContent className="pt-2 pb-2 space-y-1.5">
 
+                {/* ── Lore Definition Card ── */}
+                <div className="rounded-lg border border-orange-300 bg-gradient-to-br from-amber-50 to-orange-50 px-3 py-2.5 space-y-1 shadow-inner">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-sm font-black text-orange-800 tracking-tight">chanclazo</span>
+                    <span className="text-[10px] text-orange-500 italic font-medium">[chan-claw-so]</span>
+                    <span className="text-[9px] font-bold text-orange-400 uppercase tracking-wider">noun</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-orange-600">🩴</span>
+                    <span className="text-[10px] font-bold text-orange-700 italic">chancla strike</span>
+                  </div>
+                  <p className="text-[10px] text-orange-700 leading-relaxed">
+                    A Latina mother's secret weapon — the swift, precision-guided deployment of a flip flop with <span className="font-black">supernatural accuracy</span> and zero warning.
+                  </p>
+                  <div className="pt-0.5 border-t border-orange-200">
+                    <p className="text-[9px] text-orange-500 italic leading-relaxed">
+                      "The OG heat-seeking missile. Used to correct behavior instantly by moms, abuelas &amp; tías since the beginning of time."
+                    </p>
+                  </div>
+                </div>
+
                 {/* Level pills */}
                 <div className="space-y-1">
                   <p className="font-black text-orange-700 text-xs text-center">Levels</p>
@@ -518,6 +539,36 @@ export default function App() {
                     {key}
                   </Badge>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Grace period lore — shows for first 6s before first throw */}
+          {survivalSeconds < 6 && (
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                bottom: isMobile ? '140px' : '80px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 15,
+                width: '90%',
+                maxWidth: '380px',
+                opacity: survivalSeconds < 4.5 ? 1 : Math.max(0, 1 - (survivalSeconds - 4.5) * 2),
+                transition: 'opacity 0.3s ease',
+              }}
+            >
+              <div className="rounded-xl border border-orange-400/60 bg-black/55 backdrop-blur-sm px-4 py-3 text-center space-y-1 shadow-2xl">
+                <p className="text-yellow-300 font-black text-xs tracking-widest uppercase">⚠️ Know Your Enemy</p>
+                <p className="text-white font-black text-sm leading-snug">
+                  chanclazo <span className="text-orange-300 font-normal italic text-xs">[chan-claw-so]</span>
+                </p>
+                <p className="text-orange-200 text-[11px] leading-relaxed">
+                  The OG heat-seeking missile. Supernatural accuracy. Zero warning. Delivered by moms, abuelas &amp; tías since the beginning of time.
+                </p>
+                <p className="text-yellow-400 font-black text-[10px] animate-pulse">
+                  🩴 She's winding up... GET READY!
+                </p>
               </div>
             </div>
           )}
@@ -805,7 +856,7 @@ export default function App() {
 
               <div className="rounded-lg bg-red-900/40 border border-red-700 px-4 py-3 text-center">
                 <p className="font-bold text-orange-200 text-sm leading-snug">
-                  {getRankMessage(finalScore, lang)}
+                  {getMomQuote(finalScore, lang)}
                 </p>
               </div>
 
@@ -919,4 +970,32 @@ function getRankMessage(score: number, lang: Lang): string {
   if (score >= 1500)  return r.ok;
   if (score >= 500)   return r.bad;
   return r.worst;
+}
+
+const MOM_QUOTES_EN = [
+  '🩴 "The chanclazo: precision-guided since before GPS existed."',
+  '🩴 "Supernatural accuracy. Zero warning. No appeals."',
+  '🩴 "The OG heat-seeking missile — invented by abuelas."',
+  '🩴 "No armor can stop a chancla thrown with amor y coraje."',
+  '🩴 "She didn\'t miss. She never misses. It\'s physically impossible."',
+  '🩴 "Ancient technique. Certified by every tía on the block."',
+  '🩴 "The chanclazo does not negotiate. It corrects."',
+  '🩴 "Faster than sound. More accurate than a laser."',
+];
+
+const MOM_QUOTES_ES = [
+  '🩴 "El chanclazo: precisión guiada antes que existiera el GPS."',
+  '🩴 "Puntería sobrenatural. Sin aviso. Sin apelaciones."',
+  '🩴 "El misil original teledirigido — inventado por las abuelas."',
+  '🩴 "Ninguna armadura detiene una chancla lanzada con amor y coraje."',
+  '🩴 "No falló. Nunca falla. Es físicamente imposible."',
+  '🩴 "Técnica ancestral. Certificada por cada tía del barrio."',
+  '🩴 "El chanclazo no negocia. Corrige."',
+  '🩴 "Más rápida que el sonido. Más precisa que un láser."',
+];
+
+function getMomQuote(score: number, lang: Lang): string {
+  const quotes = lang === 'es' ? MOM_QUOTES_ES : MOM_QUOTES_EN;
+  // Use score to pick a quote so it feels different each game
+  return quotes[score % quotes.length];
 }
