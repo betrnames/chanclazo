@@ -32,8 +32,22 @@ import {
   spawnStrikeImpact,
   spawnMomHit,
   spawnBurst,
+  spawnStars,
 } from './particles';
 import { getTexts, pickRandom } from './i18n';
+import {
+  initAudio,
+  playWhoosh,
+  playHit,
+  playStrike,
+  playMomHit,
+  playDodge,
+  playJump,
+  playLevelUp,
+  playGameOver,
+  playShield,
+  playCombo,
+} from './sound';
 
 // ─── Tunables ─────────────────────────────────────────────────────────────────
 const PLAYER_SPEED = 7.0;
@@ -173,8 +187,10 @@ export function createGame(
 
       if (currentLevelIndex >= LEVELS.length - 1) {
         // Beat final level → victory
+        playLevelUp();
         callbacks.onVictory(Math.floor(score), Math.floor(totalSurvival));
       } else {
+        playLevelUp();
         callbacks.onLevelComplete(levelConfig.level, Math.floor(score), timeBonus);
       }
       return;
@@ -213,6 +229,7 @@ export function createGame(
         ch.group.visible = false;
         if (Math.abs(ch.startPos.x - ch.targetPos.x) < 4) {
           score += SCORE_DODGE;
+          playDodge();
           const texts = getTexts(callbacks.getLang());
           callbacks.onPopup(pickRandom(texts.dodge));
         }
@@ -228,6 +245,7 @@ export function createGame(
         mom.shakeTimer = 1.0;
         const hitPos = new THREE.Vector3(0, 1.5, ROOM.momZ);
         particles.push(...spawnMomHit(scene, hitPos));
+        playMomHit();
 
         const texts = getTexts(callbacks.getLang());
         callbacks.onPopup(pickRandom(texts.momHit));
@@ -239,6 +257,7 @@ export function createGame(
           callbacks.onPopup(pickRandom(texts.heal));
         } else if (roll < HEAL_CHANCE + SHIELD_CHANCE && player.shieldTimer <= 0) {
           player.shieldTimer = SHIELD_DURATION;
+          playShield();
           callbacks.onPopup(pickRandom(texts.shield));
         }
       }
@@ -249,6 +268,9 @@ export function createGame(
     if (!isProtected) {
       for (const ch of chanclas) {
         if (checkChanclaHitsPlayer(ch, player)) {
+          // Burst at exact chancla impact point + player body
+          const impactPos = ch.group.position.clone();
+          particles.push(...spawnBurst(scene, impactPos, 10, [0xFF6B6B, 0xFFD93D, 0xFFFFFF], 5.0, 0.5));
           ch.expired = true;
           ch.group.visible = false;
           onPlayerHit();
@@ -267,12 +289,17 @@ export function createGame(
         score += SCORE_STRIKE;
         shakeIntensity = 0.22;
 
+        playStrike();
+
         const pos = target.group.position.clone();
         particles.push(...spawnStrikeImpact(scene, pos));
 
         const texts = getTexts(callbacks.getLang());
         callbacks.onPopup(pickRandom(texts.strike));
         if (combo >= 3) {
+          playCombo(combo);
+          // Star burst at strike position for combo flair
+          particles.push(...spawnStars(scene, target.group.position.clone()));
           const comboTexts = texts.combo(combo);
           callbacks.onPopup(pickRandom(comboTexts));
         }
@@ -350,6 +377,7 @@ export function createGame(
       for (let v = 0; v < volleySize; v++) {
         chanclas.push(spawnChancla(scene, player, difficulty, style, v));
       }
+      playWhoosh(1.0 + difficulty * 0.05);
       nextThrowAt = survivalTime + nextThrowDelay(difficulty);
     }
 
@@ -378,7 +406,7 @@ export function createGame(
     }
 
     const isGrounded = player.y <= 0.001;
-    if (input.jump && isGrounded) player.vy = JUMP_VELOCITY;
+    if (input.jump && isGrounded) { player.vy = JUMP_VELOCITY; playJump(); }
 
     player.isDucking = input.duck && isGrounded;
     const targetScaleY = player.isDucking ? 0.55 : 1.0;
@@ -434,7 +462,9 @@ export function createGame(
     player.invincibleTimer = INVINCIBLE_DURATION;
     combo = 0;
     comboTimer = 0;
-    shakeIntensity = 0.18;
+    shakeIntensity = 0.45; // boosted from 0.18
+
+    playHit();
 
     const pos = new THREE.Vector3(player.x, player.y + 0.8, ROOM.playerZ);
     particles.push(...spawnBurst(scene, pos, 14, [0xFF6B6B, 0xFFD93D, 0xFFFFFF], 4.5, 0.6));
@@ -443,7 +473,7 @@ export function createGame(
     callbacks.onPopup(pickRandom(texts.hit));
 
     if (health <= 0) {
-      // Game over — stop loop and report
+      playGameOver();
       running = false;
       cancelAnimationFrame(rafId);
       callbacks.onGameOver(Math.floor(score), Math.floor(totalSurvival));
@@ -594,6 +624,7 @@ export function createGame(
 
   // ─── Start ────────────────────────────────────────────────────────────────
   function start() {
+    initAudio();
     clock.start();
     camTarget.set(0, 5.5, ROOM.playerZ + 7.5);
     camLookTarget.set(0, 1.2, ROOM.playerZ - 3);
