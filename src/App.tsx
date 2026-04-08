@@ -931,57 +931,84 @@ export default function App() {
       ════════════════════════════════════════════════════════════════ */}
       {showLore && (
         <div className="absolute inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLore(false)} />
-          <Card className="relative z-10 w-full max-w-sm mx-4 border-2 border-orange-400 shadow-2xl bg-amber-950 text-white overflow-hidden">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setShowLore(false)} />
+
+          {/* Flat editorial panel — no Card, no rounded borders */}
+          <div className="relative z-10 w-full max-w-sm mx-4 bg-stone-950 text-white overflow-hidden"
+            style={{ border: '1px solid rgba(255,140,0,0.35)' }}>
+
+            {/* Orange top accent bar */}
+            <div style={{ height: '4px', background: 'linear-gradient(90deg, #FF6B00, #FFD700, #FF6B00)' }} />
+
             {/* Header */}
-            <div className="relative px-5 pt-5 pb-3 text-center border-b border-orange-800">
-              <div className="text-5xl mb-2">🩴</div>
-              <p className="text-[11px] font-bold text-orange-400 uppercase tracking-widest mb-1">The Ancient Art of</p>
-              <h2 className="text-3xl font-black text-white tracking-tight leading-none">chanclazo</h2>
-              <p className="text-orange-400 italic text-sm mt-1">[chan-claw-so] · noun</p>
-              <p className="text-orange-300 font-bold text-xs mt-0.5">chancla strike</p>
+            <div className="px-6 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center gap-3 mb-3">
+                <span style={{ fontSize: '36px', lineHeight: 1 }}>🩴</span>
+                <div>
+                  <p className="text-[10px] font-bold text-orange-500 uppercase tracking-[0.2em] mb-0.5">Field Guide · Latino Culture</p>
+                  <h2 className="text-2xl font-black text-white tracking-tight leading-none">chanclazo</h2>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-orange-400 italic text-xs">/chan·claw·so/</span>
+                <span style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
+                <span className="text-white/40 text-xs uppercase tracking-widest">noun</span>
+                <span style={{ width: '1px', height: '12px', background: 'rgba(255,255,255,0.2)' }} />
+                <span className="text-orange-400 text-xs italic">chancla strike</span>
+              </div>
             </div>
 
-            {/* Body */}
-            <div className="px-5 py-4 space-y-3">
-              <p className="text-orange-100 text-sm leading-relaxed text-center">
-                A Latina mother's <span className="font-black text-yellow-300">secret weapon</span> — the swift, precision-guided deployment of a flip flop or sandal.
+            {/* Definition */}
+            <div className="px-6 py-4 space-y-4">
+              <p className="text-white/85 text-sm leading-relaxed">
+                A Latina mother's <span className="text-yellow-300 font-bold">secret weapon</span> — the swift, precision-guided deployment of a flip flop or sandal with supernatural accuracy and zero warning.
               </p>
 
-              <div className="rounded-xl bg-orange-900/50 border border-orange-700 px-4 py-3 space-y-2">
-                <p className="text-orange-300 text-[10px] font-black uppercase tracking-widest">A chanclazo is:</p>
+              {/* Divider with label */}
+              <div className="flex items-center gap-3">
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+                <span className="text-[9px] text-white/30 uppercase tracking-widest">Characteristics</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+              </div>
+
+              {/* Bullet list — flat, no box */}
+              <div className="space-y-2.5">
                 {[
-                  'A sudden, precision-guided sandal strike',
-                  'Delivered by a mom, abuela, or tía',
-                  'With supernatural accuracy and zero warning',
-                  'Used to correct behavior instantly',
-                ].map((line) => (
-                  <div key={line} className="flex items-start gap-2">
-                    <span className="text-orange-400 text-xs mt-0.5">•</span>
-                    <p className="text-orange-100 text-xs leading-snug">{line}</p>
+                  ['⚡', 'Sudden, precision-guided sandal strike'],
+                  ['👵', 'Delivered by a mom, abuela, or tía'],
+                  ['🎯', 'Supernatural accuracy. Zero warning.'],
+                  ['✅', 'Corrects behavior instantly'],
+                ].map(([icon, text]) => (
+                  <div key={text} className="flex items-start gap-3">
+                    <span className="text-sm mt-0.5" style={{ minWidth: '18px' }}>{icon}</span>
+                    <p className="text-white/70 text-xs leading-relaxed">{text}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="rounded-xl bg-black/40 border border-yellow-600/40 px-4 py-3 text-center">
-                <p className="text-yellow-300 font-black text-sm leading-snug">
+              {/* Pull quote — left border accent only */}
+              <div style={{ borderLeft: '3px solid #FF6B00', paddingLeft: '14px' }}>
+                <p className="text-orange-300 text-sm font-bold italic leading-snug">
                   "The OG heat-seeking missile."
                 </p>
-                <p className="text-orange-300/70 text-[10px] mt-1">
-                  Iconic. Funny. Universally understood across Latino culture since the beginning of time.
+                <p className="text-white/35 text-[10px] mt-1">
+                  Iconic across Latino culture since the beginning of time.
                 </p>
               </div>
             </div>
 
-            <div className="px-5 pb-4">
+            {/* Footer */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+              className="px-6 py-3 flex items-center justify-between">
+              <span className="text-white/25 text-[10px] uppercase tracking-widest">chanclazo.com</span>
               <button
                 onClick={() => setShowLore(false)}
-                className="w-full py-2 text-sm font-black text-white/60 hover:text-white transition-colors"
+                className="text-xs font-bold text-white/40 hover:text-white transition-colors uppercase tracking-widest"
               >
                 Close ✕
               </button>
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>
