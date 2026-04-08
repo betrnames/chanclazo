@@ -127,15 +127,17 @@ export default function LorePage() {
         {/* CTA */}
         <a href="/" style={{
           display: 'inline-block',
-          padding: '14px 32px',
-          background: '#F97316',
-          color: '#fff',
+          fontSize: '12px',
           fontWeight: 900,
-          fontSize: '14px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
+          color: '#c2410c',
           textDecoration: 'none',
-        }}>
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          opacity: 0.8,
+        }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '0.8')}
+        >
           Play Chanclazo
         </a>
 
