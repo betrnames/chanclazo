@@ -60,6 +60,7 @@ export default function App() {
   const [handle, setHandle] = useState<string>(() => localStorage.getItem('chanclazo-handle') ?? '');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showLore, setShowLore] = useState(false);
   const [, setSubmitting] = useState(false);
   const [highScore, setHighScore] = useState<number>(() => {
     return parseInt(localStorage.getItem('chanclazo-highscore') ?? '0', 10);
@@ -287,27 +288,6 @@ export default function App() {
             <Card className="border-2 border-orange-300/60 shadow-2xl bg-amber-50/95 backdrop-blur-sm">
               <CardContent className="pt-2 pb-2 space-y-1.5">
 
-                {/* ── Lore Definition Card ── */}
-                <div className="rounded-lg border border-orange-300 bg-gradient-to-br from-amber-50 to-orange-50 px-3 py-2.5 space-y-1 shadow-inner">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-sm font-black text-orange-800 tracking-tight">chanclazo</span>
-                    <span className="text-[10px] text-orange-500 italic font-medium">[chan-claw-so]</span>
-                    <span className="text-[9px] font-bold text-orange-400 uppercase tracking-wider">noun</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-orange-600">🩴</span>
-                    <span className="text-[10px] font-bold text-orange-700 italic">chancla strike</span>
-                  </div>
-                  <p className="text-[10px] text-orange-700 leading-relaxed">
-                    A Latina mother's secret weapon — the swift, precision-guided deployment of a flip flop with <span className="font-black">supernatural accuracy</span> and zero warning.
-                  </p>
-                  <div className="pt-0.5 border-t border-orange-200">
-                    <p className="text-[9px] text-orange-500 italic leading-relaxed">
-                      "The OG heat-seeking missile. Used to correct behavior instantly by moms, abuelas &amp; tías since the beginning of time."
-                    </p>
-                  </div>
-                </div>
-
                 {/* Level pills */}
                 <div className="space-y-1">
                   <p className="font-black text-orange-700 text-xs text-center">Levels</p>
@@ -427,6 +407,12 @@ export default function App() {
                   className="w-full text-xs font-black text-orange-700 opacity-70 hover:opacity-100 py-1 transition-opacity"
                 >
                   View Leaderboard
+                </button>
+                <button
+                  onClick={() => setShowLore(true)}
+                  className="w-full text-xs font-bold text-orange-500 opacity-60 hover:opacity-90 py-0.5 transition-opacity italic"
+                >
+                  🩴 What is a Chanclazo?
                 </button>
                 {/* Footer */}
                 <div className="pt-2 border-t border-orange-200/60 flex flex-col items-center gap-1">
@@ -937,6 +923,64 @@ export default function App() {
                 Close ✕
               </button>
             </CardContent>
+          </Card>
+        </div>
+      )}
+      {/* ════════════════════════════════════════════════════════════════
+          LORE MODAL
+      ════════════════════════════════════════════════════════════════ */}
+      {showLore && (
+        <div className="absolute inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowLore(false)} />
+          <Card className="relative z-10 w-full max-w-sm mx-4 border-2 border-orange-400 shadow-2xl bg-amber-950 text-white overflow-hidden">
+            {/* Header */}
+            <div className="relative px-5 pt-5 pb-3 text-center border-b border-orange-800">
+              <div className="text-5xl mb-2">🩴</div>
+              <p className="text-[11px] font-bold text-orange-400 uppercase tracking-widest mb-1">The Ancient Art of</p>
+              <h2 className="text-3xl font-black text-white tracking-tight leading-none">chanclazo</h2>
+              <p className="text-orange-400 italic text-sm mt-1">[chan-claw-so] · noun</p>
+              <p className="text-orange-300 font-bold text-xs mt-0.5">chancla strike</p>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-orange-100 text-sm leading-relaxed text-center">
+                A Latina mother's <span className="font-black text-yellow-300">secret weapon</span> — the swift, precision-guided deployment of a flip flop or sandal.
+              </p>
+
+              <div className="rounded-xl bg-orange-900/50 border border-orange-700 px-4 py-3 space-y-2">
+                <p className="text-orange-300 text-[10px] font-black uppercase tracking-widest">A chanclazo is:</p>
+                {[
+                  'A sudden, precision-guided sandal strike',
+                  'Delivered by a mom, abuela, or tía',
+                  'With supernatural accuracy and zero warning',
+                  'Used to correct behavior instantly',
+                ].map((line) => (
+                  <div key={line} className="flex items-start gap-2">
+                    <span className="text-orange-400 text-xs mt-0.5">•</span>
+                    <p className="text-orange-100 text-xs leading-snug">{line}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-xl bg-black/40 border border-yellow-600/40 px-4 py-3 text-center">
+                <p className="text-yellow-300 font-black text-sm leading-snug">
+                  "The OG heat-seeking missile."
+                </p>
+                <p className="text-orange-300/70 text-[10px] mt-1">
+                  Iconic. Funny. Universally understood across Latino culture since the beginning of time.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-5 pb-4">
+              <button
+                onClick={() => setShowLore(false)}
+                className="w-full py-2 text-sm font-black text-white/60 hover:text-white transition-colors"
+              >
+                Close ✕
+              </button>
+            </div>
           </Card>
         </div>
       )}
