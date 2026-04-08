@@ -748,6 +748,31 @@ export default function App() {
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="absolute inset-0 bg-red-950/90 backdrop-blur-md" />
 
+          {/* Flying chancla animation on game over */}
+          <div
+            className="absolute pointer-events-none select-none"
+            style={{
+              fontSize: '80px',
+              top: '10%',
+              left: '-10%',
+              animation: 'chanclaFly 0.7s cubic-bezier(0.22,1,0.36,1) forwards',
+              zIndex: 20,
+              filter: 'drop-shadow(0 0 20px #FF4400)',
+            }}
+            aria-hidden
+          >
+            🩴
+          </div>
+          {/* Screen flash */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse at center, #FF220055 0%, transparent 70%)',
+              animation: 'hitFlash 0.5s ease-out forwards',
+              zIndex: 5,
+            }}
+          />
+
           <LangToggle dark />
 
           <Card className="relative z-10 w-full max-w-md mx-4 border-4 border-red-500 shadow-2xl bg-red-950 text-white">

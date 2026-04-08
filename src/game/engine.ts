@@ -141,8 +141,9 @@ export function createGame(
   setLevelTheme(scene, currentLevelIndex);
   addFurniture(scene, currentLevelIndex);
 
-  // First throw delay
-  let nextThrowAt = 1.5;
+  // First throw delay — grace period so player can orient themselves
+  const firstThrowGrace = currentLevelIndex === 0 ? 4.0 : 2.0;
+  let nextThrowAt = firstThrowGrace;
   let nextPanAt = 8.0; // pans start appearing a bit later
 
   const clock = new THREE.Clock();
@@ -370,7 +371,15 @@ export function createGame(
       player.shieldTimer > 0,
     );
 
-    // ── Spawn chanclas (dynamic scheduler) ───────────────────────────────
+  // ── Mom throw windup state ────────────────────────────────────────────────
+  let momWindupTimer = 0;
+  const MOM_WINDUP = 0.45; // seconds of windup animation before throw
+
+  // ── Spawn chanclas (dynamic scheduler) ───────────────────────────────
+    if (survivalTime >= nextThrowAt - MOM_WINDUP) {
+      // Start windup animation
+      momWindupTimer = MOM_WINDUP;
+    }
     if (survivalTime >= nextThrowAt) {
       const volleySize = pickVolleySize(difficulty);
       const style = pickThrowStyle(difficulty);
@@ -379,6 +388,21 @@ export function createGame(
       }
       playWhoosh(1.0 + difficulty * 0.05);
       nextThrowAt = survivalTime + nextThrowDelay(difficulty);
+      momWindupTimer = 0;
+    }
+
+    // ── Mom windup animation ──────────────────────────────────────────────
+    if (momWindupTimer > 0) {
+      momWindupTimer -= dt;
+      const windupProgress = 1 - (momWindupTimer / MOM_WINDUP);
+      const pulse = 1.0 + Math.sin(windupProgress * Math.PI) * 0.12;
+      mom.group.scale.set(pulse, pulse, 1);
+      // Shake her side to side rapidly
+      if (mom.shakeTimer <= 0) {
+        mom.group.position.x = Math.sin(survivalTime * 28) * 0.08 * windupProgress;
+      }
+    } else {
+      mom.group.scale.set(1, 1, 1);
     }
 
     // ── Spawn pans ────────────────────────────────────────────────────────

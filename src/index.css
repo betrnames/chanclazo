@@ -181,3 +181,27 @@
   0%, 100% { transform: translateY(0px) rotate(-5deg); }
   50%       { transform: translateY(-12px) rotate(5deg); }
 }
+
+@keyframes chanclaFly {
+  0%   { 
+    transform: translate(-10vw, 0) rotate(-20deg) scale(0.5);
+    opacity: 0;
+  }
+  30%  { 
+    opacity: 1;
+    transform: translate(20vw, -5vh) rotate(120deg) scale(1.4);
+  }
+  70%  { 
+    transform: translate(60vw, 20vh) rotate(340deg) scale(1.0);
+  }
+  100% { 
+    transform: translate(110vw, 40vh) rotate(540deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes hitFlash {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.6; }
+  100% { opacity: 0; }
+}
