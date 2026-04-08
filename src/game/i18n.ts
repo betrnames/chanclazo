@@ -10,6 +10,7 @@ export const TEXTS = {
     shield: ['SHIELDED! ✨', 'Lucky break!', 'INVINCIBLE!', '+SHIELD!'],
     heal:   ['+1 HEART! ❤️', 'Healed!', 'Heart recovered!'],
     panHit: ['PAN TO THE FACE!', 'Sartén attack!', 'DUCK next time!', '🍳 That sizzled!'],
+    tsunami: ['🌊 TSUNAMI!!', '🩴🩴🩴 INCOMING!', '😱 RUN!!!', '⚠️ MEGA THROW!', '💀 SHE MEANS IT!'],
     ui: {
       score:      'Score',
       time:       'Time',
@@ -70,6 +71,7 @@ export const TEXTS = {
     shield: ['¡ESCUDO! ✨', '¡Qué suerte!', '¡INVENCIBLE!', '+ESCUDO!'],
     heal:   ['+1 VIDA ❤️', '¡Recuperado!', '¡Corazón recuperado!'],
     panHit: ['¡SARTENAZO!', '¡Agáchate!', '¡La sartén no miente!', '🍳 ¡Bien frito!'],
+    tsunami: ['🌊 ¡TSUNAMI!', '🩴🩴🩴 ¡CORRE!', '😱 ¡MUCHO CHANCLAZO!', '⚠️ ¡MEGA TIRO!', '💀 ¡ESTA SÍ DUELE!'],
     ui: {
       score:      'Puntos',
       time:       'Tiempo',

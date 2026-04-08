@@ -136,9 +136,12 @@ export function createGame(
   let rafId = 0;
   let strikeQueued = false;
   let shakeIntensity = 0;
-  let momWindupTimer = 0;        // counts DOWN from MOM_WINDUP to 0
-  let momWindupActive = false;   // true while windup is playing
-  const MOM_WINDUP = 0.7;        // seconds of windup before throw
+  let momWindupTimer = 0;
+  let momWindupActive = false;
+  const MOM_WINDUP = 0.9;          // windup duration in seconds
+  let throwCycleCount = 0;         // counts every throw
+  let nextTsunamiAt = 3 + Math.floor(Math.random() * 3); // first tsunami at throw 3, 4, or 5
+  let tsunamiQueued = false;       // true when next throw should be a tsunami
 
   // Visual polish - vibrant low-poly style: apply initial theme + level clutter
   setLevelTheme(scene, currentLevelIndex);
@@ -340,12 +343,15 @@ export function createGame(
       mom.shakeTimer -= dt;
       mom.group.position.x = Math.sin(mom.shakeTimer * 35) * 0.18;
     } else if (momWindupActive) {
-      // Windup: count down timer, pulse scale + rapid side shake
+      // Tsunami windup: dramatic scale pulse + rapid shake, gets more intense
       momWindupTimer -= dt;
       const progress = 1.0 - Math.max(0, momWindupTimer / MOM_WINDUP); // 0→1
-      const pulse = 1.0 + Math.sin(progress * Math.PI) * 0.18;        // scale up then back
+      const pulse = 1.0 + Math.sin(progress * Math.PI) * 0.28;        // big scale pump
       mom.group.scale.set(pulse, pulse, 1);
-      mom.group.position.x = Math.sin(survivalTime * 22) * 0.12 * progress;
+      // Shake gets faster and wider as windup peaks
+      const shakeSpeed = 18 + progress * 28;
+      const shakeWidth = 0.08 + progress * 0.22;
+      mom.group.position.x = Math.sin(survivalTime * shakeSpeed) * shakeWidth;
     } else {
       mom.group.position.x = 0;
       mom.group.scale.set(1, 1, 1);
@@ -383,21 +389,47 @@ export function createGame(
     );
 
     // ── Spawn chanclas (dynamic scheduler) ───────────────────────────────
-    // Start windup animation MOM_WINDUP seconds before the actual throw
-    if (!momWindupActive && survivalTime >= nextThrowAt - MOM_WINDUP) {
+    // Start windup animation MOM_WINDUP seconds before tsunami throw only
+    if (!momWindupActive && tsunamiQueued && survivalTime >= nextThrowAt - MOM_WINDUP) {
       momWindupActive = true;
       momWindupTimer = MOM_WINDUP;
+      // Warn the player!
+      const texts = getTexts(callbacks.getLang());
+      callbacks.onPopup(pickRandom(texts.tsunami));
     }
     if (survivalTime >= nextThrowAt) {
-      const volleySize = pickVolleySize(difficulty);
-      const style = pickThrowStyle(difficulty);
-      for (let v = 0; v < volleySize; v++) {
-        chanclas.push(spawnChancla(scene, player, difficulty, style, v));
+      throwCycleCount++;
+
+      if (tsunamiQueued) {
+        // ── TSUNAMI throw: 6–10 chanclas all at once, all styles ──────────
+        const tsunamiSize = 6 + Math.floor(Math.random() * 5); // 6–10
+        const styles: ReturnType<typeof pickThrowStyle>[] = ['quick_low','high_loop','side_angle','rapid_fire'];
+        for (let v = 0; v < tsunamiSize; v++) {
+          const style = styles[v % styles.length];
+          chanclas.push(spawnChancla(scene, player, difficulty, style, v));
+        }
+        playWhoosh(1.8); // louder whoosh for tsunami
+        tsunamiQueued = false;
+        // Schedule next tsunami randomly 3–5 throws away
+        nextTsunamiAt = throwCycleCount + 3 + Math.floor(Math.random() * 3);
+        momWindupActive = false;
+        momWindupTimer = 0;
+      } else {
+        // ── Normal throw ─────────────────────────────────────────────────
+        const volleySize = pickVolleySize(difficulty);
+        const style = pickThrowStyle(difficulty);
+        for (let v = 0; v < volleySize; v++) {
+          chanclas.push(spawnChancla(scene, player, difficulty, style, v));
+        }
+        playWhoosh(1.0 + difficulty * 0.05);
       }
-      playWhoosh(1.0 + difficulty * 0.05);
+
+      // Check if next throw should be a tsunami
+      if (throwCycleCount >= nextTsunamiAt) {
+        tsunamiQueued = true;
+      }
+
       nextThrowAt = survivalTime + nextThrowDelay(difficulty);
-      momWindupActive = false;
-      momWindupTimer = 0;
     }
 
     // ── Spawn pans ────────────────────────────────────────────────────────
