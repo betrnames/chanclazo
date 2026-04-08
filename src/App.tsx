@@ -931,10 +931,87 @@ export default function App() {
       ════════════════════════════════════════════════════════════════ */}
       {showLore && (
         <div className="absolute inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setShowLore(false)} />
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.88)' }} onClick={() => setShowLore(false)} />
 
-          <div className="relative z-10 w-full max-w-sm mx-4 bg-stone-950 text-white"
-            style={{ border: '1px solid rgba(255,140,0,0.25)' }}>
+          <div className="relative z-10 w-full max-w-sm mx-4"
+            style={{
+              background: '#1a1208',
+              border: '1px solid rgba(255,140,0,0.3)',
+              boxShadow: '0 32px 64px rgba(0,0,0,0.9)',
+            }}>
+
+            {/* Top accent bar */}
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, #C2410C, #F97316, #C2410C)' }} />
+
+            {/* Header */}
+            <div className="px-6 pt-6 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <p style={{ fontSize: '9px', color: '#F97316', letterSpacing: '0.25em', textTransform: 'uppercase', fontWeight: 700, marginBottom: '12px' }}>
+                Latino Culture · Field Guide
+              </p>
+              <h2 style={{ fontSize: '30px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: '10px' }}>
+                chanclazo
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px' }}>
+                <span style={{ color: 'rgba(249,115,22,0.75)', fontStyle: 'italic' }}>/chan·claw·so/</span>
+                <span style={{ width: '1px', height: '10px', background: 'rgba(255,255,255,0.15)' }} />
+                <span style={{ color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '10px' }}>noun</span>
+                <span style={{ width: '1px', height: '10px', background: 'rgba(255,255,255,0.15)' }} />
+                <span style={{ color: 'rgba(249,115,22,0.75)', fontStyle: 'italic' }}>chancla strike</span>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', lineHeight: '1.65' }}>
+                A Latina mother's{' '}
+                <span style={{ color: '#fdba74', fontWeight: 600 }}>secret weapon</span>
+                {' '}— the swift, precision-guided deployment of a flip flop or sandal with supernatural accuracy and zero warning.
+              </p>
+
+              <div>
+                <p style={{ fontSize: '9px', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: '12px' }}>
+                  Characteristics
+                </p>
+                {[
+                  'A sudden, precision-guided sandal strike',
+                  'Delivered by a mom, abuela, or tía',
+                  'Supernatural accuracy. Zero warning.',
+                  'Corrects behavior instantly',
+                ].map((line) => (
+                  <div key={line} style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
+                    <span style={{ color: '#F97316', fontSize: '12px', fontWeight: 700, marginTop: '1px', flexShrink: 0 }}>—</span>
+                    <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '12px', lineHeight: '1.5' }}>{line}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ borderLeft: '2px solid #F97316', paddingLeft: '16px' }}>
+                <p style={{ color: '#fed7aa', fontSize: '13px', fontWeight: 600, fontStyle: 'italic', lineHeight: '1.4' }}>
+                  "The OG heat-seeking missile."
+                </p>
+                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', marginTop: '6px', lineHeight: '1.5' }}>
+                  Iconic. Universally understood across Latino culture since the beginning of time.
+                </p>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.2em' }}>chanclazo.com</span>
+              <button
+                onClick={() => setShowLore(false)}
+                style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', background: 'none', border: 'none', cursor: 'pointer' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.8)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
             {/* Top accent bar */}
             <div style={{ height: '3px', background: 'linear-gradient(90deg, #C2410C, #F97316, #C2410C)' }} />
