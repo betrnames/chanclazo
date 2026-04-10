@@ -76,22 +76,23 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
     transition: pressed ? 'transform 0.05s ease-in' : 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
   });
 
-  // Color filters applied directly on the <img> — button.png is red
-  // Strike stays red (no hue shift), Jump shifts red→yellow (hue-rotate ~62deg)
-  const imgStyle = (colorFilter: string, pressed: boolean, active: boolean = true) => ({
-    width: 70,
-    height: 70,
-    pointerEvents: 'none' as const,
-    userSelect: 'none' as const,
-    filter: !active
-      ? `${colorFilter} brightness(0.4) saturate(0.2) drop-shadow(0 2px 4px rgba(0,0,0,0.4))`
-      : pressed
-        ? `${colorFilter} brightness(0.75) drop-shadow(0 1px 3px rgba(0,0,0,0.5))`
-        : `${colorFilter} drop-shadow(0 4px 10px rgba(0,0,0,0.5))`,
-  });
+  const imgStyle = (colorFilter: string, pressed: boolean, active: boolean = true) => {
+    const base = colorFilter ? `${colorFilter} ` : '';
+    return {
+      width: 70,
+      height: 70,
+      pointerEvents: 'none' as const,
+      userSelect: 'none' as const,
+      filter: !active
+        ? `${base}brightness(0.4) saturate(0.2) drop-shadow(0 2px 4px rgba(0,0,0,0.4))`
+        : pressed
+          ? `${base}brightness(0.75) drop-shadow(0 1px 3px rgba(0,0,0,0.5))`
+          : `${base}drop-shadow(0 4px 10px rgba(0,0,0,0.5))`,
+    };
+  };
 
-  const NO_FILTER     = '';                                                         // strike uses button.png natural red
-  const YELLOW_FILTER = 'hue-rotate(62deg) saturate(2.5) brightness(1.15)';
+  const NO_FILTER     = '';
+  const YELLOW_FILTER = 'sepia(1) saturate(4) hue-rotate(5deg) brightness(1.2)';
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>

@@ -600,10 +600,12 @@ export function createGoldChancla(): THREE.Group {
   logoTex.colorSpace = THREE.SRGBColorSpace;
 
   // Large flat sprite using the logo — always faces camera (billboard)
+  // alphaTest cuts out the white background so only the chancla shows
   const spriteMat = new THREE.SpriteMaterial({
     map: logoTex,
-    color: 0xFFD700,
+    color: 0xFFFFFF,   // no tint — show natural colors
     transparent: true,
+    alphaTest: 0.1,    // discard near-white pixels, removing the white bg
     opacity: 1.0,
     depthWrite: false,
   });
