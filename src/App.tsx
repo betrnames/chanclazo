@@ -70,15 +70,15 @@ const goToVibeJamPortal = (handle: string, health: number = 3) => {
   window.location.href = url.toString();
 };
 
-// Computed once at module load — safe to use in useState initialisers
-const _portal = getPortalParams();
-if (_portal.isFromPortal && _portal.username) {
-  localStorage.setItem('chanclazo-handle', _portal.username);
-}
-
 
 export default function App() {
   if (window.location.pathname === '/lore') return <LorePage />;
+
+  // ── VibeJam portal: detect incoming player, auto-start game ───────────────
+  const portalParams = getPortalParams();
+  if (portalParams.isFromPortal && portalParams.username) {
+    localStorage.setItem('chanclazo-handle', portalParams.username);
+  }
 
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<GameInstance | null>(null);
@@ -89,9 +89,10 @@ export default function App() {
   const [isMobile] = useState(() => isMobileDevice());
   const [canStrike, setCanStrike] = useState(false);
 
-  const [phase, setPhase] = useState<GamePhase>(() => _portal.isFromPortal ? 'playing' : 'start');
+  // Auto-start if arriving from a portal
+  const [phase, setPhase] = useState<GamePhase>(() => portalParams.isFromPortal ? 'playing' : 'start');
   const [gender, setGender] = useState<CharacterGender>('boy');
-  const [handle, setHandle] = useState<string>(() => _portal.username || localStorage.getItem('chanclazo-handle') ?? '');
+  const [handle, setHandle] = useState<string>(() => portalParams.username || localStorage.getItem('chanclazo-handle') ?? '');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [, setSubmitting] = useState(false);
@@ -466,10 +467,10 @@ export default function App() {
                 </button>
 
                 {/* Return portal if player came from another game */}
-                {_portal.ref && (
+                {portalParams.ref && (
                   <button
                     onClick={() => {
-                      const url = new URL(`https://${_portal.ref}`);
+                      const url = new URL(`https://${portalParams.ref}`);
                       if (handle) url.searchParams.set('username', handle);
                       url.searchParams.set('ref', 'chanclazo.com');
                       url.searchParams.set('portal', 'true');
