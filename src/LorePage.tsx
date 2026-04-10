@@ -43,11 +43,32 @@ export default function LorePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#110d07', color: '#fff', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
 
+      {/* Background image with brown overlay */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
+        backgroundImage: 'url(/livingroom.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        opacity: 0.18,
+        mixBlendMode: 'luminosity',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
+        background: 'rgba(101, 67, 33, 0.35)',
+        pointerEvents: 'none',
+      }} />
+
       {/* Top accent bar */}
-      <div style={{ height: '3px', background: 'linear-gradient(90deg, #C2410C, #F97316, #C2410C)' }} />
+      <div style={{ height: '3px', background: 'linear-gradient(90deg, #C2410C, #F97316, #C2410C)', position: 'relative', zIndex: 1 }} />
 
       {/* Nav — aligned to match body max-width */}
-      <nav style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <nav style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: '560px', margin: '0 auto', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
           <a href="/" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.2em', textDecoration: 'none' }}>
             chanclazo.com
@@ -59,7 +80,7 @@ export default function LorePage() {
       </nav>
 
       {/* Main content */}
-      <main style={{ flex: 1, maxWidth: '560px', margin: '0 auto', padding: '48px 24px 64px', width: '100%' }}>
+      <main style={{ flex: 1, maxWidth: '560px', margin: '0 auto', padding: '48px 24px 64px', width: '100%', position: 'relative', zIndex: 1 }}>
 
         <p style={{ fontSize: '10px', color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700, marginBottom: '16px' }}>
           Latino Culture · Field Guide
@@ -134,7 +155,7 @@ export default function LorePage() {
       </main>
 
       {/* Footer — centered */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', position: 'relative', zIndex: 1 }}>
         <div style={{ maxWidth: '560px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', width: '100%' }}>
           <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>© 2026 Chanclazo</span>
           <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer"
