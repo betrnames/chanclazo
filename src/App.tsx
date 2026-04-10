@@ -421,6 +421,23 @@ export default function App() {
                 >
                   What is a Chanclazo?
                 </a>
+
+                {/* VibeJam 2026 Portal */}
+                <a
+                  href={`https://vibej.am/portal/2026?ref=chanclazo.com&color=orange${handle ? `&username=${encodeURIComponent(handle)}` : ''}`}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black no-underline"
+                  style={{
+                    background: 'linear-gradient(135deg, #6600ff, #aa00ff, #ff00cc)',
+                    color: 'white',
+                    boxShadow: '0 0 16px rgba(170,0,255,0.5)',
+                    animation: 'portalPulse 2s ease-in-out infinite',
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>🌀</span>
+                  <span>Vibe Jam 2026 Portal</span>
+                  <span style={{ fontSize: 10, opacity: 0.8 }}>hop to next game →</span>
+                </a>
+
                 {/* Footer */}
                 <div className="pt-2 border-t border-orange-200/60 flex flex-col items-center gap-1">
                   <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer"
