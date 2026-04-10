@@ -13,6 +13,12 @@ import type {
 } from './types';
 import { LEVELS } from './types';
 import { buildScene, buildCamera, createPlayer, createMom, addFurniture, ROOM, setLevelTheme, createCat, createDog, createPan, createMouse, createVibeJamPortal, animateVibeJamPortal } from './scene';
+import { submitGhost } from '../api';
+import type { GhostSnapshot } from '../api';
+import { loadGhosts, updateGhosts, destroyGhosts } from './ghost';
+import type { GhostPlayer } from './ghost';
+import { loadGhosts, updateGhosts, destroyGhosts } from './ghost';
+import type { GhostPlayer } from './ghost';
 import { createControls } from './controls';
 import type { TouchInputState } from './controls';
 import {
@@ -148,6 +154,15 @@ export function createGame(
   let nextTsunamiAt = 3 + Math.floor(Math.random() * 3); // first tsunami at throw 3, 4, or 5
   let tsunamiQueued = false;       // true when next throw should be a tsunami
 
+  // ── Ghost recording — snapshot player position every 0.5s ─────────────────
+  const ghostSnapshots: GhostSnapshot[] = [];
+  let ghostTimer = 0;
+  const GHOST_INTERVAL = 0.5;
+
+  // ── Ghost playback ────────────────────────────────────────────────────────
+  let ghosts: GhostPlayer[] = [];
+  loadGhosts(scene, currentLevelIndex + 1).then(loaded => { ghosts = loaded; });
+
   // Visual polish - vibrant low-poly style: apply initial theme + level clutter
   setLevelTheme(scene, currentLevelIndex);
   addFurniture(scene, currentLevelIndex);
@@ -181,6 +196,18 @@ export function createGame(
     survivalTime += dt;
     totalSurvival += dt;
     score += SCORE_PER_SECOND * dt;
+
+    // ── Ghost snapshot recording ──────────────────────────────────────────
+    ghostTimer += dt;
+    if (ghostTimer >= GHOST_INTERVAL && ghostSnapshots.length < 300) {
+      ghostSnapshots.push({
+        t: Math.round(totalSurvival * 10) / 10,
+        x: Math.round(player.x * 100) / 100,
+        y: Math.round(player.y * 100) / 100,
+        d: player.isDucking ? 1 : 0,
+      });
+      ghostTimer = 0;
+    }
 
     // ── VibeJam portal: animate + proximity redirect ──────────────────────
     animateVibeJamPortal(vibePortal, totalSurvival);
@@ -217,8 +244,9 @@ export function createGame(
       running = false;
       cancelAnimationFrame(rafId);
 
+      const handle = localStorage.getItem('chanclazo-handle') || 'ghost';
+      submitGhost(handle, currentLevelIndex + 1, ghostSnapshots, Math.floor(score));
       if (currentLevelIndex >= LEVELS.length - 1) {
-        // Beat final level → victory
         playLevelUp();
         callbacks.onVictory(Math.floor(score), Math.floor(totalSurvival));
       } else {
@@ -358,6 +386,9 @@ export function createGame(
     // ── Particles ─────────────────────────────────────────────────────────
     particles = updateParticles(particles, scene, dt);
     chanclas = pruneExpiredChanclas(chanclas, scene);
+
+    // ── Ghost playback ────────────────────────────────────────────────────
+    updateGhosts(ghosts, dt, totalSurvival);
 
     // ── Strike ring ───────────────────────────────────────────────────────
     updateStrikeRing();
@@ -566,6 +597,9 @@ export function createGame(
       playGameOver();
       running = false;
       cancelAnimationFrame(rafId);
+      // Submit ghost run before game over
+      const handle = localStorage.getItem('chanclazo-handle') || 'ghost';
+      submitGhost(handle, currentLevelIndex + 1, ghostSnapshots, Math.floor(score));
       callbacks.onGameOver(Math.floor(score), Math.floor(totalSurvival));
     }
   }
@@ -733,6 +767,7 @@ export function createGame(
     for (const pan of pans) scene.remove(pan.group);
     scene.remove(cat.group);
     scene.remove(mouse.group);
+    destroyGhosts(ghosts, scene);
     renderer.dispose();
     if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
   }
