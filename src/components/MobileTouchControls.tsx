@@ -112,31 +112,24 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
             position: 'absolute', touchAction: 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {/* Shaft */}
-            <div style={{
-              width: 11, height: 30,
-              background: 'linear-gradient(to right, #999, #555, #888)',
-              borderRadius: 5,
-              position: 'absolute',
-              bottom: '50%',
-              left: '50%',
-              transform: `translateX(-50%) translateX(${knobOffset * 14}px) rotate(${knobOffset * 18}deg)`,
-              transformOrigin: 'bottom center',
-              transition: knobOffset === 0 ? 'transform 0.15s' : 'none',
-              boxShadow: '1px 0 4px rgba(0,0,0,0.5)',
-            }} />
-            {/* Ball knob — prominent red */}
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'radial-gradient(circle at 36% 30%, #ff6644, #cc2200 60%, #881100)',
-              boxShadow: '0 3px 8px rgba(0,0,0,0.7), inset 0 1px 3px rgba(255,160,100,0.5)',
-              position: 'absolute',
-              bottom: 'calc(50% + 10px)',
-              left: '50%',
-              transform: `translateX(-50%) translateX(${knobOffset * 14}px)`,
-              transition: knobOffset === 0 ? 'transform 0.15s' : 'none',
-              zIndex: 2,
-            }} />
+            {/* joystickRed.png knob — animates left/right with drag */}
+            <img
+              src="/joystickRed.png"
+              alt="joystick"
+              draggable={false}
+              style={{
+                width: 52, height: 52,
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: `translate(-50%, -50%) translateX(${knobOffset * 18}px) rotate(${knobOffset * 14}deg)`,
+                transition: knobOffset === 0 ? 'transform 0.15s ease-out' : 'none',
+                zIndex: 2,
+                pointerEvents: 'none',
+                userSelect: 'none',
+                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.7))',
+              }}
+            />
           </div>
         </div>
         <p style={{ textAlign: 'center', fontSize: 8, color: 'rgba(255,255,255,0.28)', marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Move</p>
