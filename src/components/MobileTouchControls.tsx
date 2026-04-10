@@ -85,7 +85,7 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>
 
       {/* LEFT — Joystick (image only, no base) */}
-      <div style={{ position: 'absolute', left: 18, bottom: 40, pointerEvents: 'auto' }}>
+      <div style={{ position: 'absolute', left: 18, bottom: 70, pointerEvents: 'auto' }}>
         {/* Drag zone — invisible, same size as image */}
         <div ref={joystickRef} style={{
           width: 72, height: 72,
@@ -110,7 +110,7 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
       </div>
 
       {/* RIGHT — 3 Arcade Buttons vertical stack */}
-      <div style={{ position: 'absolute', right: 18, bottom: 40, pointerEvents: 'auto' }}>
+      <div style={{ position: 'absolute', right: 18, bottom: 70, pointerEvents: 'auto' }}>
         {/* Floating buttons — no panel */}
         <div style={{
           display: 'flex', flexDirection: 'column',

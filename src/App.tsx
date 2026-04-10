@@ -451,10 +451,10 @@ export default function App() {
       ════════════════════════════════════════════════════════════════ */}
       {phase === 'playing' && (
         <>
-          {/* Top bar */}
+          {/* Top bar — fixed so it stays visible on vertical scroll */}
           <div
-            className="absolute top-0 left-0 right-0 flex items-start justify-between px-2 pt-2 gap-2 pointer-events-none"
-            style={{ zIndex: 10 }}
+            className="fixed top-0 left-0 right-0 flex items-start justify-between px-2 pt-2 gap-2 pointer-events-none"
+            style={{ zIndex: 30 }}
           >
             {/* Left: score + time */}
             <div className="flex flex-col gap-1">
