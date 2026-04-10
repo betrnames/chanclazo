@@ -609,14 +609,12 @@ export default function App() {
             ))}
           </div>
 
-          {/* Mobile touch controls */}
-          {isMobile && (
-            <MobileTouchControls
-              touchState={touchStateRef.current}
-              canStrike={canStrike}
-              onStrike={() => gameRef.current?.triggerStrike()}
-            />
-          )}
+          {/* Arcade controls — always visible on all devices */}
+          <MobileTouchControls
+            touchState={touchStateRef.current}
+            canStrike={canStrike}
+            onStrike={() => gameRef.current?.triggerStrike()}
+          />
         </>
       )}
 
