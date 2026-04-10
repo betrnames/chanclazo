@@ -187,10 +187,10 @@ export function createGame(
     if (!portalTriggered) {
       const px = player.x;
       const pz = ROOM.playerZ;
-      const portalX = ROOM.width / 2 - 0.2;
-      const portalZ = ROOM.playerZ - 2;
+      const portalX = 4.0;
+      const portalZ = ROOM.playerZ - 1;
       const dist = Math.sqrt((px - portalX) ** 2 + (pz - portalZ) ** 2);
-      if (dist < 1.8) {
+      if (dist < 1.5) {
         portalTriggered = true;
         const handle = localStorage.getItem('chanclazo-handle') || '';
         const url = new URL('https://vibej.am/portal/2026');

@@ -1079,9 +1079,9 @@ export function createVibeJamPortal(scene: THREE.Scene): THREE.Group {
   label.position.set(0, 1.55, 0);
   group.add(label);
 
-  // Position: right wall, mid-height, flush against wall
-  group.position.set(ROOM.width / 2 - 0.2, 2.0, ROOM.playerZ - 2);
-  group.rotation.y = -Math.PI / 2; // face inward
+  // Position: right side of play area, within player reach, facing the player
+  group.position.set(4.0, 2.0, ROOM.playerZ - 1);
+  group.rotation.y = 0; // face the player (no rotation needed)
 
   scene.add(group);
   return group;
