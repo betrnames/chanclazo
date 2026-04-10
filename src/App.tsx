@@ -50,36 +50,9 @@ const LEVEL_ACCENT_CLASSES = [
   'text-red-900',
 ];
 
-// ─── Vibeverse Portal helpers ─────────────────────────────────────────────────
-const getPortalParams = () => {
-  const p = new URLSearchParams(window.location.search);
-  return {
-    isFromPortal: p.get('portal') === 'true',
-    username:     p.get('username') || '',
-    color:        p.get('color')    || '',
-    ref:          p.get('ref')      || '',
-  };
-};
-
-const goToVibeJamPortal = (handle: string, health: number = 3) => {
-  const url = new URL('https://vibej.am/portal/2026');
-  if (handle) url.searchParams.set('username', handle);
-  url.searchParams.set('ref', 'chanclazo.com');
-  url.searchParams.set('color', 'orange');
-  url.searchParams.set('hp', String(Math.round((health / 3) * 100)));
-  window.location.href = url.toString();
-};
-
-
+// ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   if (window.location.pathname === '/lore') return <LorePage />;
-
-  // ── VibeJam portal: detect incoming player, auto-start game ───────────────
-  const portalParams = getPortalParams();
-  if (portalParams.isFromPortal && portalParams.username) {
-    localStorage.setItem('chanclazo-handle', portalParams.username);
-  }
-
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<GameInstance | null>(null);
   const langRef = useRef<Lang>(
@@ -89,10 +62,9 @@ export default function App() {
   const [isMobile] = useState(() => isMobileDevice());
   const [canStrike, setCanStrike] = useState(false);
 
-  // Auto-start if arriving from a portal
-  const [phase, setPhase] = useState<GamePhase>(() => portalParams.isFromPortal ? 'playing' : 'start');
+  const [phase, setPhase] = useState<GamePhase>('start');
   const [gender, setGender] = useState<CharacterGender>('boy');
-  const [handle, setHandle] = useState<string>(() => portalParams.username || localStorage.getItem('chanclazo-handle') ?? '');
+  const [handle, setHandle] = useState<string>(() => localStorage.getItem('chanclazo-handle') ?? '');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [, setSubmitting] = useState(false);
@@ -449,46 +421,6 @@ export default function App() {
                 >
                   What is a Chanclazo?
                 </a>
-
-                {/* VibeJam 2026 Portal Button */}
-                <button
-                  onClick={() => goToVibeJamPortal(handle, 3)}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black transition-all"
-                  style={{
-                    background: 'linear-gradient(135deg, #6600ff, #aa00ff, #ff00cc)',
-                    color: 'white',
-                    boxShadow: '0 0 16px rgba(170,0,255,0.5), 0 2px 8px rgba(0,0,0,0.3)',
-                    animation: 'portalPulse 2s ease-in-out infinite',
-                  }}
-                >
-                  <span style={{ fontSize: 16 }}>🌀</span>
-                  <span>Vibe Jam 2026 Portal</span>
-                  <span style={{ fontSize: 10, opacity: 0.8 }}>hop to next game →</span>
-                </button>
-
-                {/* Return portal if player came from another game */}
-                {portalParams.ref && (
-                  <button
-                    onClick={() => {
-                      const url = new URL(`https://${portalParams.ref}`);
-                      if (handle) url.searchParams.set('username', handle);
-                      url.searchParams.set('ref', 'chanclazo.com');
-                      url.searchParams.set('portal', 'true');
-                      url.searchParams.set('color', 'orange');
-                      window.location.href = url.toString();
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl text-xs font-black transition-all"
-                    style={{
-                      background: 'linear-gradient(135deg, #0044ff, #0088ff)',
-                      color: 'white',
-                      boxShadow: '0 0 12px rgba(0,100,255,0.4)',
-                    }}
-                  >
-                    <span style={{ fontSize: 14 }}>↩️</span>
-                    <span>Return to {portalParams.ref}</span>
-                  </button>
-                )}
-
                 {/* Footer */}
                 <div className="pt-2 border-t border-orange-200/60 flex flex-col items-center gap-1">
                   <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer"

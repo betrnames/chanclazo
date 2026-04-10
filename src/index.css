@@ -205,11 +205,6 @@
   }
 }
 
-@keyframes portalPulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(170,0,255,0.5), 0 2px 8px rgba(0,0,0,0.3); transform: scale(1); }
-  50%       { box-shadow: 0 0 28px rgba(255,0,200,0.8), 0 2px 8px rgba(0,0,0,0.3); transform: scale(1.02); }
-}
-
 @keyframes hitFlash {
   0%   { opacity: 1; }
   40%  { opacity: 0.8; }
