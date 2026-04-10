@@ -12,8 +12,8 @@ import { initAudio } from './game/sound';
 import { createTouchState } from './game/controls';
 import type { TouchInputState } from './game/controls';
 import MobileTouchControls from './components/MobileTouchControls';
-import { submitScore, fetchLeaderboard } from './api';
-import type { LeaderboardEntry } from './api';
+import { submitScore, fetchLeaderboard, pingPresence, leavePresence, fetchGhosts } from './api';
+import type { LeaderboardEntry, GhostRun } from './api';
 import LorePage from './LorePage';
 
 // Route to lore page if on /lore
@@ -61,6 +61,9 @@ export default function App() {
   const touchStateRef = useRef<TouchInputState>(createTouchState());
   const [isMobile] = useState(() => isMobileDevice());
   const [canStrike, setCanStrike] = useState(false);
+  const sessionId = useRef<string>(Math.random().toString(36).slice(2));
+  const [playerCount, setPlayerCount] = useState(0);
+  const [ghosts, setGhosts] = useState<GhostRun[]>([]);
 
   const [phase, setPhase] = useState<GamePhase>('start');
   const [gender, setGender] = useState<CharacterGender>('boy');
@@ -164,6 +167,27 @@ export default function App() {
   }, []);
 
   const getLang = useCallback((): Lang => langRef.current, []);
+
+  // ── Presence heartbeat — ping every 15s, leave on unmount ─────────────────
+  useEffect(() => {
+    const sid = sessionId.current;
+    pingPresence(sid).then(setPlayerCount);
+    const interval = setInterval(() => pingPresence(sid).then(setPlayerCount), 15000);
+    const onUnload = () => leavePresence(sid);
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', onUnload);
+      leavePresence(sid);
+    };
+  }, []);
+
+  // ── Fetch ghosts when a level starts ──────────────────────────────────────
+  useEffect(() => {
+    if (phase === 'playing') {
+      fetchGhosts(currentLevel).then(setGhosts);
+    }
+  }, [phase, currentLevel]);
 
   // ── Start level ───────────────────────────────────────────────────────────
   const startLevel = useCallback((level: number) => {
@@ -408,6 +432,18 @@ export default function App() {
                   {texts.ui.play}
                 </Button>
 
+                {/* Live player count on start screen */}
+                {playerCount > 0 && (
+                  <p className="text-center text-xs font-black text-purple-600 animate-pulse">
+                    👥 {playerCount} {playerCount === 1 ? 'player' : 'players'} dodging right now!
+                  </p>
+                )}
+
+                {/* Ghost mode badge */}
+                <p className="text-center text-xs font-bold text-blue-400 opacity-80 tracking-wide">
+                  👻 Ghost Mode — race the shadows of past players
+                </p>
+
                 <button
                   onClick={loadLeaderboard}
                   className="w-full text-xs font-black text-orange-700 opacity-70 hover:opacity-100 py-1 transition-opacity"
@@ -457,7 +493,7 @@ export default function App() {
             className="fixed top-0 left-0 right-0 flex items-start justify-between px-2 pt-2 gap-2 pointer-events-none"
             style={{ zIndex: 30 }}
           >
-            {/* Left: score + time */}
+            {/* Left: score + time + live player count */}
             <div className="flex flex-col gap-1">
               <Badge className="text-sm font-black px-2 py-1 bg-orange-500/90 text-white shadow-lg backdrop-blur-sm border-orange-400 w-fit">
                 🏆 {score.toLocaleString()}
@@ -465,6 +501,11 @@ export default function App() {
               <Badge variant="secondary" className="text-[10px] font-bold px-2 py-0.5 shadow backdrop-blur-sm w-fit">
                 ⏱ {formatTime(survivalSeconds)}
               </Badge>
+              {playerCount > 1 && (
+                <Badge className="text-[10px] font-bold px-2 py-0.5 bg-purple-600/90 text-white shadow backdrop-blur-sm border-purple-400 w-fit animate-pulse">
+                  👥 {playerCount} playing
+                </Badge>
+              )}
             </div>
 
             {/* Center: level + health + progress */}
