@@ -90,7 +90,7 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>
 
       {/* LEFT — Compact Joystick */}
-      <div style={{ position: 'absolute', left: 18, bottom: 120, pointerEvents: 'auto' }}>
+      <div style={{ position: 'absolute', left: 18, bottom: 40, pointerEvents: 'auto' }}>
         {/* Base plate — smaller */}
         <div style={{
           width: 86, height: 86,
@@ -144,63 +144,50 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
       </div>
 
       {/* RIGHT — 3 Arcade Buttons vertical stack */}
-      <div style={{ position: 'absolute', right: 18, bottom: 120, pointerEvents: 'auto' }}>
-        {/* Panel plate */}
+      <div style={{ position: 'absolute', right: 18, bottom: 40, pointerEvents: 'auto' }}>
+        {/* Floating buttons — no panel */}
         <div style={{
-          width: 80, height: 210,
-          borderRadius: 14,
-          background: 'radial-gradient(circle at 40% 35%, #3a3a3a, #161616)',
-          border: '2px solid #3a3a3a',
-          boxShadow: '0 5px 18px rgba(0,0,0,0.75), inset 0 1px 1px rgba(255,255,255,0.06)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'space-evenly',
-          padding: '12px 0',
+          gap: 10,
         }}>
 
           {/* JUMP — Blue */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <button
-              style={arcadeBtn('#4488ff', '#1155cc', '#0a2f77', jumpPressed)}
-              onTouchStart={(e) => { e.preventDefault(); touchState.jump = true; setJumpPressed(true); }}
-              onTouchEnd={(e)   => { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
-              onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}>
-              <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Jump</span>
-            </button>
-          </div>
+          <button
+            style={arcadeBtn('#4488ff', '#1155cc', '#0a2f77', jumpPressed)}
+            onTouchStart={(e) => { e.preventDefault(); touchState.jump = true; setJumpPressed(true); }}
+            onTouchEnd={(e)   => { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
+            onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}>
+            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Jump</span>
+          </button>
 
-          {/* STRIKE — Orange (glows when available) */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <button
-              style={{
-                ...arcadeBtn(
-                  canStrike ? '#ffaa22' : '#886622',
-                  canStrike ? '#dd6600' : '#553300',
-                  canStrike ? '#882200' : '#221100',
-                  strikePressed
-                ),
-                ...(canStrike && !strikePressed ? { boxShadow: '0 5px 0 #882200, 0 0 18px #ff880088, inset 0 1px 0 rgba(255,255,255,0.35)' } : {}),
-              }}
-              onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); handleStrikeTouch(e); }}
-              onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
-              onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}>
-              <span style={{ fontSize: 16, lineHeight: 1 }}>⚡</span>
-              <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Strike</span>
-            </button>
-          </div>
+          {/* STRIKE — Orange */}
+          <button
+            style={{
+              ...arcadeBtn(
+                canStrike ? '#ffaa22' : '#886622',
+                canStrike ? '#dd6600' : '#553300',
+                canStrike ? '#882200' : '#221100',
+                strikePressed
+              ),
+              ...(canStrike && !strikePressed ? { boxShadow: '0 5px 0 #882200, 0 0 18px #ff880088, inset 0 1px 0 rgba(255,255,255,0.35)' } : {}),
+            }}
+            onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); handleStrikeTouch(e); }}
+            onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
+            onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}>
+            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Strike</span>
+          </button>
 
           {/* DUCK — Green */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <button
-              style={arcadeBtn('#44bb44', '#228822', '#114411', duckPressed)}
-              onTouchStart={(e) => { e.preventDefault(); touchState.duck = true; setDuckPressed(true); }}
-              onTouchEnd={(e)   => { e.preventDefault(); touchState.duck = false; setDuckPressed(false); }}
-              onTouchCancel={(e)=> { e.preventDefault(); touchState.duck = false; setDuckPressed(false); }}>
-              <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Duck</span>
-            </button>
-          </div>
+          <button
+            style={arcadeBtn('#44bb44', '#228822', '#114411', duckPressed)}
+            onTouchStart={(e) => { e.preventDefault(); touchState.duck = true; setDuckPressed(true); }}
+            onTouchEnd={(e)   => { e.preventDefault(); touchState.duck = false; setDuckPressed(false); }}
+            onTouchCancel={(e)=> { e.preventDefault(); touchState.duck = false; setDuckPressed(false); }}>
+            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Duck</span>
+          </button>
 
         </div>
-        <p style={{ textAlign: 'center', fontSize: 8, color: 'rgba(255,255,255,0.28)', marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Actions</p>
       </div>
 
     </div>
