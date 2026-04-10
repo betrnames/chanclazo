@@ -536,8 +536,8 @@ export default function App() {
             </div>
           )}
 
-          {/* Grace period lore — shows for first 6s before first throw */}
-          {survivalSeconds < 6 && (
+          {/* Know Your Enemy blurb — hidden */}
+          {false && survivalSeconds < 6 && (
             <div
               className="absolute pointer-events-none"
               style={{
@@ -609,12 +609,14 @@ export default function App() {
             ))}
           </div>
 
-          {/* Arcade controls — always visible on all devices */}
-          <MobileTouchControls
-            touchState={touchStateRef.current}
-            canStrike={canStrike}
-            onStrike={() => gameRef.current?.triggerStrike()}
-          />
+          {/* Arcade controls — mobile only */}
+          {isMobile && (
+            <MobileTouchControls
+              touchState={touchStateRef.current}
+              canStrike={canStrike}
+              onStrike={() => gameRef.current?.triggerStrike()}
+            />
+          )}
         </>
       )}
 
