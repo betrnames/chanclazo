@@ -590,6 +590,45 @@ export function createMom(): MomState {
   };
 }
 
+// ─── Gold Chancla Mesh (uses logo gold color, glows) ──────────────────────────
+export function createGoldChancla(): THREE.Group {
+  const group = new THREE.Group();
+
+  const soleMat  = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: new THREE.Color(0xAA8800), emissiveIntensity: 0.6 });
+  const strapMat = new THREE.MeshLambertMaterial({ color: 0xFFA500, emissive: new THREE.Color(0x885500), emissiveIntensity: 0.5 });
+
+  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 1.05), soleMat);
+  group.add(sole);
+
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 1.1), soleMat);
+  rim.position.y = -0.04;
+  group.add(rim);
+
+  const frontStrap = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.09), strapMat);
+  frontStrap.position.set(0, 0.1, -0.18);
+  group.add(frontStrap);
+
+  const leftStrap = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.32), strapMat);
+  leftStrap.position.set(-0.21, 0.1, -0.03);
+  group.add(leftStrap);
+
+  const rightStrap = leftStrap.clone();
+  rightStrap.position.x = 0.21;
+  group.add(rightStrap);
+
+  const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 6), strapMat);
+  peg.position.set(0, 0.12, 0.1);
+  group.add(peg);
+
+  // Point light for glow effect
+  const glow = new THREE.PointLight(0xFFD700, 1.5, 3.5);
+  glow.name = 'goldGlow';
+  group.add(glow);
+
+  group.scale.set(1.6, 1.6, 1.6); // slightly bigger than normal
+  return group;
+}
+
 // ─── Chancla Mesh ──────────────────────────────────────────────────────────────
 export function createChancla(colorIndex: number): THREE.Group {
   const group = new THREE.Group();

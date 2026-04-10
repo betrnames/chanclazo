@@ -13,7 +13,6 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
   const joystickRef = useRef<HTMLDivElement>(null);
   const [knobOffset, setKnobOffset]     = useState(0);
   const [jumpPressed,   setJumpPressed]   = useState(false);
-  const [duckPressed,   setDuckPressed]   = useState(false);
   const [strikePressed, setStrikePressed] = useState(false);
 
   useEffect(() => {
@@ -178,14 +177,7 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
             <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Strike</span>
           </button>
 
-          {/* DUCK — Green */}
-          <button
-            style={arcadeBtn('#44bb44', '#228822', '#114411', duckPressed)}
-            onTouchStart={(e) => { e.preventDefault(); touchState.duck = true; setDuckPressed(true); }}
-            onTouchEnd={(e)   => { e.preventDefault(); touchState.duck = false; setDuckPressed(false); }}
-            onTouchCancel={(e)=> { e.preventDefault(); touchState.duck = false; setDuckPressed(false); }}>
-            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Duck</span>
-          </button>
+
 
         </div>
       </div>

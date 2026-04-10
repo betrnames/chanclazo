@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { ChanclaState, PlayerState, ThrowStyle } from './types';
-import { createChancla, ROOM } from './scene';
+import { createChancla, createGoldChancla, ROOM } from './scene';
 
 // ─── Collision constants ────────────────────────────────────────────────────────
 const PLAYER_HIT_RADIUS  = 0.75;  // world-units — bounding sphere around player
@@ -101,10 +101,15 @@ export function spawnChancla(
   player: PlayerState,
   difficulty: number,
   style: ThrowStyle,
-  volleyIndex: number = 0  // 0 = first in volley, stagger subsequent ones
+  volleyIndex: number = 0
 ): ChanclaState {
   const colorIndex = nextColorIndex++;
-  const group = createChancla(colorIndex);
+
+  // 15% chance of gold chancla (increases slightly with difficulty)
+  const goldChance = Math.min(0.25, 0.15 + difficulty * 0.01);
+  const isGold = Math.random() < goldChance;
+
+  const group = isGold ? createGoldChancla() : createChancla(colorIndex);
   scene.add(group);
 
   const p = STYLE_TABLE[style];
@@ -174,6 +179,7 @@ export function spawnChancla(
     struckBack: false,
     expired: false,
     colorIndex,
+    isGold,
   };
 }
 

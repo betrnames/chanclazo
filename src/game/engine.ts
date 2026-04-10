@@ -275,12 +275,21 @@ export function createGame(
     if (!isProtected) {
       for (const ch of chanclas) {
         if (checkChanclaHitsPlayer(ch, player)) {
-          // Burst at exact chancla impact point + player body
           const impactPos = ch.group.position.clone();
-          particles.push(...spawnBurst(scene, impactPos, 10, [0xFF6B6B, 0xFFD93D, 0xFFFFFF], 5.0, 0.5));
-          ch.expired = true;
-          ch.group.visible = false;
-          onPlayerHit();
+          // Gold chancla — bigger burst, gold particles, 2x damage
+          if (ch.isGold) {
+            particles.push(...spawnBurst(scene, impactPos, 20, [0xFFD700, 0xFFA500, 0xFFFFFF], 6.5, 0.7));
+            ch.expired = true;
+            ch.group.visible = false;
+            onPlayerHit();
+            onPlayerHit(); // second hit = 2x damage
+            callbacks.onPopup(callbacks.getLang() === 'es' ? '💛 ¡CHANCLA DORADA! -2 ❤️' : '💛 GOLD CHANCLA! -2 ❤️');
+          } else {
+            particles.push(...spawnBurst(scene, impactPos, 10, [0xFF6B6B, 0xFFD93D, 0xFFFFFF], 5.0, 0.5));
+            ch.expired = true;
+            ch.group.visible = false;
+            onPlayerHit();
+          }
           break;
         }
       }

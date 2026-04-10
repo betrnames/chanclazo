@@ -32,6 +32,7 @@ export interface ChanclaState {
   struckBack: boolean;
   expired: boolean;
   colorIndex: number;
+  isGold: boolean; // gold chancla = 2x damage
 }
 
 // ─── Particle ──────────────────────────────────────────────────────────────────
