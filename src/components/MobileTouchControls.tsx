@@ -57,32 +57,28 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
     onStrike();
   }
 
-  // Glossy vintage arcade button
-  const arcadeBtn = (topColor: string, midColor: string, shadowColor: string, pressed: boolean) => ({
-    width: 58,
-    height: 58,
-    borderRadius: '50%',
+  // Image button style — smash scale on press
+  const imgBtn = (pressed: boolean, active: boolean = true) => ({
+    width: 70,
+    height: 70,
     border: 'none',
     outline: 'none',
+    background: 'none',
+    padding: 0,
     touchAction: 'none' as const,
     WebkitTapHighlightColor: 'transparent',
     cursor: 'pointer',
     userSelect: 'none' as const,
-    position: 'relative' as const,
-    background: pressed
-      ? `radial-gradient(circle at 50% 60%, ${midColor}, ${shadowColor})`
-      : `radial-gradient(circle at 38% 28%, #ffffff55 0%, transparent 45%),
-         radial-gradient(circle at 42% 35%, ${topColor} 0%, ${midColor} 55%, ${shadowColor} 100%)`,
-    boxShadow: pressed
-      ? `0 2px 0 ${shadowColor}, inset 0 3px 8px rgba(0,0,0,0.45)`
-      : `0 5px 0 ${shadowColor}, 0 7px 14px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.35)`,
-    transform: pressed ? 'translateY(4px) scale(0.96)' : 'translateY(0) scale(1)',
-    transition: 'transform 0.07s ease, box-shadow 0.07s ease',
     display: 'flex',
-    flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    transform: pressed ? 'scale(0.82) translateY(4px)' : 'scale(1) translateY(0)',
+    transition: pressed ? 'transform 0.05s ease-in' : 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+    filter: pressed
+      ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.5)) brightness(0.85)'
+      : active
+        ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.6)) brightness(1)'
+        : 'drop-shadow(0 2px 4px rgba(0,0,0,0.4)) brightness(0.5) saturate(0.3)',
   });
 
   return (
@@ -144,31 +140,31 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
           gap: 10,
         }}>
 
-          {/* JUMP — Blue */}
-          <button
-            style={arcadeBtn('#4488ff', '#1155cc', '#0a2f77', jumpPressed)}
-            onTouchStart={(e) => { e.preventDefault(); touchState.jump = true; setJumpPressed(true); }}
-            onTouchEnd={(e)   => { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
-            onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}>
-            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Jump</span>
-          </button>
+          {/* JUMP — buttons.png */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <button
+              style={imgBtn(jumpPressed)}
+              onTouchStart={(e) => { e.preventDefault(); touchState.jump = true; setJumpPressed(true); }}
+              onTouchEnd={(e)   => { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
+              onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}>
+              <img src="/buttons.png" alt="Jump" draggable={false}
+                style={{ width: 70, height: 70, pointerEvents: 'none', userSelect: 'none' }} />
+            </button>
+            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Jump</span>
+          </div>
 
-          {/* STRIKE — Orange */}
-          <button
-            style={{
-              ...arcadeBtn(
-                canStrike ? '#ffaa22' : '#886622',
-                canStrike ? '#dd6600' : '#553300',
-                canStrike ? '#882200' : '#221100',
-                strikePressed
-              ),
-              ...(canStrike && !strikePressed ? { boxShadow: '0 5px 0 #882200, 0 0 18px #ff880088, inset 0 1px 0 rgba(255,255,255,0.35)' } : {}),
-            }}
-            onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); handleStrikeTouch(e); }}
-            onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
-            onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}>
-            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)' }}>Strike</span>
-          </button>
+          {/* STRIKE — buttons.png */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <button
+              style={imgBtn(strikePressed, canStrike)}
+              onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); handleStrikeTouch(e); }}
+              onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
+              onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}>
+              <img src="/buttons.png" alt="Strike" draggable={false}
+                style={{ width: 70, height: 70, pointerEvents: 'none', userSelect: 'none' }} />
+            </button>
+            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Strike</span>
+          </div>
 
 
 
