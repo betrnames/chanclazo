@@ -83,8 +83,9 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
   });
 
   // CSS filters to tint button.png — no extra images needed
-  const RED_FILTER    = 'hue-rotate(0deg) saturate(3) brightness(1.1)';
-  const YELLOW_FILTER = 'hue-rotate(40deg) saturate(4) brightness(1.15)';
+  // Strike = Red, Jump = Yellow — CSS filters tint button.png, no extra images needed
+  const RED_FILTER    = 'hue-rotate(0deg)   saturate(5)   brightness(1.05)';
+  const YELLOW_FILTER = 'hue-rotate(165deg)  saturate(6)   brightness(1.2) sepia(0.3)';
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>
