@@ -12,7 +12,7 @@ import type {
   CharacterGender,
 } from './types';
 import { LEVELS } from './types';
-import { buildScene, buildCamera, createPlayer, createMom, addFurniture, ROOM, setLevelTheme, createCat, createPan, createMouse } from './scene';
+import { buildScene, buildCamera, createPlayer, createMom, addFurniture, ROOM, setLevelTheme, createCat, createDog, createPan, createMouse } from './scene';
 import { createControls } from './controls';
 import type { TouchInputState } from './controls';
 import {
@@ -97,8 +97,9 @@ export function createGame(
   const mom: MomState = createMom();
   scene.add(mom.group);
 
-  // Cat + Mouse — mouse visible from level 2 onwards
-  const cat: CatState = createCat();
+  // Cat (levels 1-2) or Dog (levels 3+) — delayed 20s, mouse visible from level 2 onwards
+  const cat: CatState = currentLevelIndex >= 2 ? createDog() : createCat();
+  cat.group.visible = false; // hidden until delay expires
   scene.add(cat.group);
   const mouse: MouseState = createMouse();
   mouse.group.visible = currentLevelIndex >= 1;
@@ -138,6 +139,8 @@ export function createGame(
   let shakeIntensity = 0;
   let momWindupTimer = 0;
   let momWindupActive = false;
+  const CAT_DELAY = 20; // seconds before cat/dog appears
+  let catActive = false;
   const MOM_WINDUP = 0.9;          // windup duration in seconds
   let throwCycleCount = 0;         // counts every throw
   let nextTsunamiAt = 3 + Math.floor(Math.random() * 3); // first tsunami at throw 3, 4, or 5
@@ -212,7 +215,12 @@ export function createGame(
 
     // ── Cat + Mouse ───────────────────────────────────────────────────────
     updateMouse(dt);
-    updateCat(dt);
+    // Delay cat/dog appearance by CAT_DELAY seconds
+    if (!catActive && survivalTime >= CAT_DELAY) {
+      catActive = true;
+      cat.group.visible = true;
+    }
+    if (catActive) updateCat(dt);
 
     // ── Shield timer ──────────────────────────────────────────────────────
     if (player.shieldTimer > 0) {

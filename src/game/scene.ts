@@ -843,6 +843,88 @@ export function createMouse(): MouseState {
   return { group, x: -2, direction: 1 };
 }
 
+// ─── Dog Mesh (appears level 3+, bigger/faster than cat) ──────────────────────
+export function createDog(): CatState {
+  const group = new THREE.Group();
+
+  const bodyMat  = new THREE.MeshLambertMaterial({ color: 0xC8A46E }); // tan/brown
+  const darkMat  = new THREE.MeshLambertMaterial({ color: 0x8B6240 }); // dark brown
+  const eyeMat   = new THREE.MeshLambertMaterial({ color: 0x3B2A1A }); // dark eyes
+  const noseMat  = new THREE.MeshLambertMaterial({ color: 0x111111 });
+  const tongueMat = new THREE.MeshLambertMaterial({ color: 0xFF6B8A });
+
+  // Body — bigger and longer than cat
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.45, 0.38), bodyMat);
+  body.position.set(0, 0.32, 0);
+  group.add(body);
+
+  // Head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.38, 0.36), bodyMat);
+  head.position.set(0.44, 0.52, 0);
+  group.add(head);
+
+  // Snout
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.20, 0.28), darkMat);
+  snout.position.set(0.60, 0.44, 0);
+  group.add(snout);
+
+  // Floppy ears
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.22, 0.10), darkMat);
+    ear.position.set(0.36, 0.65, side * 0.16);
+    ear.rotation.z = side * 0.15;
+    group.add(ear);
+  }
+
+  // Eyes
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), eyeMat);
+    eye.position.set(0.62, 0.54, side * 0.10);
+    group.add(eye);
+  }
+
+  // Nose
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 5, 4), noseMat);
+  nose.position.set(0.68, 0.48, 0);
+  group.add(nose);
+
+  // Tongue
+  const tongue = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 0.06), tongueMat);
+  tongue.position.set(0.70, 0.36, 0);
+  tongue.rotation.z = 0.2;
+  group.add(tongue);
+
+  // Tail — stubby wagging tail
+  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.38, 6), darkMat);
+  tail.position.set(-0.48, 0.48, 0);
+  tail.rotation.z = -0.9;
+  tail.name = 'tail';
+  group.add(tail);
+
+  // Legs — 4 stocky ones
+  const legGeo = new THREE.BoxGeometry(0.13, 0.28, 0.13);
+  const legPositions: [number, number, number][] = [
+    [0.26, 0.14, 0.13], [0.26, 0.14, -0.13],
+    [-0.26, 0.14, 0.13], [-0.26, 0.14, -0.13],
+  ];
+  for (const [lx, ly, lz] of legPositions) {
+    const leg = new THREE.Mesh(legGeo, bodyMat);
+    leg.position.set(lx, ly, lz);
+    group.add(leg);
+  }
+
+  group.scale.set(1.4, 1.4, 1.4); // bigger than cat
+  group.position.set(3, -0.4, ROOM.playerZ + 0.5);
+
+  return {
+    group,
+    x: 3,
+    direction: -1,
+    speed: 3.2, // faster than cat
+    hitFlashTimer: 0,
+  };
+}
+
 // ─── Cat Mesh ──────────────────────────────────────────────────────────────────
 export function createCat(): CatState {
   const group = new THREE.Group();
