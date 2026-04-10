@@ -12,7 +12,7 @@ import type {
   CharacterGender,
 } from './types';
 import { LEVELS } from './types';
-import { buildScene, buildCamera, createPlayer, createMom, addFurniture, ROOM, setLevelTheme, createCat, createDog, createPan, createMouse } from './scene';
+import { buildScene, buildCamera, createPlayer, createMom, addFurniture, ROOM, setLevelTheme, createCat, createDog, createPan, createMouse, createVibeJamPortal, animateVibeJamPortal } from './scene';
 import { createControls } from './controls';
 import type { TouchInputState } from './controls';
 import {
@@ -105,7 +105,9 @@ export function createGame(
   mouse.group.visible = currentLevelIndex >= 1;
   scene.add(mouse.group);
 
-  // Strike-back indicator ring
+  // VibeJam 2026 portal — right wall
+  const vibePortal = createVibeJamPortal(scene);
+  let portalTriggered = false;
   const strikeRingGeo = new THREE.RingGeometry(0.9, 1.05, 24);
   const strikeRingMat = new THREE.MeshBasicMaterial({
     color: 0xFFD700, side: THREE.DoubleSide, transparent: true, opacity: 0,
@@ -179,6 +181,26 @@ export function createGame(
     survivalTime += dt;
     totalSurvival += dt;
     score += SCORE_PER_SECOND * dt;
+
+    // ── VibeJam portal: animate + proximity redirect ──────────────────────
+    animateVibeJamPortal(vibePortal, totalSurvival);
+    if (!portalTriggered) {
+      const px = player.x;
+      const pz = ROOM.playerZ;
+      const portalX = ROOM.width / 2 - 0.2;
+      const portalZ = ROOM.playerZ - 2;
+      const dist = Math.sqrt((px - portalX) ** 2 + (pz - portalZ) ** 2);
+      if (dist < 1.8) {
+        portalTriggered = true;
+        const handle = localStorage.getItem('chanclazo-handle') || '';
+        const url = new URL('https://vibej.am/portal/2026');
+        if (handle) url.searchParams.set('username', handle);
+        url.searchParams.set('ref', 'chanclazo.com');
+        url.searchParams.set('color', 'orange');
+        url.searchParams.set('hp', String(Math.round((health / 3) * 100)));
+        window.location.href = url.toString();
+      }
+    }
 
     // ── In-level difficulty ramp ──────────────────────────────────────────
     if (survivalTime >= nextDifficultyTime) {

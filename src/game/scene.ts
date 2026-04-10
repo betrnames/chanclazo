@@ -1026,3 +1026,81 @@ export function buildCamera(): THREE.PerspectiveCamera {
   cam.lookAt(0, 0.5, 0);
   return cam;
 }
+
+// ─── VibeJam 2026 Portal ───────────────────────────────────────────────────────
+// Glowing purple ring mounted on the right wall, visible during gameplay.
+// Returns the group so engine.ts can check player proximity each frame.
+export function createVibeJamPortal(scene: THREE.Scene): THREE.Group {
+  const group = new THREE.Group();
+
+  // Outer ring — torus
+  const torusGeo = new THREE.TorusGeometry(1.1, 0.12, 16, 60);
+  const torusMat = new THREE.MeshLambertMaterial({
+    color: 0xaa00ff,
+    emissive: new THREE.Color(0x6600cc),
+    emissiveIntensity: 1.0,
+  });
+  const torus = new THREE.Mesh(torusGeo, torusMat);
+  group.add(torus);
+
+  // Inner swirling disc — semi-transparent purple
+  const discGeo = new THREE.CircleGeometry(1.0, 48);
+  const discMat = new THREE.MeshLambertMaterial({
+    color: 0xcc44ff,
+    emissive: new THREE.Color(0x8800ff),
+    emissiveIntensity: 0.8,
+    transparent: true,
+    opacity: 0.55,
+    side: THREE.DoubleSide,
+  });
+  const disc = new THREE.Mesh(discGeo, discMat);
+  group.add(disc);
+
+  // Glow point light inside portal
+  const glow = new THREE.PointLight(0xaa00ff, 2.5, 5.0);
+  group.add(glow);
+
+  // Label sprite above portal
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = 'rgba(0,0,0,0)';
+  ctx.fillRect(0, 0, 512, 128);
+  ctx.font = 'bold 44px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = '#cc00ff';
+  ctx.shadowBlur = 18;
+  ctx.fillText('🌀 VIBE JAM 2026', 256, 70);
+  const labelTex = new THREE.CanvasTexture(canvas);
+  const labelMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true, depthWrite: false });
+  const label = new THREE.Sprite(labelMat);
+  label.scale.set(2.8, 0.7, 1);
+  label.position.set(0, 1.55, 0);
+  group.add(label);
+
+  // Position: right wall, mid-height, flush against wall
+  group.position.set(ROOM.width / 2 - 0.2, 2.0, ROOM.playerZ - 2);
+  group.rotation.y = -Math.PI / 2; // face inward
+
+  scene.add(group);
+  return group;
+}
+
+// Animate portal — spin the disc, pulse the glow. Call each frame with elapsed time.
+export function animateVibeJamPortal(portalGroup: THREE.Group, t: number): void {
+  // Spin inner disc
+  const disc = portalGroup.children[1] as THREE.Mesh;
+  if (disc) disc.rotation.z = t * 1.2;
+
+  // Pulse torus emissive
+  const torus = portalGroup.children[0] as THREE.Mesh;
+  if (torus && !Array.isArray(torus.material)) {
+    const mat = torus.material as THREE.MeshLambertMaterial;
+    mat.emissiveIntensity = 0.7 + Math.sin(t * 3) * 0.4;
+  }
+
+  // Pulse glow intensity
+  const glow = portalGroup.children[2] as THREE.PointLight;
+  if (glow) glow.intensity = 2.0 + Math.sin(t * 4) * 1.0;
+}
