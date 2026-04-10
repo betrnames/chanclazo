@@ -590,30 +590,34 @@ export function createMom(): MomState {
   };
 }
 
-// ─── Gold Chancla Mesh — uses logo_chancla.png texture, glows ─────────────────
+// ─── Gold Chancla Mesh — logo_chancla.png as a glowing sprite billboard ────────
 export function createGoldChancla(): THREE.Group {
   const group = new THREE.Group();
 
-  // Load the logo texture — shows the real chancla logo on the sole face
+  // Load logo texture — used as a large flat sprite so it's clearly visible in flight
   const loader = new THREE.TextureLoader();
   const logoTex = loader.load('/logo_chancla.png');
   logoTex.colorSpace = THREE.SRGBColorSpace;
 
-  // Top face (face index 2 on BoxGeometry = +Y) uses the logo texture
-  // All other faces use a plain gold material
-  const goldMat  = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: new THREE.Color(0xAA8800), emissiveIntensity: 0.6 });
-  const logoMat  = new THREE.MeshLambertMaterial({ map: logoTex,    emissive: new THREE.Color(0x886600), emissiveIntensity: 0.4 });
+  // Large flat sprite using the logo — always faces camera (billboard)
+  const spriteMat = new THREE.SpriteMaterial({
+    map: logoTex,
+    color: 0xFFD700,
+    transparent: true,
+    opacity: 1.0,
+    depthWrite: false,
+  });
+  const sprite = new THREE.Sprite(spriteMat);
+  sprite.scale.set(1.4, 1.4, 1.4); // big enough to see clearly mid-flight
+  sprite.name = 'logoSprite';
+  group.add(sprite);
+
+  // Gold sole underneath the sprite for 3D depth
+  const goldMat  = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: new THREE.Color(0xAA8800), emissiveIntensity: 0.7 });
   const strapMat = new THREE.MeshLambertMaterial({ color: 0xFFA500, emissive: new THREE.Color(0x885500), emissiveIntensity: 0.5 });
 
-  // BoxGeometry face order: +X, -X, +Y (top), -Y (bottom), +Z, -Z
-  const soleMats = [goldMat, goldMat, logoMat, goldMat, goldMat, goldMat];
-
-  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 1.05), soleMats);
+  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 1.05), goldMat);
   group.add(sole);
-
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 1.1), goldMat);
-  rim.position.y = -0.04;
-  group.add(rim);
 
   const frontStrap = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.09), strapMat);
   frontStrap.position.set(0, 0.1, -0.18);
@@ -627,16 +631,12 @@ export function createGoldChancla(): THREE.Group {
   rightStrap.position.x = 0.21;
   group.add(rightStrap);
 
-  const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 6), strapMat);
-  peg.position.set(0, 0.12, 0.1);
-  group.add(peg);
-
-  // Gold point-light glow
-  const glow = new THREE.PointLight(0xFFD700, 2.0, 4.0);
+  // Bright gold glow point light
+  const glow = new THREE.PointLight(0xFFD700, 2.5, 5.0);
   glow.name = 'goldGlow';
   group.add(glow);
 
-  group.scale.set(1.6, 1.6, 1.6); // bigger than normal chanclas
+  group.scale.set(1.6, 1.6, 1.6);
   return group;
 }
 
