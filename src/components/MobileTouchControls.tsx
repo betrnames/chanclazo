@@ -58,7 +58,8 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
   }
 
   // Image button style — smash scale on press
-  const imgBtn = (pressed: boolean, active: boolean = true) => ({
+  // colorFilter: CSS filter string to tint button.png to the desired color
+  const imgBtn = (pressed: boolean, colorFilter: string, active: boolean = true) => ({
     width: 70,
     height: 70,
     border: 'none',
@@ -74,12 +75,16 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
     justifyContent: 'center',
     transform: pressed ? 'scale(0.82) translateY(4px)' : 'scale(1) translateY(0)',
     transition: pressed ? 'transform 0.05s ease-in' : 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
-    filter: pressed
-      ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.5)) brightness(0.85)'
-      : active
-        ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.6)) brightness(1)'
-        : 'drop-shadow(0 2px 4px rgba(0,0,0,0.4)) brightness(0.5) saturate(0.3)',
+    filter: !active
+      ? `${colorFilter} brightness(0.45) saturate(0.3) drop-shadow(0 2px 4px rgba(0,0,0,0.4))`
+      : pressed
+        ? `${colorFilter} brightness(0.8) drop-shadow(0 1px 2px rgba(0,0,0,0.5))`
+        : `${colorFilter} drop-shadow(0 4px 10px rgba(0,0,0,0.6))`,
   });
+
+  // CSS filters to tint button.png — no extra images needed
+  const RED_FILTER    = 'hue-rotate(0deg) saturate(3) brightness(1.1)';
+  const YELLOW_FILTER = 'hue-rotate(40deg) saturate(4) brightness(1.15)';
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>
@@ -118,27 +123,27 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
           gap: 10,
         }}>
 
-          {/* JUMP — buttons.png */}
+          {/* JUMP — button.png tinted yellow */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <button
-              style={imgBtn(jumpPressed)}
+              style={imgBtn(jumpPressed, YELLOW_FILTER)}
               onTouchStart={(e) => { e.preventDefault(); touchState.jump = true; setJumpPressed(true); }}
               onTouchEnd={(e)   => { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
               onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}>
-              <img src="/buttons.png" alt="Jump" draggable={false}
+              <img src="/button.png" alt="Jump" draggable={false}
                 style={{ width: 70, height: 70, pointerEvents: 'none', userSelect: 'none' }} />
             </button>
             <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Jump</span>
           </div>
 
-          {/* STRIKE — buttons.png */}
+          {/* STRIKE — button.png tinted red */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <button
-              style={imgBtn(strikePressed, canStrike)}
+              style={imgBtn(strikePressed, RED_FILTER, canStrike)}
               onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); handleStrikeTouch(e); }}
               onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
               onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}>
-              <img src="/buttons.png" alt="Strike" draggable={false}
+              <img src="/button.png" alt="Strike" draggable={false}
                 style={{ width: 70, height: 70, pointerEvents: 'none', userSelect: 'none' }} />
             </button>
             <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Strike</span>
