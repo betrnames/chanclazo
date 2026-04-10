@@ -84,49 +84,27 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>
 
-      {/* LEFT — Compact Joystick */}
+      {/* LEFT — Joystick (image only, no base) */}
       <div style={{ position: 'absolute', left: 18, bottom: 40, pointerEvents: 'auto' }}>
-        {/* Base plate — smaller */}
-        <div style={{
-          width: 86, height: 86,
-          borderRadius: 14,
-          background: 'radial-gradient(circle at 40% 35%, #3a3a3a, #161616)',
-          border: '2px solid #3a3a3a',
-          boxShadow: '0 5px 18px rgba(0,0,0,0.75), inset 0 1px 1px rgba(255,255,255,0.06)',
+        {/* Drag zone — invisible, same size as image */}
+        <div ref={joystickRef} style={{
+          width: 72, height: 72,
+          position: 'relative', touchAction: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          position: 'relative',
         }}>
-          {/* Circular gate groove */}
-          <div style={{
-            width: 60, height: 60, borderRadius: '50%',
-            border: '1.5px solid #2a2a2a',
-            position: 'absolute',
-          }} />
-          {/* Drag zone */}
-          <div ref={joystickRef} style={{
-            width: 60, height: 60, borderRadius: '50%',
-            position: 'absolute', touchAction: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            {/* joystickRed.png knob — animates left/right with drag */}
-            <img
-              src="/joystickRed.png"
-              alt="joystick"
-              draggable={false}
-              style={{
-                width: 52, height: 52,
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                transform: `translate(-50%, -50%) translateX(${knobOffset * 18}px) rotate(${knobOffset * 14}deg)`,
-                transition: knobOffset === 0 ? 'transform 0.15s ease-out' : 'none',
-                zIndex: 2,
-                pointerEvents: 'none',
-                userSelect: 'none',
-                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.7))',
-              }}
-            />
-          </div>
+          <img
+            src="/joystickRed.png"
+            alt="joystick"
+            draggable={false}
+            style={{
+              width: 72, height: 72,
+              transform: `translateX(${knobOffset * 18}px) rotate(${knobOffset * 14}deg)`,
+              transition: knobOffset === 0 ? 'transform 0.15s ease-out' : 'none',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.6))',
+            }}
+          />
         </div>
         <p style={{ textAlign: 'center', fontSize: 8, color: 'rgba(255,255,255,0.28)', marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Move</p>
       </div>
