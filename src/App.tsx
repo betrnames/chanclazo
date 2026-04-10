@@ -411,6 +411,7 @@ export default function App() {
                 <button
                   onClick={loadLeaderboard}
                   className="w-full text-xs font-black text-orange-700 opacity-70 hover:opacity-100 py-1 transition-opacity"
+                  style={{ cursor: 'pointer' }}
                 >
                   View Leaderboard
                 </button>

@@ -29,11 +29,7 @@ export default function LorePage() {
       '@type': 'DefinedTerm',
       name: 'Chanclazo',
       description: 'A sudden, precision-guided sandal or flip flop strike delivered by a Latina mother, abuela, or tía, known for supernatural accuracy and zero warning. Iconic across Latino culture.',
-      inDefinedTermSet: {
-        '@type': 'DefinedTermSet',
-        name: 'Latino Culture Field Guide',
-        url: 'https://chanclazo.com/lore',
-      },
+      inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'Latino Culture Field Guide', url: 'https://chanclazo.com/lore' },
       url: 'https://chanclazo.com/lore',
     });
     document.head.appendChild(script);
@@ -50,14 +46,16 @@ export default function LorePage() {
       {/* Top accent bar */}
       <div style={{ height: '3px', background: 'linear-gradient(90deg, #C2410C, #F97316, #C2410C)' }} />
 
-      {/* Nav */}
-      <nav style={{ padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <a href="/" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.2em', textDecoration: 'none' }}>
-          chanclazo.com
-        </a>
-        <a href="/" aria-label="Play Chanclazo 3D Survival game" style={{ fontSize: '11px', fontWeight: 700, color: '#F97316', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-          Play the Game
-        </a>
+      {/* Nav — aligned to match body max-width */}
+      <nav style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ maxWidth: '560px', margin: '0 auto', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <a href="/" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.2em', textDecoration: 'none' }}>
+            chanclazo.com
+          </a>
+          <a href="/" aria-label="Play Chanclazo 3D Survival game" style={{ fontSize: '11px', fontWeight: 700, color: '#F97316', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+            Play the Game
+          </a>
+        </div>
       </nav>
 
       {/* Main content */}
@@ -125,22 +123,25 @@ export default function LorePage() {
           </cite>
         </blockquote>
 
-        <a href="/" aria-label="Play Chanclazo 3D Survival — free browser game" style={{ display: 'inline-block', fontSize: '12px', fontWeight: 900, color: '#c2410c', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}
+        {/* CTA — Go Back */}
+        <a href="/" aria-label="Go back to Chanclazo game" style={{ display: 'inline-block', fontSize: '12px', fontWeight: 900, color: '#c2410c', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8, cursor: 'pointer' }}
           onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={e => (e.currentTarget.style.opacity = '0.8')}
         >
-          Play Chanclazo →
+          ← Go Back
         </a>
 
       </main>
 
-      {/* Footer */}
-      <footer style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>© 2026 Chanclazo</span>
-        <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer"
-          style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em', textDecoration: 'none' }}>
-          @ChanclaStrike
-        </a>
+      {/* Footer — centered */}
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ maxWidth: '560px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', width: '100%' }}>
+          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>© 2026 Chanclazo</span>
+          <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em', textDecoration: 'none' }}>
+            @ChanclaStrike
+          </a>
+        </div>
       </footer>
     </div>
   );
