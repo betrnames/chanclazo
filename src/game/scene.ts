@@ -590,17 +590,28 @@ export function createMom(): MomState {
   };
 }
 
-// ─── Gold Chancla Mesh (uses logo gold color, glows) ──────────────────────────
+// ─── Gold Chancla Mesh — uses logo_chancla.png texture, glows ─────────────────
 export function createGoldChancla(): THREE.Group {
   const group = new THREE.Group();
 
-  const soleMat  = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: new THREE.Color(0xAA8800), emissiveIntensity: 0.6 });
+  // Load the logo texture — shows the real chancla logo on the sole face
+  const loader = new THREE.TextureLoader();
+  const logoTex = loader.load('/logo_chancla.png');
+  logoTex.colorSpace = THREE.SRGBColorSpace;
+
+  // Top face (face index 2 on BoxGeometry = +Y) uses the logo texture
+  // All other faces use a plain gold material
+  const goldMat  = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: new THREE.Color(0xAA8800), emissiveIntensity: 0.6 });
+  const logoMat  = new THREE.MeshLambertMaterial({ map: logoTex,    emissive: new THREE.Color(0x886600), emissiveIntensity: 0.4 });
   const strapMat = new THREE.MeshLambertMaterial({ color: 0xFFA500, emissive: new THREE.Color(0x885500), emissiveIntensity: 0.5 });
 
-  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 1.05), soleMat);
+  // BoxGeometry face order: +X, -X, +Y (top), -Y (bottom), +Z, -Z
+  const soleMats = [goldMat, goldMat, logoMat, goldMat, goldMat, goldMat];
+
+  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 1.05), soleMats);
   group.add(sole);
 
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 1.1), soleMat);
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 1.1), goldMat);
   rim.position.y = -0.04;
   group.add(rim);
 
@@ -620,12 +631,12 @@ export function createGoldChancla(): THREE.Group {
   peg.position.set(0, 0.12, 0.1);
   group.add(peg);
 
-  // Point light for glow effect
-  const glow = new THREE.PointLight(0xFFD700, 1.5, 3.5);
+  // Gold point-light glow
+  const glow = new THREE.PointLight(0xFFD700, 2.0, 4.0);
   glow.name = 'goldGlow';
   group.add(glow);
 
-  group.scale.set(1.6, 1.6, 1.6); // slightly bigger than normal
+  group.scale.set(1.6, 1.6, 1.6); // bigger than normal chanclas
   return group;
 }
 
