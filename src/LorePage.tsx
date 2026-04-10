@@ -52,15 +52,15 @@ export default function LorePage() {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',
-        opacity: 0.18,
-        mixBlendMode: 'luminosity',
+        opacity: 0.35,
+        mixBlendMode: 'normal',
         pointerEvents: 'none',
       }} />
       <div style={{
         position: 'fixed',
         inset: 0,
         zIndex: 0,
-        background: 'rgba(101, 67, 33, 0.35)',
+        background: 'rgba(17, 13, 7, 0.72)',
         pointerEvents: 'none',
       }} />
 
