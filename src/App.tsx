@@ -12,8 +12,8 @@ import { initAudio } from './game/sound';
 import { createTouchState } from './game/controls';
 import type { TouchInputState } from './game/controls';
 import MobileTouchControls from './components/MobileTouchControls';
-import { submitScore, fetchLeaderboard, pingPresence, leavePresence, fetchGhosts } from './api';
-import type { LeaderboardEntry, GhostRun } from './api';
+import { submitScore, fetchLeaderboard, pingPresence, leavePresence } from './api';
+import type { LeaderboardEntry } from './api';
 import LorePage from './LorePage';
 
 // Route to lore page if on /lore
@@ -63,7 +63,6 @@ export default function App() {
   const [canStrike, setCanStrike] = useState(false);
   const sessionId = useRef<string>(Math.random().toString(36).slice(2));
   const [playerCount, setPlayerCount] = useState(0);
-  const [ghosts, setGhosts] = useState<GhostRun[]>([]);
 
   const [phase, setPhase] = useState<GamePhase>('start');
   const [gender, setGender] = useState<CharacterGender>('boy');
@@ -184,9 +183,7 @@ export default function App() {
 
   // ── Fetch ghosts when a level starts ──────────────────────────────────────
   useEffect(() => {
-    if (phase === 'playing') {
-      fetchGhosts(currentLevel).then(setGhosts);
-    }
+    // ghosts are loaded directly inside engine.ts
   }, [phase, currentLevel]);
 
   // ── Start level ───────────────────────────────────────────────────────────
@@ -998,15 +995,7 @@ function getPopupColor(text: string): string {
   return '#FFFFFF';
 }
 
-function getRankMessage(score: number, lang: Lang): string {
-  const r = getTexts(lang).ui.rank;
-  if (score >= 15000) return r.legend;
-  if (score >= 8000)  return r.expert;
-  if (score >= 4000)  return r.good;
-  if (score >= 1500)  return r.ok;
-  if (score >= 500)   return r.bad;
-  return r.worst;
-}
+
 
 const MOM_QUOTES_EN = [
   '🩴 "The chanclazo: precision-guided since before GPS existed."',

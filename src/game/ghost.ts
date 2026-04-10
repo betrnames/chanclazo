@@ -123,7 +123,7 @@ function interpolateSnapshot(snaps: GhostSnapshot[], elapsed: number): GhostSnap
 
 // ─── Update Ghosts ────────────────────────────────────────────────────────────
 // Call every tick inside engine.ts, passing dt and totalSurvival elapsed time
-export function updateGhosts(ghosts: GhostPlayer[], dt: number, totalSurvival: number): void {
+export function updateGhosts(ghosts: GhostPlayer[], _dt: number, totalSurvival: number): void {
   for (const ghost of ghosts) {
     if (ghost.done) continue;
 

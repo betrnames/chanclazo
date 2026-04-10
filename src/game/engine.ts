@@ -17,8 +17,6 @@ import { submitGhost } from '../api';
 import type { GhostSnapshot } from '../api';
 import { loadGhosts, updateGhosts, destroyGhosts } from './ghost';
 import type { GhostPlayer } from './ghost';
-import { loadGhosts, updateGhosts, destroyGhosts } from './ghost';
-import type { GhostPlayer } from './ghost';
 import { createControls } from './controls';
 import type { TouchInputState } from './controls';
 import {
