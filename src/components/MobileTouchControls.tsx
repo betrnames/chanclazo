@@ -90,7 +90,7 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
         : `${colorFilter} drop-shadow(0 4px 10px rgba(0,0,0,0.5))`,
   });
 
-  const RED_FILTER    = 'saturate(1.3) brightness(1.05)';                          // already red — just boost
+  const NO_FILTER     = '';                                                         // strike uses button.png natural red
   const YELLOW_FILTER = 'hue-rotate(62deg) saturate(2.5) brightness(1.15)';
 
   return (
@@ -149,7 +149,7 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
               onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); handleStrikeTouch(e); }}
               onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
               onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}>
-              <img src="/button.png" alt="Strike" draggable={false} style={imgStyle(RED_FILTER, strikePressed, canStrike)} />
+              <img src="/button.png" alt="Strike" draggable={false} style={imgStyle(NO_FILTER, strikePressed, canStrike)} />
             </button>
             <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Strike</span>
           </div>
