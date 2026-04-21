@@ -541,17 +541,82 @@ function addLevelClutter(scene: THREE.Scene, levelIndex: number) {
   }
 }
 
+// ─── Spritesheet Animator ────────────────────────────────────────────────────
+export interface SpritesheetAnimator {
+  idleTex: THREE.Texture;
+  jumpTex: THREE.Texture;
+  material: THREE.MeshBasicMaterial;
+  currentFrame: number;
+  frameTimer: number;
+  frameDuration: number;
+  cols: number;
+  rows: number;
+}
+
+export function createSpritesheetAnimator(): SpritesheetAnimator {
+  const loader = new THREE.TextureLoader();
+  const cols = 5;
+  const rows = 5;
+
+  function makeSheetTex(path: string): THREE.Texture {
+    const t = loader.load(path);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.repeat.set(1 / cols, 1 / rows);
+    t.offset.set(0, (rows - 1) / rows);
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    return t;
+  }
+
+  const idleTex = makeSheetTex('/player_idle.png');
+  const jumpTex = makeSheetTex('/player_jump.png');
+
+  const material = new THREE.MeshBasicMaterial({
+    map: idleTex,
+    alphaTest: 0.1,
+    transparent: true,
+    side: THREE.FrontSide,
+  });
+
+  return { idleTex, jumpTex, material, currentFrame: 0, frameTimer: 0, frameDuration: 1 / 12, cols, rows };
+}
+
+export function updateSpritesheetAnimator(
+  anim: SpritesheetAnimator,
+  dt: number,
+  isAirborne: boolean,
+  totalFrames = 25
+) {
+  const targetTex = isAirborne ? anim.jumpTex : anim.idleTex;
+  if (anim.material.map !== targetTex) {
+    anim.material.map = targetTex;
+    anim.material.needsUpdate = true;
+    anim.currentFrame = 0;
+    anim.frameTimer = 0;
+  }
+
+  anim.frameTimer += dt;
+  if (anim.frameTimer >= anim.frameDuration) {
+    anim.frameTimer -= anim.frameDuration;
+    anim.currentFrame = (anim.currentFrame + 1) % totalFrames;
+  }
+
+  const col = anim.currentFrame % anim.cols;
+  const row = Math.floor(anim.currentFrame / anim.cols);
+  const tex = anim.material.map!;
+  tex.offset.set(col / anim.cols, (anim.rows - 1 - row) / anim.rows);
+}
+
 // ─── Player Character ──────────────────────────────────────────────────────────
-export function createPlayer(gender: 'boy' | 'girl' = 'boy'): PlayerState {
+export function createPlayer(_gender: 'boy' | 'girl' = 'boy'): PlayerState {
   const group = new THREE.Group();
 
-  const texturePath = gender === 'girl' ? '/girl.png' : '/boy.png';
-  const tex = new THREE.TextureLoader().load(texturePath);
-  const spriteMat = new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: THREE.FrontSide });
-  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.0), spriteMat);
+  const anim = createSpritesheetAnimator();
+  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.0), anim.material);
   sprite.position.set(0, 1.5, 1.5);
   sprite.renderOrder = 2;
   sprite.name = 'playerSprite';
+  sprite.userData.animator = anim;
   group.add(sprite);
 
   group.position.set(0, -1.5, ROOM.playerZ);
