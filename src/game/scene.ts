@@ -608,15 +608,16 @@ export function updateSpritesheetAnimator(
 }
 
 // ─── Player Character ──────────────────────────────────────────────────────────
-export function createPlayer(_gender: 'boy' | 'girl' = 'boy'): PlayerState {
+export function createPlayer(gender: 'boy' | 'girl' = 'boy'): PlayerState {
   const group = new THREE.Group();
 
-  const anim = createSpritesheetAnimator();
-  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.0), anim.material);
+  const texturePath = gender === 'girl' ? '/girl.png' : '/boy.png';
+  const tex = new THREE.TextureLoader().load(texturePath);
+  const spriteMat = new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: THREE.FrontSide });
+  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.0), spriteMat);
   sprite.position.set(0, 1.5, 1.5);
   sprite.renderOrder = 2;
   sprite.name = 'playerSprite';
-  sprite.userData.animator = anim;
   group.add(sprite);
 
   group.position.set(0, -1.5, ROOM.playerZ);
@@ -637,12 +638,12 @@ export function createPlayer(_gender: 'boy' | 'girl' = 'boy'): PlayerState {
 export function createMom(): MomState {
   const group = new THREE.Group();
 
-  const tex = new THREE.TextureLoader().load('/momi.png');
-  const spriteMat = new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: THREE.FrontSide });
-  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 4.0), spriteMat);
+  const anim = createSpritesheetAnimator();
+  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(4.0, 4.0), anim.material);
   sprite.position.set(0, 2.0, 1.5);
   sprite.renderOrder = 2;
   sprite.name = 'momSprite';
+  sprite.userData.animator = anim;
   group.add(sprite);
 
   group.position.set(0, 0.05, ROOM.momZ);

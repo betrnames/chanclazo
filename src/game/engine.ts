@@ -444,6 +444,13 @@ export function createGame(
       mom.group.position.y = 0.05 + Math.sin(survivalTime * 1.8 + 1.0) * 0.022;
     }
 
+    // Animate abuela spritesheet — idle normally, jump sheet during windup/throw
+    const momSprite = mom.group.getObjectByName('momSprite');
+    if (momSprite) {
+      const anim = momSprite.userData.animator as SpritesheetAnimator | undefined;
+      if (anim) updateSpritesheetAnimator(anim, dt, momWindupActive || mom.shakeTimer > 0);
+    }
+
     // ── Camera ────────────────────────────────────────────────────────────
     updateCamera(dt);
 
@@ -543,13 +550,6 @@ export function createGame(
     }
     player.group.position.x = player.x;
     player.group.position.y = player.y;
-
-    // Animate spritesheet — idle on ground, jump sheet while airborne
-    const playerSprite = player.group.getObjectByName('playerSprite');
-    if (playerSprite) {
-      const anim = playerSprite.userData.animator as SpritesheetAnimator | undefined;
-      if (anim) updateSpritesheetAnimator(anim, dt, player.y > 0.05);
-    }
   }
 
   // ─── Camera Update ────────────────────────────────────────────────────────
