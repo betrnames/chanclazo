@@ -638,11 +638,15 @@ export function createPlayerAnimator(gender: 'boy' | 'girl'): PlayerAnimator {
     return t;
   }
 
+  const names = gender === 'girl'
+    ? { idle: 'idle-v1', run: 'run-v1', jump: 'jump-v1', strike: 'strike_back_girl-v5' }
+    : { idle: 'idle-v2', run: 'run-v2', jump: 'jump-v2', strike: 'strike_back-v3' };
+
   const textures: Record<PlayerAnimState, THREE.Texture> = {
-    idle:   makeTex('idle-v2'),
-    run:    makeTex('run-v2'),
-    jump:   makeTex('jump-v2'),
-    strike: makeTex('strike_back-v3'),
+    idle:   makeTex(names.idle),
+    run:    makeTex(names.run),
+    jump:   makeTex(names.jump),
+    strike: makeTex(names.strike),
   };
 
   const material = new THREE.MeshBasicMaterial({
