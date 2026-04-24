@@ -167,25 +167,6 @@ export default function App() {
 
   const getLang = useCallback((): Lang => langRef.current, []);
 
-  // ── Presence heartbeat — ping every 15s, leave on unmount ─────────────────
-  useEffect(() => {
-    const sid = sessionId.current;
-    pingPresence(sid).then(setPlayerCount);
-    const interval = setInterval(() => pingPresence(sid).then(setPlayerCount), 15000);
-    const onUnload = () => leavePresence(sid);
-    window.addEventListener('beforeunload', onUnload);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('beforeunload', onUnload);
-      leavePresence(sid);
-    };
-  }, []);
-
-  // ── Fetch ghosts when a level starts ──────────────────────────────────────
-  useEffect(() => {
-    // ghosts are loaded directly inside engine.ts
-  }, [phase, currentLevel]);
-
   // ── Start level ───────────────────────────────────────────────────────────
   const startLevel = useCallback((level: number) => {
     setCurrentLevel(level);
@@ -436,10 +417,7 @@ export default function App() {
                   </p>
                 )}
 
-                {/* Ghost mode badge */}
-                <p className="text-center text-xs font-bold text-blue-400 opacity-80 tracking-wide">
-                  👻 Ghost Mode — race the shadows of past players
-                </p>
+                {/* Ghost mode badge removed */}
 
                 <button
                   onClick={loadLeaderboard}
