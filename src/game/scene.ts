@@ -607,17 +607,129 @@ export function updateSpritesheetAnimator(
   tex.offset.set(col / anim.cols, (anim.rows - 1 - row) / anim.rows);
 }
 
+// ─── Player Animator ──────────────────────────────────────────────────────────
+export type PlayerAnimState = 'idle' | 'run' | 'jump' | 'strike';
+
+export interface PlayerAnimator {
+  textures: Record<PlayerAnimState, THREE.Texture>;
+  material: THREE.MeshBasicMaterial;
+  state: PlayerAnimState;
+  currentFrame: number;
+  frameTimer: number;
+  frameDuration: number;
+  cols: number;
+  rows: number;
+  strikeTimer: number;   // counts down while strike plays (non-looping)
+  strikeDuration: number;
+}
+
+export function createPlayerAnimator(gender: 'boy' | 'girl'): PlayerAnimator {
+  const loader = new THREE.TextureLoader();
+  const cols = 5, rows = 5;
+  const prefix = gender === 'girl' ? 'girl' : 'boy';
+
+  function makeTex(name: string): THREE.Texture {
+    const t = loader.load(`/${prefix}-${name}.png`);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.repeat.set(1 / cols, 1 / rows);
+    t.offset.set(0, (rows - 1) / rows);
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    return t;
+  }
+
+  const textures: Record<PlayerAnimState, THREE.Texture> = {
+    idle:   makeTex('idle-v2'),
+    run:    makeTex('run-v2'),
+    jump:   makeTex('jump-v2'),
+    strike: makeTex('strike_back-v3'),
+  };
+
+  const material = new THREE.MeshBasicMaterial({
+    map: textures.idle,
+    alphaTest: 0.1,
+    transparent: true,
+    side: THREE.FrontSide,
+  });
+
+  const totalFrames = cols * rows; // 25
+  const fps = 12;
+  const strikeDuration = totalFrames / fps; // ~2.08s, plays once
+
+  return {
+    textures,
+    material,
+    state: 'idle',
+    currentFrame: 0,
+    frameTimer: 0,
+    frameDuration: 1 / fps,
+    cols,
+    rows,
+    strikeTimer: 0,
+    strikeDuration,
+  };
+}
+
+export function updatePlayerAnimator(
+  anim: PlayerAnimator,
+  dt: number,
+  isMoving: boolean,
+  isAirborne: boolean,
+  isStriking: boolean,
+) {
+  // Determine target state — strike takes priority and plays once
+  let targetState: PlayerAnimState;
+  if (anim.strikeTimer > 0) {
+    targetState = 'strike';
+    anim.strikeTimer -= dt;
+  } else if (isStriking) {
+    targetState = 'strike';
+    anim.strikeTimer = anim.strikeDuration;
+  } else if (isAirborne) {
+    targetState = 'jump';
+  } else if (isMoving) {
+    targetState = 'run';
+  } else {
+    targetState = 'idle';
+  }
+
+  // Swap texture sheet on state change
+  if (targetState !== anim.state) {
+    anim.state = targetState;
+    anim.material.map = anim.textures[targetState];
+    anim.material.needsUpdate = true;
+    anim.currentFrame = 0;
+    anim.frameTimer = 0;
+  }
+
+  // Advance frames — strike doesn't loop (stops on last frame)
+  const totalFrames = anim.cols * anim.rows;
+  anim.frameTimer += dt;
+  if (anim.frameTimer >= anim.frameDuration) {
+    anim.frameTimer -= anim.frameDuration;
+    if (anim.state === 'strike') {
+      anim.currentFrame = Math.min(anim.currentFrame + 1, totalFrames - 1);
+    } else {
+      anim.currentFrame = (anim.currentFrame + 1) % totalFrames;
+    }
+  }
+
+  // Apply UV offset for current frame
+  const col = anim.currentFrame % anim.cols;
+  const row = Math.floor(anim.currentFrame / anim.cols);
+  anim.material.map!.offset.set(col / anim.cols, (anim.rows - 1 - row) / anim.rows);
+}
+
 // ─── Player Character ──────────────────────────────────────────────────────────
 export function createPlayer(gender: 'boy' | 'girl' = 'boy'): PlayerState {
   const group = new THREE.Group();
 
-  const texturePath = gender === 'girl' ? '/girl.png' : '/boy.png';
-  const tex = new THREE.TextureLoader().load(texturePath);
-  const spriteMat = new THREE.MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: THREE.FrontSide });
-  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.0), spriteMat);
+  const anim = createPlayerAnimator(gender);
+  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.0), anim.material);
   sprite.position.set(0, 1.5, 1.5);
   sprite.renderOrder = 2;
   sprite.name = 'playerSprite';
+  sprite.userData.playerAnim = anim;
   group.add(sprite);
 
   group.position.set(0, -1.5, ROOM.playerZ);

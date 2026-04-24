@@ -12,7 +12,7 @@ import type {
   CharacterGender,
 } from './types';
 import { LEVELS } from './types';
-import { buildScene, buildCamera, createPlayer, createMom, addFurniture, ROOM, setLevelTheme, createCat, createDog, createPan, createMouse, createVibeJamPortal, animateVibeJamPortal, updateSpritesheetAnimator, type SpritesheetAnimator } from './scene';
+import { buildScene, buildCamera, createPlayer, createMom, addFurniture, ROOM, setLevelTheme, createCat, createDog, createPan, createMouse, createVibeJamPortal, animateVibeJamPortal, updateSpritesheetAnimator, updatePlayerAnimator, type SpritesheetAnimator, type PlayerAnimator } from './scene';
 import { submitGhost } from '../api';
 import type { GhostSnapshot } from '../api';
 import { loadGhosts, updateGhosts, destroyGhosts } from './ghost';
@@ -550,6 +550,18 @@ export function createGame(
     }
     player.group.position.x = player.x;
     player.group.position.y = player.y;
+
+    // ── Player spritesheet animation ──────────────────────────────────────
+    const playerSprite = player.group.getObjectByName('playerSprite');
+    if (playerSprite) {
+      const anim = playerSprite.userData.playerAnim as PlayerAnimator | undefined;
+      if (anim) {
+        const isMoving = input.left || input.right;
+        const isAirborne = player.y > 0.05;
+        const isStriking = input.strikePressed && findStrikeTarget(chanclas, player) !== null;
+        updatePlayerAnimator(anim, dt, isMoving, isAirborne, isStriking);
+      }
+    }
   }
 
   // ─── Camera Update ────────────────────────────────────────────────────────
