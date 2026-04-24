@@ -520,15 +520,11 @@ export function createGame(
   }
 
   // ─── Player Update ────────────────────────────────────────────────────────
-  function updatePlayer(dt: number, input: { left: boolean; right: boolean; jump: boolean; duck: boolean }) {
+  function updatePlayer(dt: number, input: { left: boolean; right: boolean; jump: boolean; duck: boolean; strikePressed?: boolean }) {
     if (input.left) {
       player.x = Math.max(ROOM.playerMinX, player.x - PLAYER_SPEED * dt);
-      player.group.rotation.y = -0.25;
     } else if (input.right) {
       player.x = Math.min(ROOM.playerMaxX, player.x + PLAYER_SPEED * dt);
-      player.group.rotation.y = 0.25;
-    } else {
-      player.group.rotation.y = THREE.MathUtils.lerp(player.group.rotation.y, 0, 0.2);
     }
 
     const isGrounded = player.y <= 0.001;
@@ -552,14 +548,24 @@ export function createGame(
     player.group.position.y = player.y;
 
     // ── Player spritesheet animation ──────────────────────────────────────
-    const playerSprite = player.group.getObjectByName('playerSprite');
+    const playerSprite = player.group.getObjectByName('playerSprite') as THREE.Mesh | undefined;
     if (playerSprite) {
       const anim = playerSprite.userData.playerAnim as PlayerAnimator | undefined;
       if (anim) {
         const isMoving = input.left || input.right;
         const isAirborne = player.y > 0.05;
-        const isStriking = input.strikePressed && findStrikeTarget(chanclas, player) !== null;
+        const isStriking = !!(input.strikePressed && findStrikeTarget(chanclas, player) !== null);
         updatePlayerAnimator(anim, dt, isMoving, isAirborne, isStriking);
+
+        // Flip sprite horizontally based on direction
+        // Strike always faces toward abuela (forward = positive Z = scale.x negative)
+        if (anim.state === 'strike') {
+          playerSprite.scale.x = -Math.abs(playerSprite.scale.x); // face forward
+        } else if (input.left) {
+          playerSprite.scale.x = -Math.abs(playerSprite.scale.x); // face left
+        } else if (input.right) {
+          playerSprite.scale.x = Math.abs(playerSprite.scale.x);  // face right
+        }
       }
     }
   }
