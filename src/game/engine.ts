@@ -283,7 +283,7 @@ export function createGame(
     updatePans(dt);
 
     // ── Chancla update ────────────────────────────────────────────────────
-    updateChanclas(chanclas, dt);
+    updateChanclas(chanclas, dt, camera);
 
     // Detect dodged chanclas
     for (const ch of chanclas) {

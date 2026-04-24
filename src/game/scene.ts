@@ -656,50 +656,42 @@ export function createMom(): MomState {
   };
 }
 
-// ─── Gold Chancla Mesh — logo_chancla.png as a glowing sprite billboard ────────
+// ─── Shared chancla spritesheet texture (loaded once, reused for all chanclas) ─
+let chanclaSheetTex: THREE.Texture | null = null;
+function getChanclaSheetTex(): THREE.Texture {
+  if (!chanclaSheetTex) {
+    chanclaSheetTex = new THREE.TextureLoader().load('/chancla_spin.png');
+    chanclaSheetTex.colorSpace = THREE.SRGBColorSpace;
+    chanclaSheetTex.repeat.set(1 / 5, 1 / 5);
+    chanclaSheetTex.offset.set(0, 4 / 5);
+    chanclaSheetTex.magFilter = THREE.NearestFilter;
+    chanclaSheetTex.minFilter = THREE.NearestFilter;
+  }
+  return chanclaSheetTex;
+}
+
+// ─── Gold Chancla Mesh — spritesheet billboard with gold tint + glow ───────────
 export function createGoldChancla(): THREE.Group {
   const group = new THREE.Group();
 
-  // Load logo texture — used as a large flat sprite so it's clearly visible in flight
-  const loader = new THREE.TextureLoader();
-  const logoTex = loader.load('/logo_chancla.png');
-  logoTex.colorSpace = THREE.SRGBColorSpace;
+  const baseTex = getChanclaSheetTex();
+  const tex = baseTex.clone();
+  tex.needsUpdate = true;
 
-  // Large flat sprite using the logo — always faces camera (billboard)
-  // alphaTest cuts out the white background so only the chancla shows
-  const spriteMat = new THREE.SpriteMaterial({
-    map: logoTex,
-    color: 0xFFFFFF,   // no tint — show natural colors
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    alphaTest: 0.1,
     transparent: true,
-    alphaTest: 0.1,    // discard near-white pixels, removing the white bg
-    opacity: 1.0,
-    depthWrite: false,
+    side: THREE.DoubleSide,
+    color: 0xFFD700, // gold tint
   });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.scale.set(1.4, 1.4, 1.4); // big enough to see clearly mid-flight
-  sprite.name = 'logoSprite';
-  group.add(sprite);
 
-  // Gold sole underneath the sprite for 3D depth
-  const goldMat  = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: new THREE.Color(0xAA8800), emissiveIntensity: 0.7 });
-  const strapMat = new THREE.MeshLambertMaterial({ color: 0xFFA500, emissive: new THREE.Color(0x885500), emissiveIntensity: 0.5 });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.8), mat);
+  mesh.name = 'chanclaSprite';
+  mesh.userData.chanclaAnim = { tex, currentFrame: 0, frameTimer: 0 };
+  group.add(mesh);
 
-  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 1.05), goldMat);
-  group.add(sole);
-
-  const frontStrap = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.09), strapMat);
-  frontStrap.position.set(0, 0.1, -0.18);
-  group.add(frontStrap);
-
-  const leftStrap = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.32), strapMat);
-  leftStrap.position.set(-0.21, 0.1, -0.03);
-  group.add(leftStrap);
-
-  const rightStrap = leftStrap.clone();
-  rightStrap.position.x = 0.21;
-  group.add(rightStrap);
-
-  // Bright gold glow point light
+  // Keep the gold glow point light for visual flair
   const glow = new THREE.PointLight(0xFFD700, 2.5, 5.0);
   glow.name = 'goldGlow';
   group.add(glow);
@@ -708,37 +700,29 @@ export function createGoldChancla(): THREE.Group {
   return group;
 }
 
-// ─── Chancla Mesh ──────────────────────────────────────────────────────────────
+// ─── Chancla Mesh — spritesheet flat sprite with color tint ────────────────────
 export function createChancla(colorIndex: number): THREE.Group {
   const group = new THREE.Group();
-  const soleColor = CHANCLA_COLORS[colorIndex % CHANCLA_COLORS.length];
-  const strapColor = CHANCLA_STRAP_COLORS[colorIndex % CHANCLA_STRAP_COLORS.length];
 
-  const soleMat = new THREE.MeshLambertMaterial({ color: soleColor });
-  const strapMat = new THREE.MeshLambertMaterial({ color: strapColor });
+  const TINTS = [0xFF4444, 0x4488FF, 0x44CC44, 0xFF8C00, 0xCC44CC, 0x00CCCC];
+  const tint = TINTS[colorIndex % TINTS.length];
 
-  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.1, 1.05), soleMat);
-  group.add(sole);
+  const baseTex = getChanclaSheetTex();
+  const tex = baseTex.clone();
+  tex.needsUpdate = true;
 
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 1.1), soleMat);
-  rim.position.y = -0.04;
-  group.add(rim);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    alphaTest: 0.1,
+    transparent: true,
+    side: THREE.DoubleSide,
+    color: tint,
+  });
 
-  const frontStrap = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.09), strapMat);
-  frontStrap.position.set(0, 0.1, -0.18);
-  group.add(frontStrap);
-
-  const leftStrap = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.32), strapMat);
-  leftStrap.position.set(-0.21, 0.1, -0.03);
-  group.add(leftStrap);
-
-  const rightStrap = leftStrap.clone();
-  rightStrap.position.x = 0.21;
-  group.add(rightStrap);
-
-  const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 6), strapMat);
-  peg.position.set(0, 0.12, 0.1);
-  group.add(peg);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), mat);
+  mesh.name = 'chanclaSprite';
+  mesh.userData.chanclaAnim = { tex, currentFrame: 0, frameTimer: 0 };
+  group.add(mesh);
 
   group.scale.set(1.3, 1.3, 1.3);
   return group;

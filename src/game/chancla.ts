@@ -184,7 +184,9 @@ export function spawnChancla(
 }
 
 // ─── Update all chanclas each frame ────────────────────────────────────────────
-export function updateChanclas(chanclas: ChanclaState[], dt: number): void {
+export function updateChanclas(chanclas: ChanclaState[], dt: number, camera?: THREE.Camera): void {
+  const COLS = 5, ROWS = 5, TOTAL = 25, FPS = 14;
+
   for (const ch of chanclas) {
     if (ch.expired) continue;
 
@@ -221,6 +223,23 @@ export function updateChanclas(chanclas: ChanclaState[], dt: number): void {
     const py = THREE.MathUtils.lerp(start.y, end.y, tClamped) + arcBump;
 
     ch.group.position.set(px, Math.max(0.1, py), pz);
+
+    // ── Spritesheet frame animation ───────────────────────────────────────
+    const sprite = ch.group.getObjectByName('chanclaSprite') as THREE.Mesh | undefined;
+    if (sprite) {
+      const anim = sprite.userData.chanclaAnim as { tex: THREE.Texture; currentFrame: number; frameTimer: number };
+      anim.frameTimer += dt;
+      if (anim.frameTimer >= 1 / FPS) {
+        anim.frameTimer -= 1 / FPS;
+        anim.currentFrame = (anim.currentFrame + 1) % TOTAL;
+      }
+      const col = anim.currentFrame % COLS;
+      const row = Math.floor(anim.currentFrame / COLS);
+      anim.tex.offset.set(col / COLS, (ROWS - 1 - row) / ROWS);
+
+      // Billboard: face the camera
+      if (camera) sprite.lookAt(camera.position);
+    }
 
     // ── Spin — rate can be varied by arc phase for realism ────────────────
     // Slightly faster spin at arc peak (angular momentum conservation feel)
