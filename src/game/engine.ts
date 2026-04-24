@@ -528,8 +528,8 @@ export function createGame(
         updatePlayerAnimator(anim, dt, isMoving, isAirborne, isStriking);
 
         // Flip sprite horizontally based on direction
-        // Strike always faces toward abuela (forward = positive Z = scale.x negative)
-        if (anim.state === 'strike') {
+        // Boy strike faces forward toward abuela; girl strike stays in last direction
+        if (anim.state === 'strike' && gender === 'boy') {
           playerSprite.scale.x = -Math.abs(playerSprite.scale.x); // face forward
         } else if (input.left) {
           playerSprite.scale.x = -Math.abs(playerSprite.scale.x); // face left
