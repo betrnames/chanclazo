@@ -179,42 +179,40 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
         )}
       </div>
 
-      {/* RIGHT — Virtual action buttons */}
-      <div style={{ position: 'absolute', right: 18, bottom: 24, pointerEvents: 'auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      {/* RIGHT — Diagonal buttons: Jump top-left, Strike bottom-right ~45deg */}
+      <div style={{ position: 'absolute', right: 18, bottom: 24, pointerEvents: 'auto', width: 155, height: 165 }}>
 
-          {/* JUMP — yellow/amber */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <div
-              style={virtualBtn(jumpPressed, '255,210,80', '255,220,100')}
-              onTouchStart={(e) => { e.preventDefault(); touchState.jump = true; setJumpPressed(true); }}
-              onTouchEnd={(e)   => { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
-              onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
-            >
-              <svg width="22" height="22" viewBox="0 0 22 22" style={{ pointerEvents: 'none' }}>
-                <path d="M11 3L11 14M6 8L11 3L16 8" stroke="rgba(255,220,100,0.95)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                <rect x="5" y="17" width="12" height="2.5" rx="1.25" fill="rgba(255,220,100,0.7)"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,220,100,0.45)' }}>Jump</span>
+        {/* JUMP — upper-left */}
+        <div style={{ position: 'absolute', top: 0, left: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div
+            style={virtualBtn(jumpPressed, '255,210,80', '255,220,100')}
+            onTouchStart={(e) => { e.preventDefault(); touchState.jump = true; setJumpPressed(true); }}
+            onTouchEnd={(e)   => { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
+            onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
+          >
+            <svg width="22" height="22" viewBox="0 0 22 22" style={{ pointerEvents: 'none' }}>
+              <path d="M11 3L11 14M6 8L11 3L16 8" stroke="rgba(255,220,100,0.95)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <rect x="5" y="17" width="12" height="2.5" rx="1.25" fill="rgba(255,220,100,0.7)"/>
+            </svg>
           </div>
-
-          {/* STRIKE — red/coral, dims when on cooldown */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <div
-              style={virtualBtn(strikePressed, '255,70,70', '255,100,80', canStrike)}
-              onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); if (canStrike) handleStrikeTouch(e); }}
-              onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
-              onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}
-            >
-              <svg width="24" height="24" viewBox="0 0 22 22" style={{ pointerEvents: 'none' }}>
-                <path d="M12.5 2L5 12.5H10.5L9.5 20L17 9.5H11.5L12.5 2Z" stroke="rgba(255,80,70,1)" strokeWidth="1.8" strokeLinejoin="round" fill="rgba(255,70,70,0.45)"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,100,80,0.7)' }}>Strike</span>
-          </div>
-
+          <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,220,100,0.45)' }}>Jump</span>
         </div>
+
+        {/* STRIKE — lower-right, darker red */}
+        <div style={{ position: 'absolute', bottom: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div
+            style={virtualBtn(strikePressed, '200,30,30', '220,50,50', canStrike)}
+            onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); if (canStrike) handleStrikeTouch(e); }}
+            onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
+            onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}
+          >
+            <svg width="24" height="24" viewBox="0 0 22 22" style={{ pointerEvents: 'none' }}>
+              <path d="M12.5 2L5 12.5H10.5L9.5 20L17 9.5H11.5L12.5 2Z" stroke="rgba(240,70,70,0.95)" strokeWidth="1.8" strokeLinejoin="round" fill="rgba(180,20,20,0.5)"/>
+            </svg>
+          </div>
+          <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(200,50,50,0.6)' }}>Strike</span>
+        </div>
+
       </div>
 
     </div>
