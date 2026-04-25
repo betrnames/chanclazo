@@ -85,9 +85,9 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
     height: 64,
     borderRadius: '50%',
     background: pressed
-      ? `rgba(${color},0.35)`
-      : `rgba(${color},0.12)`,
-    border: `2px solid rgba(${color},${active ? (pressed ? '0.9' : '0.55') : '0.2'})`,
+      ? `rgba(${color},0.45)`
+      : `rgba(${color},0.18)`,
+    border: `2px solid rgba(${color},${active ? (pressed ? '1' : '0.75') : '0.2'})`,
     boxShadow: active
       ? pressed
         ? `0 0 0 4px rgba(${color},0.12), 0 0 14px 3px rgba(${glowColor},0.35)`
@@ -120,7 +120,7 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
         {!stickVisible && (
           <div style={{
             position: 'absolute',
-            left: 52, bottom: 52,
+            left: 28, bottom: 100,
             width: 80, height: 80,
             borderRadius: '50%',
             border: '1.5px solid rgba(255,255,255,0.12)',
@@ -202,16 +202,16 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
           {/* STRIKE — red/coral, dims when on cooldown */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             <div
-              style={virtualBtn(strikePressed, '255,90,90', '255,120,100', canStrike)}
+              style={virtualBtn(strikePressed, '255,70,70', '255,100,80', canStrike)}
               onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); if (canStrike) handleStrikeTouch(e); }}
               onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
               onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}
             >
-              <svg width="22" height="22" viewBox="0 0 22 22" style={{ pointerEvents: 'none' }}>
-                <path d="M12.5 2L5 12.5H10.5L9.5 20L17 9.5H11.5L12.5 2Z" stroke="rgba(255,100,90,0.95)" strokeWidth="1.8" strokeLinejoin="round" fill="rgba(255,90,90,0.25)"/>
+              <svg width="24" height="24" viewBox="0 0 22 22" style={{ pointerEvents: 'none' }}>
+                <path d="M12.5 2L5 12.5H10.5L9.5 20L17 9.5H11.5L12.5 2Z" stroke="rgba(255,80,70,1)" strokeWidth="1.8" strokeLinejoin="round" fill="rgba(255,70,70,0.45)"/>
               </svg>
             </div>
-            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,100,90,0.45)' }}>Strike</span>
+            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,100,80,0.7)' }}>Strike</span>
           </div>
 
         </div>
