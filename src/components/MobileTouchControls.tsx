@@ -116,6 +116,32 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
         width: '45%', height: '55%',
         pointerEvents: 'auto', touchAction: 'none',
       }}>
+        {/* Ghost hint — always visible so player knows where to touch */}
+        {!stickVisible && (
+          <div style={{
+            position: 'absolute',
+            left: 52, bottom: 52,
+            width: 80, height: 80,
+            borderRadius: '50%',
+            border: '1.5px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 0 0 3px rgba(255,255,255,0.04)',
+            pointerEvents: 'none',
+          }}>
+            <div style={{
+              position: 'absolute', inset: 10,
+              borderRadius: '50%',
+              border: '1px solid rgba(255,255,255,0.07)',
+            }}/>
+            {/* Tiny center dot */}
+            <div style={{
+              position: 'absolute', top: '50%', left: '50%',
+              transform: 'translate(-50%,-50%)',
+              width: 8, height: 8, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.12)',
+            }}/>
+          </div>
+        )}
+
         {stickVisible && (
           <>
             {/* Outer ring — layered borders + subtle glow */}
@@ -129,7 +155,6 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
               boxShadow: '0 0 0 4px rgba(255,255,255,0.07), 0 0 18px 4px rgba(180,210,255,0.18)',
               pointerEvents: 'none',
             }}>
-              {/* Inner decorative ring */}
               <div style={{
                 position: 'absolute', inset: 8,
                 borderRadius: '50%',
@@ -137,7 +162,7 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
               }}/>
             </div>
 
-            {/* Knob — inner thumb circle */}
+            {/* Knob */}
             <div style={{
               position: 'absolute',
               left: stickBase.x - 22 + knobPos.x,
@@ -155,10 +180,10 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
       </div>
 
       {/* RIGHT — Virtual action buttons */}
-      <div style={{ position: 'absolute', right: 18, bottom: 70, pointerEvents: 'auto' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+      <div style={{ position: 'absolute', right: 18, bottom: 24, pointerEvents: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
 
-          {/* JUMP — yellow/amber tones */}
+          {/* JUMP — yellow/amber */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             <div
               style={virtualBtn(jumpPressed, '255,210,80', '255,220,100')}
@@ -174,11 +199,11 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
             <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,220,100,0.45)' }}>Jump</span>
           </div>
 
-          {/* STRIKE — red/coral tones, dims when inactive */}
+          {/* STRIKE — red/coral, dims when on cooldown */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             <div
               style={virtualBtn(strikePressed, '255,90,90', '255,120,100', canStrike)}
-              onTouchStart={(e) => { e.preventDefault(); if (!canStrike) return; setStrikePressed(true); handleStrikeTouch(e); }}
+              onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); if (canStrike) handleStrikeTouch(e); }}
               onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
               onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}
             >
