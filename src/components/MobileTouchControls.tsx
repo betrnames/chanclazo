@@ -7,37 +7,38 @@ interface Props {
   onStrike: () => void;
 }
 
-const leftStartX = { current: 0 };
-
 export default function MobileTouchControls({ touchState, canStrike, onStrike }: Props) {
   const joystickRef = useRef<HTMLDivElement>(null);
-  const [knobOffset, setKnobOffset]     = useState(0);
+  const [dpadActive, setDpadActive] = useState<'left'|'right'|'up'|'down'|null>(null);
   const [jumpPressed,   setJumpPressed]   = useState(false);
   const [strikePressed, setStrikePressed] = useState(false);
 
   useEffect(() => {
     const el = joystickRef.current;
     if (!el) return;
-    const DEAD = 14;
-    const MAX  = 32;
-    const onStart = (e: TouchEvent) => {
-      e.preventDefault();
-      leftStartX.current = e.changedTouches[0].clientX;
-      setKnobOffset(0);
+
+    const getDir = (e: TouchEvent): 'left'|'right'|'up'|'down'|null => {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top  + rect.height / 2;
+      const dx = e.changedTouches[0].clientX - cx;
+      const dy = e.changedTouches[0].clientY - cy;
+      if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return null;
+      return Math.abs(dx) >= Math.abs(dy)
+        ? (dx < 0 ? 'left' : 'right')
+        : (dy < 0 ? 'up'   : 'down');
     };
-    const onMove = (e: TouchEvent) => {
-      e.preventDefault();
-      const delta = e.changedTouches[0].clientX - leftStartX.current;
-      const clamped = Math.max(-MAX, Math.min(MAX, delta));
-      setKnobOffset(clamped / MAX);
-      touchState.left  = delta < -DEAD;
-      touchState.right = delta > DEAD;
+
+    const applyDir = (dir: 'left'|'right'|'up'|'down'|null) => {
+      touchState.left  = dir === 'left';
+      touchState.right = dir === 'right';
+      setDpadActive(dir);
     };
-    const onEnd = (e: TouchEvent) => {
-      e.preventDefault();
-      touchState.left = touchState.right = false;
-      setKnobOffset(0);
-    };
+
+    const onStart = (e: TouchEvent) => { e.preventDefault(); applyDir(getDir(e)); };
+    const onMove  = (e: TouchEvent) => { e.preventDefault(); applyDir(getDir(e)); };
+    const onEnd   = (e: TouchEvent) => { e.preventDefault(); applyDir(null); };
+
     el.addEventListener('touchstart',  onStart as EventListener, { passive: false });
     el.addEventListener('touchmove',   onMove  as EventListener, { passive: false });
     el.addEventListener('touchend',    onEnd   as EventListener, { passive: false });
@@ -97,27 +98,63 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>
 
-      {/* LEFT — Joystick (image only, no base) */}
+      {/* LEFT — CSS D-Pad */}
       <div style={{ position: 'absolute', left: 18, bottom: 70, pointerEvents: 'auto' }}>
-        {/* Drag zone — invisible, same size as image */}
         <div ref={joystickRef} style={{
-          width: 72, height: 72,
+          width: 96, height: 96,
           position: 'relative', touchAction: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          borderRadius: '50%',
+          background: 'rgba(0,0,0,0.35)',
+          border: '1.5px solid rgba(255,255,255,0.15)',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
         }}>
-          <img
-            src="/joystickRed.png"
-            alt="joystick"
-            draggable={false}
-            style={{
-              width: 72, height: 72,
-              transform: `translateX(${knobOffset * 18}px) rotate(${knobOffset * 14}deg)`,
-              transition: knobOffset === 0 ? 'transform 0.15s ease-out' : 'none',
-              pointerEvents: 'none',
-              userSelect: 'none',
-              filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.6))',
-            }}
-          />
+          {/* UP */}
+          <div style={{
+            position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)',
+            width: 32, height: 32, borderRadius: 7,
+            background: dpadActive === 'up' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.14)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.07s',
+          }}>
+            <svg width="13" height="11" viewBox="0 0 13 11"><path d="M6.5 1L12 10H1Z" fill="rgba(255,255,255,0.88)"/></svg>
+          </div>
+          {/* DOWN */}
+          <div style={{
+            position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
+            width: 32, height: 32, borderRadius: 7,
+            background: dpadActive === 'down' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.14)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.07s',
+          }}>
+            <svg width="13" height="11" viewBox="0 0 13 11"><path d="M6.5 10L1 1H12Z" fill="rgba(255,255,255,0.88)"/></svg>
+          </div>
+          {/* LEFT */}
+          <div style={{
+            position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)',
+            width: 32, height: 32, borderRadius: 7,
+            background: dpadActive === 'left' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.14)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.07s',
+          }}>
+            <svg width="11" height="13" viewBox="0 0 11 13"><path d="M1 6.5L10 1V12Z" fill="rgba(255,255,255,0.88)"/></svg>
+          </div>
+          {/* RIGHT */}
+          <div style={{
+            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+            width: 32, height: 32, borderRadius: 7,
+            background: dpadActive === 'right' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.14)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.07s',
+          }}>
+            <svg width="11" height="13" viewBox="0 0 11 13"><path d="M10 6.5L1 1V12Z" fill="rgba(255,255,255,0.88)"/></svg>
+          </div>
+          {/* CENTER circle */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            width: 28, height: 28, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.12)',
+            border: '1.5px solid rgba(255,255,255,0.25)',
+          }}/>
         </div>
         <p style={{ textAlign: 'center', fontSize: 8, color: 'rgba(255,255,255,0.28)', marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Move</p>
       </div>
