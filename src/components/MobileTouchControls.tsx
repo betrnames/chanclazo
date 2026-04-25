@@ -79,42 +79,33 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
     onStrike();
   }
 
-  // Wrapper style — handles only the press/bounce animation, no color filter here
-  const btnWrapper = (pressed: boolean) => ({
-    width: 70,
-    height: 70,
-    border: 'none',
-    outline: 'none',
-    background: 'none',
-    padding: 0,
+  // CSS virtual button — layered border + glow to match thumbstick
+  const virtualBtn = (pressed: boolean, color: string, glowColor: string, active: boolean = true): React.CSSProperties => ({
+    width: 64,
+    height: 64,
+    borderRadius: '50%',
+    background: pressed
+      ? `rgba(${color},0.35)`
+      : `rgba(${color},0.12)`,
+    border: `2px solid rgba(${color},${active ? (pressed ? '0.9' : '0.55') : '0.2'})`,
+    boxShadow: active
+      ? pressed
+        ? `0 0 0 4px rgba(${color},0.12), 0 0 14px 3px rgba(${glowColor},0.35)`
+        : `0 0 0 4px rgba(${color},0.07), 0 0 18px 4px rgba(${glowColor},0.2)`
+      : 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     touchAction: 'none' as const,
     WebkitTapHighlightColor: 'transparent',
     cursor: 'pointer',
     userSelect: 'none' as const,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: pressed ? 'scale(0.82) translateY(4px)' : 'scale(1) translateY(0)',
-    transition: pressed ? 'transform 0.05s ease-in' : 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+    transform: pressed ? 'scale(0.88)' : 'scale(1)',
+    transition: pressed
+      ? 'transform 0.05s ease-in, background 0.05s, box-shadow 0.05s'
+      : 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), background 0.12s, box-shadow 0.12s',
+    opacity: active ? 1 : 0.35,
   });
-
-  const imgStyle = (colorFilter: string, pressed: boolean, active: boolean = true) => {
-    const base = colorFilter ? `${colorFilter} ` : '';
-    return {
-      width: 70,
-      height: 70,
-      pointerEvents: 'none' as const,
-      userSelect: 'none' as const,
-      filter: !active
-        ? `${base}brightness(0.4) saturate(0.2) drop-shadow(0 2px 4px rgba(0,0,0,0.4))`
-        : pressed
-          ? `${base}brightness(0.75) drop-shadow(0 1px 3px rgba(0,0,0,0.5))`
-          : `${base}drop-shadow(0 4px 10px rgba(0,0,0,0.5))`,
-    };
-  };
-
-  const NO_FILTER     = '';
-  const YELLOW_FILTER = 'sepia(1) saturate(4) hue-rotate(5deg) brightness(1.2)';
 
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>
@@ -163,40 +154,40 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
         )}
       </div>
 
-      {/* RIGHT — 3 Arcade Buttons vertical stack */}
+      {/* RIGHT — Virtual action buttons */}
       <div style={{ position: 'absolute', right: 18, bottom: 70, pointerEvents: 'auto' }}>
-        {/* Floating buttons — no panel */}
-        <div style={{
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'space-evenly',
-          gap: 10,
-        }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
 
-          {/* JUMP — yellow */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <button
-              style={btnWrapper(jumpPressed)}
+          {/* JUMP — yellow/amber tones */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div
+              style={virtualBtn(jumpPressed, '255,210,80', '255,220,100')}
               onTouchStart={(e) => { e.preventDefault(); touchState.jump = true; setJumpPressed(true); }}
               onTouchEnd={(e)   => { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
-              onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}>
-              <img src="/button.png" alt="Jump" draggable={false} style={imgStyle(YELLOW_FILTER, jumpPressed)} />
-            </button>
-            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Jump</span>
+              onTouchCancel={(e)=> { e.preventDefault(); touchState.jump = false; setJumpPressed(false); }}
+            >
+              <svg width="22" height="22" viewBox="0 0 22 22" style={{ pointerEvents: 'none' }}>
+                <path d="M11 3L11 14M6 8L11 3L16 8" stroke="rgba(255,220,100,0.95)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                <rect x="5" y="17" width="12" height="2.5" rx="1.25" fill="rgba(255,220,100,0.7)"/>
+              </svg>
+            </div>
+            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,220,100,0.45)' }}>Jump</span>
           </div>
 
-          {/* STRIKE — red */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <button
-              style={btnWrapper(strikePressed)}
-              onTouchStart={(e) => { e.preventDefault(); setStrikePressed(true); handleStrikeTouch(e); }}
+          {/* STRIKE — red/coral tones, dims when inactive */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div
+              style={virtualBtn(strikePressed, '255,90,90', '255,120,100', canStrike)}
+              onTouchStart={(e) => { e.preventDefault(); if (!canStrike) return; setStrikePressed(true); handleStrikeTouch(e); }}
               onTouchEnd={(e)   => { e.preventDefault(); setStrikePressed(false); }}
-              onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}>
-              <img src="/button.png" alt="Strike" draggable={false} style={imgStyle(NO_FILTER, strikePressed, canStrike)} />
-            </button>
-            <span style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Strike</span>
+              onTouchCancel={(e)=> { e.preventDefault(); setStrikePressed(false); }}
+            >
+              <svg width="22" height="22" viewBox="0 0 22 22" style={{ pointerEvents: 'none' }}>
+                <path d="M12.5 2L5 12.5H10.5L9.5 20L17 9.5H11.5L12.5 2Z" stroke="rgba(255,100,90,0.95)" strokeWidth="1.8" strokeLinejoin="round" fill="rgba(255,90,90,0.25)"/>
+              </svg>
+            </div>
+            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,100,90,0.45)' }}>Strike</span>
           </div>
-
-
 
         </div>
       </div>
