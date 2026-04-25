@@ -8,36 +8,53 @@ interface Props {
 }
 
 export default function MobileTouchControls({ touchState, canStrike, onStrike }: Props) {
-  const joystickRef = useRef<HTMLDivElement>(null);
-  const [dpadActive, setDpadActive] = useState<'left'|'right'|'up'|'down'|null>(null);
+  const zoneRef   = useRef<HTMLDivElement>(null);
+  const [stickVisible, setStickVisible] = useState(false);
+  const [stickBase,    setStickBase]    = useState({ x: 0, y: 0 });
+  const [knobPos,      setKnobPos]      = useState({ x: 0, y: 0 });
   const [jumpPressed,   setJumpPressed]   = useState(false);
   const [strikePressed, setStrikePressed] = useState(false);
 
+  const STICK_MAX  = 36; // max knob travel in px
+  const DEAD       = 10; // dead zone
+
   useEffect(() => {
-    const el = joystickRef.current;
+    const el = zoneRef.current;
     if (!el) return;
 
-    const getDir = (e: TouchEvent): 'left'|'right'|'up'|'down'|null => {
+    const onStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
       const rect = el.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top  + rect.height / 2;
-      const dx = e.changedTouches[0].clientX - cx;
-      const dy = e.changedTouches[0].clientY - cy;
-      if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return null;
-      return Math.abs(dx) >= Math.abs(dy)
-        ? (dx < 0 ? 'left' : 'right')
-        : (dy < 0 ? 'up'   : 'down');
+      setStickBase({ x: t.clientX - rect.left, y: t.clientY - rect.top });
+      setKnobPos({ x: 0, y: 0 });
+      setStickVisible(true);
     };
 
-    const applyDir = (dir: 'left'|'right'|'up'|'down'|null) => {
-      touchState.left  = dir === 'left';
-      touchState.right = dir === 'right';
-      setDpadActive(dir);
+    const onMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const t = e.changedTouches[0];
+      const rect = el.getBoundingClientRect();
+      const bx = stickBaseRef.current.x + rect.left;
+      const by = stickBaseRef.current.y + rect.top;
+      const dx = t.clientX - bx;
+      const dy = t.clientY - by;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const clamped = Math.min(dist, STICK_MAX);
+      const angle = Math.atan2(dy, dx);
+      const kx = Math.cos(angle) * clamped;
+      const ky = Math.sin(angle) * clamped;
+      setKnobPos({ x: kx, y: ky });
+      touchState.left  = dx < -DEAD;
+      touchState.right = dx > DEAD;
     };
 
-    const onStart = (e: TouchEvent) => { e.preventDefault(); applyDir(getDir(e)); };
-    const onMove  = (e: TouchEvent) => { e.preventDefault(); applyDir(getDir(e)); };
-    const onEnd   = (e: TouchEvent) => { e.preventDefault(); applyDir(null); };
+    const onEnd = (e: TouchEvent) => {
+      e.preventDefault();
+      setStickVisible(false);
+      setKnobPos({ x: 0, y: 0 });
+      touchState.left = touchState.right = false;
+    };
 
     el.addEventListener('touchstart',  onStart as EventListener, { passive: false });
     el.addEventListener('touchmove',   onMove  as EventListener, { passive: false });
@@ -50,6 +67,10 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
       el.removeEventListener('touchcancel', onEnd   as EventListener);
     };
   }, [touchState]);
+
+  // Ref to keep stickBase accessible inside closure without re-binding
+  const stickBaseRef = useRef({ x: 0, y: 0 });
+  useEffect(() => { stickBaseRef.current = stickBase; }, [stickBase]);
 
   function handleStrikeTouch(e: React.TouchEvent) {
     e.preventDefault();
@@ -98,65 +119,48 @@ export default function MobileTouchControls({ touchState, canStrike, onStrike }:
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', userSelect: 'none', zIndex: 20 }} aria-hidden>
 
-      {/* LEFT — CSS D-Pad */}
-      <div style={{ position: 'absolute', left: 18, bottom: 70, pointerEvents: 'auto' }}>
-        <div ref={joystickRef} style={{
-          width: 96, height: 96,
-          position: 'relative', touchAction: 'none',
-          borderRadius: '50%',
-          background: 'rgba(0,0,0,0.35)',
-          border: '1.5px solid rgba(255,255,255,0.15)',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
-        }}>
-          {/* UP */}
-          <div style={{
-            position: 'absolute', top: 6, left: '50%', transform: 'translateX(-50%)',
-            width: 32, height: 32, borderRadius: 7,
-            background: dpadActive === 'up' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.14)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.07s',
-          }}>
-            <svg width="13" height="11" viewBox="0 0 13 11"><path d="M6.5 1L12 10H1Z" fill="rgba(255,255,255,0.88)"/></svg>
-          </div>
-          {/* DOWN */}
-          <div style={{
-            position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
-            width: 32, height: 32, borderRadius: 7,
-            background: dpadActive === 'down' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.14)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.07s',
-          }}>
-            <svg width="13" height="11" viewBox="0 0 13 11"><path d="M6.5 10L1 1H12Z" fill="rgba(255,255,255,0.88)"/></svg>
-          </div>
-          {/* LEFT */}
-          <div style={{
-            position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)',
-            width: 32, height: 32, borderRadius: 7,
-            background: dpadActive === 'left' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.14)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.07s',
-          }}>
-            <svg width="11" height="13" viewBox="0 0 11 13"><path d="M1 6.5L10 1V12Z" fill="rgba(255,255,255,0.88)"/></svg>
-          </div>
-          {/* RIGHT */}
-          <div style={{
-            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-            width: 32, height: 32, borderRadius: 7,
-            background: dpadActive === 'right' ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.14)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.07s',
-          }}>
-            <svg width="11" height="13" viewBox="0 0 11 13"><path d="M10 6.5L1 1V12Z" fill="rgba(255,255,255,0.88)"/></svg>
-          </div>
-          {/* CENTER circle */}
-          <div style={{
-            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-            width: 28, height: 28, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.12)',
-            border: '1.5px solid rgba(255,255,255,0.25)',
-          }}/>
-        </div>
-        <p style={{ textAlign: 'center', fontSize: 8, color: 'rgba(255,255,255,0.28)', marginTop: 3, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Move</p>
+      {/* LEFT — Virtual Thumbstick zone */}
+      <div ref={zoneRef} style={{
+        position: 'absolute', left: 0, bottom: 0,
+        width: '45%', height: '55%',
+        pointerEvents: 'auto', touchAction: 'none',
+      }}>
+        {stickVisible && (
+          <>
+            {/* Outer ring — layered borders + subtle glow */}
+            <div style={{
+              position: 'absolute',
+              left: stickBase.x - 52, top: stickBase.y - 52,
+              width: 104, height: 104,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.04)',
+              border: '2px solid rgba(255,255,255,0.28)',
+              boxShadow: '0 0 0 4px rgba(255,255,255,0.07), 0 0 18px 4px rgba(180,210,255,0.18)',
+              pointerEvents: 'none',
+            }}>
+              {/* Inner decorative ring */}
+              <div style={{
+                position: 'absolute', inset: 8,
+                borderRadius: '50%',
+                border: '1px solid rgba(255,255,255,0.12)',
+              }}/>
+            </div>
+
+            {/* Knob — inner thumb circle */}
+            <div style={{
+              position: 'absolute',
+              left: stickBase.x - 22 + knobPos.x,
+              top:  stickBase.y - 22 + knobPos.y,
+              width: 44, height: 44,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.22)',
+              border: '2px solid rgba(255,255,255,0.55)',
+              boxShadow: '0 0 0 3px rgba(255,255,255,0.08), 0 0 12px 2px rgba(180,210,255,0.25)',
+              pointerEvents: 'none',
+              transition: 'none',
+            }}/>
+          </>
+        )}
       </div>
 
       {/* RIGHT — 3 Arcade Buttons vertical stack */}
