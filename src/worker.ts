@@ -4,6 +4,7 @@
 
 export interface Env {
   DB: D1Database;
+  ASSETS: Fetcher;
 }
 
 const CORS_HEADERS = {
@@ -118,8 +119,8 @@ export default {
         return json({ ok: true });
       }
 
-      // ── Fallback: let assets handle it ──────────────────────────────────
-      return new Response(null, { status: 404, headers: CORS_HEADERS });
+      // ── Fallback: pass through to static assets ──────────────────────────
+      return env.ASSETS.fetch(request);
 
     } catch (err) {
       console.error('Worker error:', err);
