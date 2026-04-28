@@ -142,12 +142,6 @@ export function createGame(
   let rafId = 0;
   let strikeQueued = false;
   let shakeIntensity = 0;
-  // ── Juice state ──────────────────────────────────────────────────────────
-  let hitFreezeTimer = 0;        // brief time-freeze on hit (seconds)
-  let nearMissSlowTimer = 0;     // brief slow-mo on dodge (seconds)
-  let timeScale = 1.0;           // effective time multiplier
-  let landSquashTimer = 0;       // ground-land squash animation
-  let wasAirborne = false;       // track landing frame
   let momWindupTimer = 0;
   let momWindupActive = false;
   const CAT_DELAY = 20; // seconds before cat/dog appears
@@ -185,19 +179,7 @@ export function createGame(
     rafId = requestAnimationFrame(tick);
 
     const rawDt = clock.getDelta();
-    let dt = Math.min(rawDt, 0.05);
-
-    // ── Juice: hit freeze + near-miss slow-mo ─────────────────────────────
-    if (hitFreezeTimer > 0) {
-      hitFreezeTimer -= rawDt;
-      timeScale = 0.05; // near-stop freeze frame
-    } else if (nearMissSlowTimer > 0) {
-      nearMissSlowTimer -= rawDt;
-      timeScale = 0.35; // dramatic slow-mo
-    } else {
-      timeScale = 1.0;
-    }
-    dt *= timeScale;
+    const dt = Math.min(rawDt, 0.05);
 
     survivalTime += dt;
     totalSurvival += dt;
@@ -293,13 +275,6 @@ export function createGame(
           playDodge();
           const texts = getTexts(callbacks.getLang());
           callbacks.onPopup(pickRandom(texts.dodge));
-
-          // Near-miss detection: was the chancla close to the player?
-          const closeness = Math.abs(ch.targetPos.x - player.x);
-          if (closeness < 1.2) {
-            nearMissSlowTimer = 0.18; // brief dramatic slow-mo
-            shakeIntensity = Math.max(shakeIntensity, 0.08); // tiny shake
-          }
         }
       }
     }
@@ -365,7 +340,6 @@ export function createGame(
         comboTimer = 3.0;
         score += SCORE_STRIKE;
         shakeIntensity = 0.22;
-        hitFreezeTimer = 0.06; // tiny freeze-frame on strike for punch feel
 
         playStrike();
 
@@ -546,25 +520,7 @@ export function createGame(
     player.y += player.vy * dt;
     if (player.y < FLOOR_Y) { player.y = FLOOR_Y; player.vy = 0; }
 
-    // ── Juice: landing squash ─────────────────────────────────────────────
-    const isAirborneNow = player.y > 0.05;
-    if (wasAirborne && !isAirborneNow) {
-      // Just landed — trigger squash
-      landSquashTimer = 0.15;
-      // Small dust burst at feet
-      const dustPos = new THREE.Vector3(player.x, 0.05, ROOM.playerZ);
-      particles.push(...spawnBurst(scene, dustPos, 4, [0xD4A574, 0xC9956B, 0xBB8855], 1.5, 0.3));
-    }
-    wasAirborne = isAirborneNow;
-
-    if (landSquashTimer > 0) {
-      landSquashTimer -= rawDt;
-      const squashProgress = landSquashTimer / 0.15; // 1→0
-      const squashY = 1.0 - squashProgress * 0.25;   // dips to 0.75 then back
-      const squashX = 1.0 + squashProgress * 0.15;   // widens to 1.15 then back
-      player.group.scale.y = THREE.MathUtils.lerp(player.group.scale.y, squashY, 0.5);
-      player.group.scale.x = THREE.MathUtils.lerp(player.group.scale.x, squashX, 0.5);
-    } else if (isAirborneNow) {
+    if (player.y > 0.05) {
       const stretchFactor = 1.0 + Math.abs(player.vy) * 0.015;
       player.group.scale.x = THREE.MathUtils.lerp(player.group.scale.x, 1 / stretchFactor, 0.3);
     } else {
@@ -633,7 +589,6 @@ export function createGame(
     combo = 0;
     comboTimer = 0;
     shakeIntensity = 0.45;
-    hitFreezeTimer = 0.12; // brief freeze-frame on hit for impact feel
 
     playHit();
 
