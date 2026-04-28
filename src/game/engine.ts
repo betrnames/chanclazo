@@ -47,6 +47,9 @@ import {
   playGameOver,
   playShield,
   playCombo,
+  startMusic,
+  stopMusic,
+  setMusicIntensity,
 } from './sound';
 
 // ─── Tunables ─────────────────────────────────────────────────────────────────
@@ -206,6 +209,8 @@ export function createGame(
     if (survivalTime >= nextDifficultyTime) {
       difficulty++;
       nextDifficultyTime += 15;
+      // Ramp music intensity with difficulty (capped at 5)
+      setMusicIntensity(Math.min(5, 1 + currentLevelIndex + Math.floor(difficulty / 2)));
     }
 
     // ── Level completion check ────────────────────────────────────────────
@@ -215,6 +220,7 @@ export function createGame(
       const timeBonus = Math.floor((levelConfig.surviveSecs - survivalTime + levelConfig.surviveSecs) * 0 + 500);
       score += timeBonus;
       running = false;
+      stopMusic();
       cancelAnimationFrame(rafId);
 
       if (currentLevelIndex >= LEVELS.length - 1) {
@@ -587,6 +593,7 @@ export function createGame(
     callbacks.onPopup(pickRandom(texts.hit));
 
     if (health <= 0) {
+      stopMusic();
       playGameOver();
       running = false;
       cancelAnimationFrame(rafId);
@@ -739,6 +746,8 @@ export function createGame(
   // ─── Start ────────────────────────────────────────────────────────────────
   function start() {
     initAudio();
+    startMusic();
+    setMusicIntensity(1 + currentLevelIndex); // level 1=1, level 2=2, etc.
     clock.start();
     camTarget.set(0, 5.5, ROOM.playerZ + 7.5);
     camLookTarget.set(0, 1.2, ROOM.playerZ - 3);
@@ -749,6 +758,7 @@ export function createGame(
   // ─── Destroy ──────────────────────────────────────────────────────────────
   function destroy() {
     running = false;
+    stopMusic();
     cancelAnimationFrame(rafId);
     controls.destroy();
     window.removeEventListener('resize', onResize);

@@ -208,3 +208,255 @@ export function playCombo(comboCount: number): void {
   osc(freq, 'sine', t, 0.12, 0.35, freq * 1.5);
   osc(freq * 1.5, 'triangle', t + 0.03, 0.10, 0.2);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── BACKGROUND MUSIC ENGINE ─────────────────────────────────────────────────
+// Procedural Latin-flavored loop: reggaeton-ish dembow beat, syncopated bass,
+// melodic hooks, and a cumbia-style güira shimmer. Intensity scales 1–5.
+// Zero files — pure Web Audio synthesis.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let musicPlaying = false;
+let musicTimer: ReturnType<typeof setTimeout> | null = null;
+let musicIntensity = 1; // 1–5, set externally
+let musicBPM = 95;
+let loopCount = 0;
+
+// ─── Note helpers ─────────────────────────────────────────────────────────────
+const NOTE = (semi: number) => 110 * Math.pow(2, semi / 12); // A2 = 110 Hz base
+
+// Reggaeton / Latin scale — A minor pentatonic + blues note
+// A2 C3 D3 Eb3 E3 G3 A3 C4 D4 E4 G4 A4
+const BASS_NOTES = [NOTE(0), NOTE(3), NOTE(5), NOTE(7), NOTE(10), NOTE(12)]; // A C D E G A
+const MELODY_NOTES = [
+  NOTE(12), NOTE(15), NOTE(17), NOTE(19), NOTE(22), NOTE(24), // A3–A4
+  NOTE(26), NOTE(27), NOTE(29), NOTE(31), NOTE(34),           // higher ornaments
+];
+
+// ─── Dembow rhythm pattern (16th notes per beat, 4 beats) ─────────────────────
+// Classic dembow: kick on 1, snare on 2-and, kick 3, snare 4-and
+// 16 slots = 4 beats × 4 sixteenths
+const KICK_PATTERN  = [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,0,0]; // boom--boom---
+const SNARE_PATTERN = [0,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,1]; // ----clap----clap
+const HAT_PATTERN   = [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0]; // steady 8ths
+const GUIRA_PATTERN = [0,1,0,1, 0,1,0,1, 0,1,0,1, 0,1,0,1]; // offbeat shimmer
+
+// ─── Synth percussion ─────────────────────────────────────────────────────────
+function playKick(time: number, vol: number): void {
+  const c = getCtx(); if (!c) return;
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(150, time);
+  o.frequency.exponentialRampToValueAtTime(35, time + 0.12);
+  g.gain.setValueAtTime(vol, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+  o.connect(g); connect(g);
+  o.start(time); o.stop(time + 0.22);
+  // Click transient
+  noise(time, 0.015, vol * 0.4, 6000);
+}
+
+function playSnare(time: number, vol: number): void {
+  const c = getCtx(); if (!c) return;
+  // Noise body
+  noise(time, 0.1, vol * 0.6, 5500);
+  // Tonal ping
+  osc(220, 'triangle', time, 0.05, vol * 0.3, 120);
+}
+
+function playHiHat(time: number, vol: number, open = false): void {
+  const c = getCtx(); if (!c) return;
+  const dur = open ? 0.12 : 0.04;
+  noise(time, dur, vol * 0.2, open ? 9000 : 12000);
+}
+
+function playGuira(time: number, vol: number): void {
+  // Güira / shaker — high metallic shimmer
+  const c = getCtx(); if (!c) return;
+  noise(time, 0.03, vol * 0.12, 14000);
+  osc(8000, 'square', time, 0.02, vol * 0.04, 12000);
+}
+
+// ─── Bass synth ───────────────────────────────────────────────────────────────
+function playBass(time: number, freq: number, dur: number, vol: number): void {
+  const c = getCtx(); if (!c) return;
+  const o = c.createOscillator();
+  const o2 = c.createOscillator();
+  const g = c.createGain();
+  // Sub + slightly detuned square for grit
+  o.type = 'sine';
+  o.frequency.setValueAtTime(freq, time);
+  o2.type = 'square';
+  o2.frequency.setValueAtTime(freq * 1.002, time); // slight detune
+  const g2 = c.createGain();
+  g2.gain.value = 0.15; // square much quieter
+  g.gain.setValueAtTime(vol, time);
+  g.gain.setValueAtTime(vol * 0.8, time + dur * 0.7);
+  g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+  o.connect(g); connect(g);
+  o2.connect(g2); g2.connect(g); // route square through same gain
+  o.start(time); o.stop(time + dur + 0.01);
+  o2.start(time); o2.stop(time + dur + 0.01);
+}
+
+// ─── Melody synth (plucky, slightly resonant) ─────────────────────────────────
+function playMelody(time: number, freq: number, dur: number, vol: number): void {
+  const c = getCtx(); if (!c) return;
+  const o = c.createOscillator();
+  const g = c.createGain();
+  const filt = c.createBiquadFilter();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(freq, time);
+  filt.type = 'lowpass';
+  filt.frequency.setValueAtTime(freq * 4, time);
+  filt.frequency.exponentialRampToValueAtTime(freq * 1.2, time + dur * 0.8);
+  filt.Q.value = 3;
+  g.gain.setValueAtTime(vol, time);
+  g.gain.setValueAtTime(vol * 0.5, time + dur * 0.3);
+  g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+  o.connect(filt); filt.connect(g); connect(g);
+  o.start(time); o.stop(time + dur + 0.01);
+}
+
+// ─── Bass patterns (syncopated, one per bar) ──────────────────────────────────
+// Each pattern is an array of [16th-note slot, note index, duration in 16ths]
+type BassHit = [number, number, number]; // [slot, noteIdx, durSlots]
+const BASS_PATTERNS: BassHit[][] = [
+  // Pattern A: root groove
+  [[0,0,3], [4,2,2], [8,0,3], [13,4,2]],
+  // Pattern B: climbing
+  [[0,0,2], [3,1,2], [6,2,2], [10,3,3], [14,4,2]],
+  // Pattern C: syncopated bounce
+  [[0,0,2], [3,0,1], [6,2,3], [10,4,2], [14,3,2]],
+  // Pattern D: minimal (low intensity)
+  [[0,0,4], [8,0,4]],
+];
+
+// ─── Melody phrases (short 1-bar riffs) ───────────────────────────────────────
+type MelodyHit = [number, number, number]; // [slot, noteIdx, durSlots]
+const MELODY_PHRASES: MelodyHit[][] = [
+  // Phrase A: descending hook
+  [[0,4,2], [2,3,2], [4,2,2], [8,1,2], [12,0,4]],
+  // Phrase B: call & response
+  [[0,5,2], [3,4,1], [8,2,2], [11,3,1], [14,5,2]],
+  // Phrase C: rhythmic stab
+  [[0,6,1], [2,6,1], [4,4,2], [8,6,1], [10,6,1], [12,3,4]],
+  // Phrase D: sparse (low intensity)
+  [[0,4,4], [8,2,4]],
+  // Phrase E: soaring
+  [[0,3,2], [4,5,2], [8,7,2], [12,8,4]],
+];
+
+// ─── Schedule one bar ─────────────────────────────────────────────────────────
+function scheduleBar(): void {
+  const c = getCtx(); if (!c) return;
+  if (!musicPlaying) return;
+
+  const now = c.currentTime + 0.05; // small lookahead
+  const beatDur = 60 / musicBPM;
+  const sixteenthDur = beatDur / 4;
+  const barDur = beatDur * 4;
+
+  const vol = 0.3 + musicIntensity * 0.06; // 0.36 – 0.60
+  const drumVol = vol * (0.5 + musicIntensity * 0.1);
+
+  // ── Drums ───────────────────────────────────────────────────────────────
+  for (let i = 0; i < 16; i++) {
+    const t = now + i * sixteenthDur;
+    if (KICK_PATTERN[i])  playKick(t, drumVol);
+    if (SNARE_PATTERN[i]) playSnare(t, drumVol * 0.8);
+    if (HAT_PATTERN[i])   playHiHat(t, drumVol, i % 8 === 6); // open hat on "and of 2" and "and of 4"
+    if (GUIRA_PATTERN[i] && musicIntensity >= 2) playGuira(t, drumVol);
+  }
+
+  // ── Extra percussion at higher intensity ────────────────────────────────
+  if (musicIntensity >= 3) {
+    // Syncopated rimshot ghost notes
+    const rimSlots = [3, 7, 11, 15];
+    for (const slot of rimSlots) {
+      if (Math.random() < 0.5) {
+        osc(1200, 'square', now + slot * sixteenthDur, 0.02, drumVol * 0.15, 800);
+      }
+    }
+  }
+
+  if (musicIntensity >= 4) {
+    // Timbale-like fills on beat 4
+    osc(900, 'square', now + 12 * sixteenthDur, 0.04, drumVol * 0.25, 600);
+    osc(1100, 'square', now + 13 * sixteenthDur, 0.04, drumVol * 0.2, 700);
+    if (loopCount % 4 === 3) {
+      // Every 4th bar: fill across beat 4
+      osc(800, 'square', now + 14 * sixteenthDur, 0.03, drumVol * 0.25, 500);
+      osc(1000, 'square', now + 15 * sixteenthDur, 0.03, drumVol * 0.25, 600);
+    }
+  }
+
+  // ── Bass ────────────────────────────────────────────────────────────────
+  const bassIdx = musicIntensity <= 1
+    ? 3 // minimal pattern for low intensity
+    : (loopCount % (BASS_PATTERNS.length - 1)); // cycle A, B, C
+  const bassPattern = BASS_PATTERNS[bassIdx];
+  const bassVol = vol * 0.5;
+
+  for (const [slot, noteIdx, durSlots] of bassPattern) {
+    const note = BASS_NOTES[noteIdx % BASS_NOTES.length];
+    playBass(now + slot * sixteenthDur, note, durSlots * sixteenthDur, bassVol);
+  }
+
+  // ── Melody (only at intensity 2+) ───────────────────────────────────────
+  if (musicIntensity >= 2) {
+    const melIdx = musicIntensity <= 2
+      ? 3 // sparse phrase
+      : (loopCount % (MELODY_PHRASES.length - 1));
+    const melPhrase = MELODY_PHRASES[melIdx];
+    const melVol = vol * (0.12 + musicIntensity * 0.04); // subtle at first, brighter later
+
+    for (const [slot, noteIdx, durSlots] of melPhrase) {
+      const note = MELODY_NOTES[noteIdx % MELODY_NOTES.length];
+      playMelody(now + slot * sixteenthDur, note, durSlots * sixteenthDur, melVol);
+    }
+  }
+
+  // ── Accent chord stab on beat 1 at intensity 5 ─────────────────────────
+  if (musicIntensity >= 5 && loopCount % 2 === 0) {
+    const chordNotes = [NOTE(12), NOTE(15), NOTE(19)]; // A minor triad
+    for (const n of chordNotes) {
+      playMelody(now, n, beatDur * 0.8, vol * 0.15);
+    }
+  }
+
+  loopCount++;
+
+  // ── Schedule next bar ───────────────────────────────────────────────────
+  // Use setTimeout for scheduling; the actual audio is sample-accurate via
+  // Web Audio's time parameter.
+  musicTimer = setTimeout(scheduleBar, barDur * 1000 * 0.9); // overlap slightly
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export function startMusic(): void {
+  if (musicPlaying) return;
+  const c = getCtx(); if (!c) return;
+  musicPlaying = true;
+  loopCount = 0;
+  scheduleBar();
+}
+
+export function stopMusic(): void {
+  musicPlaying = false;
+  if (musicTimer !== null) {
+    clearTimeout(musicTimer);
+    musicTimer = null;
+  }
+}
+
+/** Set music intensity 1–5. Higher = more layers, faster feel. */
+export function setMusicIntensity(level: number): void {
+  musicIntensity = Math.max(1, Math.min(5, Math.round(level)));
+  // Subtly increase BPM with intensity
+  musicBPM = 92 + musicIntensity * 3; // 95 → 107
+}
+
+export function isMusicPlaying(): boolean { return musicPlaying; }
