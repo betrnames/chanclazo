@@ -64,9 +64,27 @@ export default function App() {
   const sessionId = useRef<string>(Math.random().toString(36).slice(2));
   const [playerCount, setPlayerCount] = useState(0);
 
-  const [phase, setPhase] = useState<GamePhase>('start');
+  // ── Portal detection: skip start screen if arriving from Vibe Jam webring ──
+  const [portalRef] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      isPortal: params.get('portal') === 'true',
+      ref: params.get('ref') || '',
+      username: params.get('username') || '',
+    };
+  });
+
+  const [phase, setPhase] = useState<GamePhase>(() =>
+    portalRef.isPortal ? 'playing' : 'start'
+  );
   const [gender, setGender] = useState<CharacterGender>('boy');
-  const [handle, setHandle] = useState<string>(() => localStorage.getItem('chanclazo-handle') ?? '');
+  const [handle, setHandle] = useState<string>(() => {
+    if (portalRef.isPortal && portalRef.username) {
+      localStorage.setItem('chanclazo-handle', portalRef.username);
+      return portalRef.username;
+    }
+    return localStorage.getItem('chanclazo-handle') ?? '';
+  });
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [, setSubmitting] = useState(false);
