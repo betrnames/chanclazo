@@ -210,7 +210,8 @@ export function createGame(
       difficulty++;
       nextDifficultyTime += 15;
       // Ramp music intensity with difficulty (capped at 5)
-      setMusicIntensity(Math.min(5, 1 + currentLevelIndex + Math.floor(difficulty / 2)));
+      // Starts at 2 after first throw, so ramp from there
+      setMusicIntensity(Math.min(5, 2 + currentLevelIndex + Math.floor(difficulty / 2)));
     }
 
     // ── Level completion check ────────────────────────────────────────────
@@ -450,6 +451,11 @@ export function createGame(
     }
     if (survivalTime >= nextThrowAt) {
       throwCycleCount++;
+
+      // First throw: bump music from chill (1) to groove (2)
+      if (throwCycleCount === 1) {
+        setMusicIntensity(2 + currentLevelIndex);
+      }
 
       if (tsunamiQueued) {
         // ── TSUNAMI throw: 6–10 chanclas all at once, all styles ──────────
@@ -746,14 +752,10 @@ export function createGame(
   // ─── Start ────────────────────────────────────────────────────────────────
   function start() {
     initAudio();
-    // Delay music start — kick in right before the first chancla throw
-    // Level 1: 7s grace → start music at ~5s (2 bars of buildup before action)
-    // Other levels: 2.5s grace → start almost immediately
-    const musicDelay = currentLevelIndex === 0 ? 5.0 : 0.5;
-    setTimeout(() => {
-      setMusicIntensity(1 + currentLevelIndex);
-      startMusic();
-    }, musicDelay * 1000);
+    // Music starts immediately at intensity 1 (chill groove),
+    // then bumps to intensity 2 when the first chancla flies
+    setMusicIntensity(1);
+    startMusic();
     clock.start();
     camTarget.set(0, 5.5, ROOM.playerZ + 7.5);
     camLookTarget.set(0, 1.2, ROOM.playerZ - 3);
