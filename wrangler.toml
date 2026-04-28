@@ -1,5 +1,14 @@
 name = "chanclazo-worker"
 compatibility_date = "2026-04-10"
+main = "src/worker.ts"
 
 [assets]
 directory = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "chanclazo-leaderboard"
+database_id = "c1dd025a-b978-4e7a-ba5d-5ca8f4799f60"
+
+[vars]
+ENVIRONMENT = "production"
