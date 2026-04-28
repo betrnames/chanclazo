@@ -746,8 +746,14 @@ export function createGame(
   // ─── Start ────────────────────────────────────────────────────────────────
   function start() {
     initAudio();
-    startMusic();
-    setMusicIntensity(1 + currentLevelIndex); // level 1=1, level 2=2, etc.
+    // Delay music start — kick in right before the first chancla throw
+    // Level 1: 7s grace → start music at ~5s (2 bars of buildup before action)
+    // Other levels: 2.5s grace → start almost immediately
+    const musicDelay = currentLevelIndex === 0 ? 5.0 : 0.5;
+    setTimeout(() => {
+      setMusicIntensity(1 + currentLevelIndex);
+      startMusic();
+    }, musicDelay * 1000);
     clock.start();
     camTarget.set(0, 5.5, ROOM.playerZ + 7.5);
     camLookTarget.set(0, 1.2, ROOM.playerZ - 3);
