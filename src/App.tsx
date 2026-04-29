@@ -8,7 +8,7 @@ import { LEVELS } from './game/types';
 import { createGame } from './game/engine';
 import type { GameInstance } from './game/types';
 import { getTexts } from './game/i18n';
-import { initAudio } from './game/sound';
+import { initAudio, setMuted, isMuted, startMusic, stopMusic, setMusicIntensity } from './game/sound';
 import { createTouchState } from './game/controls';
 import type { TouchInputState } from './game/controls';
 import MobileTouchControls from './components/MobileTouchControls';
@@ -96,6 +96,8 @@ export default function App() {
     () => (localStorage.getItem('chanclazo-lang') as Lang) ?? 'en'
   );
   const [currentLevel, setCurrentLevel] = useState(1);
+  const [musicMuted, setMusicMuted] = useState(false);
+  const homeMusicStarted = useRef(false);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const [survivalSeconds, setSurvivalSeconds] = useState(0);
@@ -108,6 +110,45 @@ export default function App() {
 
   const texts = getTexts(lang);
   const levelConfig = LEVELS[currentLevel - 1];
+
+  // ── Homepage background music (starts on first click/tap) ─────────────────
+  useEffect(() => {
+    if (phase !== 'start' || homeMusicStarted.current) return;
+    const startHomeMusic = () => {
+      if (homeMusicStarted.current) return;
+      homeMusicStarted.current = true;
+      initAudio();
+      setMusicIntensity(1);
+      startMusic();
+    };
+    document.addEventListener('click', startHomeMusic, { once: true });
+    document.addEventListener('touchstart', startHomeMusic, { once: true });
+    return () => {
+      document.removeEventListener('click', startHomeMusic);
+      document.removeEventListener('touchstart', startHomeMusic);
+    };
+  }, [phase]);
+
+  // Stop homepage music when game starts (engine takes over)
+  useEffect(() => {
+    if (phase === 'playing') {
+      stopMusic();
+      homeMusicStarted.current = false;
+    }
+  }, [phase]);
+
+  const toggleMute = useCallback(() => {
+    const newMuted = !musicMuted;
+    setMusicMuted(newMuted);
+    setMuted(newMuted);
+    if (newMuted) {
+      stopMusic();
+    } else if (phase === 'start') {
+      initAudio();
+      setMusicIntensity(1);
+      startMusic();
+    }
+  }, [musicMuted, phase]);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
@@ -450,6 +491,14 @@ export default function App() {
                 >
                   What is a Chanclazo?
                 </a>
+
+                {/* Music mute toggle */}
+                <button
+                  onClick={toggleMute}
+                  className="w-full flex items-center justify-center gap-2 py-1.5 text-xs font-black text-orange-700 opacity-70 hover:opacity-100 transition-opacity"
+                >
+                  {musicMuted ? '🔇 Music Off' : '🔊 Music On'}
+                </button>
 
                 {/* Footer */}
                 <div className="pt-2 border-t border-orange-200/60 flex flex-col items-center gap-1">
