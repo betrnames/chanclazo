@@ -1,4 +1,4 @@
-export const WORKER_URL = '';
+export const WORKER_URL = 'https://chanclazo-worker.betrnames.workers.dev';
 
 export interface LeaderboardEntry {
   handle: string;
