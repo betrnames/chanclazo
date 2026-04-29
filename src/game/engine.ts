@@ -588,7 +588,7 @@ export function createGame(
     player.invincibleTimer = INVINCIBLE_DURATION;
     combo = 0;
     comboTimer = 0;
-    shakeIntensity = 0.45;
+    shakeIntensity = 0.45; // boosted from 0.18
 
     playHit();
 
