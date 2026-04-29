@@ -118,7 +118,7 @@ export default function App() {
       if (homeMusicStarted.current) return;
       homeMusicStarted.current = true;
       initAudio();
-      setMusicIntensity(1);
+      setMusicIntensity(2);
       startMusic();
     };
     document.addEventListener('click', startHomeMusic, { once: true });
@@ -145,7 +145,7 @@ export default function App() {
       stopMusic();
     } else if (phase === 'start') {
       initAudio();
-      setMusicIntensity(1);
+      setMusicIntensity(2);
       startMusic();
     }
   }, [musicMuted, phase]);
