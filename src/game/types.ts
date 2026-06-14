@@ -73,7 +73,7 @@ export interface InputState {
 }
 
 // ─── Character ────────────────────────────────────────────────────────────────
-export type CharacterGender = 'boy' | 'girl';
+export type CharacterGender = 'boy' | 'girl' | 'luchador';
 
 // ─── Pan State ────────────────────────────────────────────────────────────────
 export interface PanState {

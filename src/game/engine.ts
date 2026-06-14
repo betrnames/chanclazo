@@ -416,7 +416,8 @@ export function createGame(
 
     // Visual polish - vibrant low-poly style: gentle idle bob for player and mom
     if (player.y <= 0.001 && !input.left && !input.right) {
-      player.group.position.y = player.y + Math.sin(survivalTime * 2.2) * 0.018;
+      const bobAmount = gender === 'luchador' ? 0.012 : 0.018;  // less bob for Luchador to reduce choppy visual jitter
+      player.group.position.y = player.y + Math.sin(survivalTime * 2.2) * bobAmount;
     }
     if (mom.shakeTimer <= 0) {
       mom.group.position.y = 0.05 + Math.sin(survivalTime * 1.8 + 1.0) * 0.022;
@@ -523,11 +524,19 @@ export function createGame(
 
     if (player.y > 0.05) {
       const stretchFactor = 1.0 + Math.abs(player.vy) * 0.015;
-      player.group.scale.x = THREE.MathUtils.lerp(player.group.scale.x, 1 / stretchFactor, 0.3);
+      const targetX = 1 / stretchFactor;
+      // For Luchador, reduce air stretch effect to minimize visual glitch/choppiness from frame variations
+      const lerpFactor = gender === 'luchador' ? 0.15 : 0.3;
+      player.group.scale.x = THREE.MathUtils.lerp(player.group.scale.x, targetX, lerpFactor);
     } else {
       player.group.scale.x = THREE.MathUtils.lerp(player.group.scale.x, 1.0, 0.3);
     }
-    player.group.position.x = player.x;
+    if (gender === 'luchador') {
+      // Slight lerp on x for Luchador to smooth out visual glitches/choppiness caused by slight offsets in the user-edited sprite frames
+      player.group.position.x = THREE.MathUtils.lerp(player.group.position.x, player.x, 0.65);
+    } else {
+      player.group.position.x = player.x;
+    }
     player.group.position.y = player.y;
 
     // ── Player spritesheet animation ──────────────────────────────────────
@@ -541,7 +550,8 @@ export function createGame(
         updatePlayerAnimator(anim, dt, isMoving, isAirborne, isStriking);
 
         // Flip sprite horizontally based on direction
-        // Boy strike faces forward toward abuela; girl strike stays in last direction
+        // Boy strike faces forward toward abuela; girl strike stays in last direction.
+        // Luchador now strikes in the current movement direction (left or right).
         if (anim.state === 'strike' && gender === 'boy') {
           playerSprite.scale.x = -Math.abs(playerSprite.scale.x); // face forward
         } else if (input.left) {

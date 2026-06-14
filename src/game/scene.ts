@@ -623,13 +623,26 @@ export interface PlayerAnimator {
   strikeDuration: number;
 }
 
-export function createPlayerAnimator(gender: 'boy' | 'girl'): PlayerAnimator {
+export function createPlayerAnimator(gender: 'boy' | 'girl' | 'luchador'): PlayerAnimator {
   const loader = new THREE.TextureLoader();
   const cols = 5, rows = 5;
-  const prefix = gender === 'girl' ? 'girl' : 'boy';
+  let prefix: string;
+  let names: { idle: string; run: string; jump: string; strike: string };
+  const ext = gender === 'luchador' ? 'png' : 'png';
+
+  if (gender === 'luchador') {
+    prefix = 'luchador';
+    names = { idle: 'idle-right', run: 'run-right', jump: 'jump', strike: 'strike' };
+  } else if (gender === 'girl') {
+    prefix = 'girl';
+    names = { idle: 'idle-v1', run: 'run-v1', jump: 'jump-v1', strike: 'strike_back_girl-v5' };
+  } else {
+    prefix = 'boy';
+    names = { idle: 'idle-v2', run: 'run-v2', jump: 'jump-v2', strike: 'strike_back-v3' };
+  }
 
   function makeTex(name: string): THREE.Texture {
-    const t = loader.load(`/${prefix}-${name}.png`);
+    const t = loader.load(`/${prefix}-${name}.${ext}`);
     t.colorSpace = THREE.SRGBColorSpace;
     t.repeat.set(1 / cols, 1 / rows);
     t.offset.set(0, (rows - 1) / rows);
@@ -638,15 +651,43 @@ export function createPlayerAnimator(gender: 'boy' | 'girl'): PlayerAnimator {
     return t;
   }
 
-  const names = gender === 'girl'
-    ? { idle: 'idle-v1', run: 'run-v1', jump: 'jump-v1', strike: 'strike_back_girl-v5' }
-    : { idle: 'idle-v2', run: 'run-v2', jump: 'jump-v2', strike: 'strike_back-v3' };
+  function makeLuchadorTex(name: string): THREE.Texture {
+    const texture = new THREE.Texture();
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.repeat.set(1 / cols, 1 / rows);
+    texture.offset.set(0, (rows - 1) / rows);
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        // More aggressive strip for white/near-white fringes on user-edited PNGs to eliminate glitching borders
+        if (r > 220 && g > 220 && b > 220) {
+          data[i + 3] = 0;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      texture.image = canvas;
+      texture.needsUpdate = true;
+    };
+    img.src = `/luchador-${name}.png`;
+    return texture;
+  }
 
   const textures: Record<PlayerAnimState, THREE.Texture> = {
-    idle:   makeTex(names.idle),
-    run:    makeTex(names.run),
-    jump:   makeTex(names.jump),
-    strike: makeTex(names.strike),
+    idle:   gender === 'luchador' ? makeLuchadorTex(names.idle) : makeTex(names.idle),
+    run:    gender === 'luchador' ? makeLuchadorTex(names.run) : makeTex(names.run),
+    jump:   gender === 'luchador' ? makeLuchadorTex(names.jump) : makeTex(names.jump),
+    strike: gender === 'luchador' ? makeLuchadorTex(names.strike) : makeTex(names.strike),
   };
 
   const material = new THREE.MeshBasicMaterial({
@@ -656,8 +697,13 @@ export function createPlayerAnimator(gender: 'boy' | 'girl'): PlayerAnimator {
     side: THREE.FrontSide,
   });
 
+  if (gender === 'luchador') {
+    // Higher alphaTest to clip soft/fringed edges from PNG without showing white glitching
+    material.alphaTest = 0.5;
+  }
+
   const totalFrames = cols * rows; // 25
-  const fps = 12;
+  const fps = gender === 'luchador' ? 18 : 12;  // higher fps for smoother Luchador animation
   const strikeDuration = totalFrames / fps; // ~2.08s, plays once
 
   return {
@@ -725,18 +771,35 @@ export function updatePlayerAnimator(
 }
 
 // ─── Player Character ──────────────────────────────────────────────────────────
-export function createPlayer(gender: 'boy' | 'girl' = 'boy'): PlayerState {
+export function createPlayer(gender: 'boy' | 'girl' | 'luchador' = 'boy'): PlayerState {
   const group = new THREE.Group();
 
   const anim = createPlayerAnimator(gender);
-  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.0), anim.material);
-  sprite.position.set(0, 1.5, 1.5);
+
+  const planeSize = 3.0;  // match boy/girl exactly for consistent alignment and movement behavior
+  const spriteYOffset = 1.5;
+  const groupYOffset = -2.0;  // moved lower on screen (back toward/lower than some previous tweaks) so characters sit lower in the view
+
+  const sprite = new THREE.Mesh(new THREE.PlaneGeometry(planeSize, planeSize), anim.material);
+  sprite.position.set(0, spriteYOffset, 1.5);
   sprite.renderOrder = 2;
   sprite.name = 'playerSprite';
   sprite.userData.playerAnim = anim;
   group.add(sprite);
 
-  group.position.set(0, -1.5, ROOM.playerZ);
+  if (gender === 'luchador') {
+    // Make visually smaller than boy/girl (to match user's request) while keeping *exact same* base positioning/alignment
+    // so feet, jumps, ducks, and horizontal movement feel consistent with other characters (reduces choppy alignment shifts)
+    const scale = 0.7;  // bigger while keeping exact base alignment/positioning consistent with boy/girl
+    sprite.scale.set(scale, scale, 1);
+    // Adjust group y further down so the visual bottom of the smaller scaled sprite aligns the same as unscaled (back to original alignment)
+    const half = 1.5 * scale;
+    const localBottom = spriteYOffset - half;
+    const adjustedGroupY = groupYOffset - localBottom;  // moves it lower to compensate for scale, using the updated base groupYOffset
+    group.position.set(0, adjustedGroupY, ROOM.playerZ);
+  } else {
+    group.position.set(0, groupYOffset, ROOM.playerZ);
+  }
 
   return {
     group,

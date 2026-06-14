@@ -381,68 +381,123 @@ export default function App() {
 
             {/* Card */}
             <Card className="border-2 border-orange-300/60 shadow-2xl bg-amber-50/95 backdrop-blur-sm">
-              <CardContent className="pt-2 pb-2 space-y-1.5">
+              <CardContent className="pt-2 pb-2 space-y-2">
 
-                {/* Level pills */}
-                <div className="space-y-1">
-                  <p className="font-black text-orange-700 text-xs text-center">Levels</p>
-                  <div className="grid grid-cols-5 gap-1">
-                  {[['1','Irritated'],['2','Angry'],['3','Furious'],['4','Raging'],['5','Final Boss']].map(([num, name]) => (
-                    <div key={num} className="rounded-md p-1 text-center border border-orange-200 bg-orange-50">
-                      <div className="text-sm font-black text-orange-700">{num}</div>
-                      <div className="text-[8px] font-bold text-orange-600 leading-tight">{name}</div>
-                    </div>
-                  ))}
+                {/* 3-tier character selector - center focused like pricing tiers, sides smaller/ghosted */}
+                <div className="px-3 py-8 space-y-5"> {/* more padding top and bottom of the characters */}
+                  <p className="font-black text-orange-800 text-sm tracking-wide text-center">
+                    🎮 {texts.ui.pickChar.toUpperCase()}
+                  </p>
+
+                  <div className="flex items-end justify-center gap-3 py-3"> {/* more vertical padding around characters */}
+                    {(() => {
+                      const order: CharacterGender[] = ['boy', 'girl', 'luchador'];
+                      const idx = order.indexOf(gender);
+                      const leftId = order[(idx - 1 + 3) % 3];
+                      const centerId = gender;
+                      const rightId = order[(idx + 1) % 3];
+
+                      const getChar = (id: CharacterGender) => {
+                        if (id === 'boy') return { name: texts.ui.boy, avatar: '/boy.png' };
+                        if (id === 'girl') return { name: texts.ui.girl, avatar: '/girl.png' };
+                        return { name: texts.ui.luchador || 'Luchador', avatar: '/luchador.png' };
+                      };
+
+                      const left = getChar(leftId);
+                      const center = getChar(centerId);
+                      const right = getChar(rightId);
+
+                      return (
+                        <>
+                          {/* Left - smaller, ghosted */}
+                          <button
+                            onClick={() => setGender(leftId)}
+                            className="flex flex-col items-center transition-all opacity-35 hover:opacity-60 active:scale-95"
+                          >
+                            <div className="h-22 w-22 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={left.avatar}
+                                alt={left.name}
+                                className="max-h-20 max-w-20 object-contain"
+                                style={{ imageRendering: 'pixelated' }}
+                              />
+                            </div>
+                            <span className="text-[9px] font-black text-orange-600 mt-0.5 tracking-wider">{left.name}</span>
+                          </button>
+
+                          {/* Center - main focus, noticeably taller */}
+                          <button
+                            onClick={() => { /* already selected */ }}
+                            className="flex flex-col items-center transition-all scale-[1.15]"
+                          >
+                            <div className="h-40 w-40 flex items-center justify-center overflow-hidden -mt-7">
+                              <img
+                                src={center.avatar}
+                                alt={center.name}
+                                className="max-h-40 max-w-40 object-contain drop-shadow-xl"
+                                style={{ imageRendering: 'pixelated' }}
+                              />
+                            </div>
+                            <span className="text-sm font-black text-orange-800 -mt-1 tracking-wider">{center.name}</span>
+                          </button>
+
+                          {/* Right - smaller, ghosted */}
+                          <button
+                            onClick={() => setGender(rightId)}
+                            className="flex flex-col items-center transition-all opacity-35 hover:opacity-60 active:scale-95"
+                          >
+                            <div className="h-22 w-22 flex items-center justify-center overflow-hidden">
+                              <img
+                                src={right.avatar}
+                                alt={right.name}
+                                className="max-h-20 max-w-20 object-contain"
+                                style={{ imageRendering: 'pixelated' }}
+                              />
+                            </div>
+                            <span className="text-[9px] font-black text-orange-600 mt-0.5 tracking-wider">{right.name}</span>
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="flex justify-center gap-3 pt-0.5">
+                    <button
+                      onClick={() => {
+                        const order: CharacterGender[] = ['boy', 'girl', 'luchador'];
+                        const idx = order.indexOf(gender);
+                        setGender(order[(idx - 1 + 3) % 3]);
+                      }}
+                      className="text-orange-600 hover:text-orange-800 text-lg font-black px-1 leading-none"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={() => {
+                        const order: CharacterGender[] = ['boy', 'girl', 'luchador'];
+                        const idx = order.indexOf(gender);
+                        setGender(order[(idx + 1) % 3]);
+                      }}
+                      className="text-orange-600 hover:text-orange-800 text-lg font-black px-1 leading-none"
+                    >
+                      →
+                    </button>
                   </div>
                 </div>
 
-                {/* Controls */}
-                <div className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-2 space-y-1">
-                  <p className="font-black text-orange-700 text-xs text-center">{texts.ui.howToPlay}</p>
-                  {isMobile ? (
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {[
-                        ['← →', texts.ui.move],
-                        ['↑', texts.ui.jump],
-                        ['↓', texts.ui.duck],
-                        ['⚡', texts.ui.strike],
-                      ].map(([arrow, label]) => (
-                        <div key={label} className="flex flex-col items-center gap-0.5 bg-orange-100 rounded-lg py-3 px-2">
-                          <span className="text-xs font-black text-orange-700 text-center leading-tight">{arrow}</span>
-                          <span className="text-[10px] font-medium text-orange-600 text-center leading-tight">{label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {[
-                        ['A / D', texts.ui.move],
-                        ['W / ↑', texts.ui.jump],
-                        ['S / ↓', texts.ui.duck],
-                        ['SPACE', texts.ui.strike],
-                      ].map(([key, label]) => (
-                        <div key={key} className="flex flex-col items-center gap-1 bg-orange-100 rounded-lg py-1.5 px-1">
-                          <span className="text-xs font-black text-orange-700 text-center leading-tight">{key}</span>
-                          <span className="text-[10px] font-medium text-orange-600 text-center leading-tight">{label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-center text-[10px] font-semibold text-orange-600 pt-1">{texts.ui.ringHint}</p>
-                </div>
-
-
-
-                {webglError && (
-                  <div className="rounded-lg border border-destructive/60 bg-destructive/10 px-3 py-2 text-center">
-                    <p className="text-xs font-black text-destructive">WebGL Not Available</p>
-                    <p className="text-[10px] text-muted-foreground">Open in a full browser tab to play.</p>
+                {/* High score tease - game feel (using allowed heart icon) */}
+                {highScore > 0 && (
+                  <div className="text-center">
+                    <span className="inline-block text-[10px] font-black text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">
+                      ❤️ YOUR BEST: {highScore.toLocaleString()}
+                    </span>
                   </div>
                 )}
 
-                {/* X Handle input */}
+                {/* X Handle input - styled as player tag (no extra icons) */}
                 <div className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-2 space-y-1">
-                  <div className="flex items-center gap-1.5 bg-white rounded-lg border border-orange-200 px-2 py-1">
+                  <div className="text-[10px] font-black text-orange-600 text-center">PLAYER TAG FOR LEADERBOARD</div>
+                  <div className="flex items-center gap-1.5 bg-white rounded-lg border-2 border-orange-300 px-2 py-1">
                     <span className="text-orange-400 font-bold text-sm">@</span>
                     <input
                       type="text"
@@ -459,94 +514,66 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Character select */}
-                <div className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-2 space-y-1.5">
-                  <p className="font-black text-orange-700 text-xs text-center">{texts.ui.pickChar}</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setGender('boy')}
-                      className={`flex flex-col items-center gap-1 rounded-lg py-2 border-2 transition-all ${
-                        gender === 'boy'
-                          ? 'bg-blue-100 border-blue-400 scale-105'
-                          : 'bg-orange-50 border-orange-200 opacity-60'
-                      }`}
-                    >
-                      <span className="text-lg font-black text-blue-600">♂</span>
-                      <span className="text-xs font-black text-orange-700">{texts.ui.boy}</span>
-                    </button>
-                    <button
-                      onClick={() => setGender('girl')}
-                      className={`flex flex-col items-center gap-1 rounded-lg py-2 border-2 transition-all ${
-                        gender === 'girl'
-                          ? 'bg-pink-100 border-pink-400 scale-105'
-                          : 'bg-orange-50 border-orange-200 opacity-60'
-                      }`}
-                    >
-                      <span className="text-lg font-black text-pink-600">♀</span>
-                      <span className="text-xs font-black text-orange-700">{texts.ui.girl}</span>
-                    </button>
+                {webglError && (
+                  <div className="rounded-lg border border-destructive/60 bg-destructive/10 px-3 py-2 text-center">
+                    <p className="text-xs font-black text-destructive">WebGL Not Available</p>
+                    <p className="text-[10px] text-muted-foreground">Open in a full browser tab to play.</p>
                   </div>
-                </div>
+                )}
 
+                {/* Big juicy PLAY button - more arcade (no sandal icons) */}
                 <Button
                   size="lg"
                   disabled={webglError}
-                  className="w-full text-xl font-black py-7 bg-orange-500 hover:bg-orange-600 text-white rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95"
+                  className="w-full text-2xl font-black py-8 bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-2xl shadow-[0_6px_0_#9a3412] active:shadow-[0_2px_0_#9a3412] active:translate-y-1 transition-all border-b-4 border-orange-800"
                   onClick={() => { initAudio(); startLevel(1); }}
                 >
                   {texts.ui.play}
                 </Button>
 
-                {/* Live player count on start screen */}
+                {/* Live player count - more prominent (no icon) */}
                 {playerCount > 0 && (
-                  <p className="text-center text-xs font-black text-purple-600 animate-pulse">
-                    👥 {playerCount} {playerCount === 1 ? 'player' : 'players'} dodging right now!
-                  </p>
+                  <div className="text-center py-1">
+                    <span className="text-sm font-black text-purple-600 bg-purple-100 px-3 py-0.5 rounded-full border border-purple-200 animate-pulse">
+                      {playerCount} {playerCount === 1 ? 'player' : 'players'} dodging RIGHT NOW
+                    </span>
+                  </div>
                 )}
 
-                <button
-                  onClick={loadLeaderboard}
-                  className="w-full text-xs font-black text-orange-700 opacity-70 hover:opacity-100 py-1 transition-opacity"
-                  style={{ cursor: 'pointer' }}
-                >
-                  {texts.ui.leaderboard}
-                </button>
-                <a
-                  href="/lore"
-                  className="block w-full text-center text-xs font-black text-orange-700 opacity-70 hover:opacity-100 py-1 transition-opacity"
-                >
-                  {texts.ui.whatIsChanclazo}
-                </a>
+                {/* Community actions - tighter, fun menu style (no extra icons) */}
+                <div className="flex flex-col gap-1 pt-1">
+                  <button
+                    onClick={loadLeaderboard}
+                    className="w-full text-sm font-black text-orange-700 hover:text-orange-900 bg-orange-100 hover:bg-orange-200 py-1.5 rounded-lg transition-colors border border-orange-200"
+                  >
+                    {texts.ui.leaderboard}
+                  </button>
+                  <a
+                    href="/lore"
+                    className="block w-full text-center text-sm font-black text-orange-700 hover:text-orange-900 bg-orange-100 hover:bg-orange-200 py-1.5 rounded-lg transition-colors border border-orange-200"
+                  >
+                    {texts.ui.whatIsChanclazo}
+                  </a>
+                </div>
 
-                {/* Music mute toggle */}
+                {/* Music toggle - compact (keep sound icons) */}
                 <button
                   onClick={toggleMute}
-                  className="w-full flex items-center justify-center gap-2 py-1.5 text-xs font-black text-orange-700 opacity-70 hover:opacity-100 transition-opacity"
+                  className="w-full text-xs font-black text-orange-600 hover:text-orange-800 py-1 flex items-center justify-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity"
                 >
-                  {musicMuted ? '🔇 Music Off' : '🔊 Music On'}
+                  {musicMuted ? '🔇 Turn Music On' : '🔊 Turn Music Off'}
                 </button>
 
-                {/* Footer */}
-                <div className="pt-2 border-t border-orange-200/60 flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-3">
-                    <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-orange-600/60 hover:text-orange-700 transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{width:'12px',height:'12px'}}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                      <span className="text-[10px] font-bold">@ChanclaStrike</span>
-                    </a>
-                    <a href="mailto:contact@chanclazo.com"
-                      className="flex items-center gap-1.5 text-orange-600/60 hover:text-orange-700 transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:'12px',height:'12px'}}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                      <span className="text-[10px] font-bold">contact@chanclazo.com</span>
-                    </a>
+                {/* Footer - smaller, less dominant */}
+                <div className="pt-1 border-t border-orange-200/60 text-[9px] text-orange-500/60 flex flex-col items-center gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer" className="hover:text-orange-700">@ChanclaStrike</a>
+                    <span>•</span>
+                    <a href="mailto:contact@chanclazo.com" className="hover:text-orange-700">Contact</a>
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] text-orange-500/60 font-medium">
-                    <span>Powered by</span>
-                    <a href="https://bolt.new" target="_blank" rel="noopener noreferrer" className="font-black hover:text-orange-700 transition-colors">bolt.new</a>
-                    <span>&amp;</span>
-                    <span className="font-black">Claude AI</span>
+                  <div>
+                    Made with ❤️ + bolt.new
                   </div>
-                  <p className="text-[9px] text-orange-500/50">© 2026 Chanclazo. All rights reserved.</p>
                 </div>
 
               </CardContent>
