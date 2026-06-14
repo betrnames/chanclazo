@@ -382,8 +382,10 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const vx = dx * power / 12;
     const vy = dy * power / 12;
 
-    // Launch the chancla (sandal) projectile - only one type now
-    const birdBody = Matter.Bodies.circle(slingshotPos.x, slingshotPos.y, 30, {
+    // Launch the chancla (sandal) projectile from the current dragged position (no more fixed pouch)
+    const releaseX = drag.current.x;
+    const releaseY = drag.current.y;
+    const birdBody = Matter.Bodies.circle(releaseX, releaseY, 30, {
       restitution: 0.4,
       friction: 0.5,
       density: 0.0015,
@@ -617,6 +619,46 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       const size = 60; // bigger
       ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
       ctx.restore();
+    }
+
+    // Curved dotted trajectory preview (line of sight) while the sandal is grabbed
+    // Shows the approximate direction of travel + gravity arc flowing towards the enemy stacks
+    if (drag.active) {
+      // Compute the velocity that will be used on release (exact same calc as handleMouseUp)
+      const dx = slingshotPos.x - birdPos.x;
+      const dy = slingshotPos.y - birdPos.y;
+      const dist = Math.hypot(dx, dy);
+      const maxPullLocal = 140;
+      let pdx = dx;
+      let pdy = dy;
+      if (dist > maxPullLocal) {
+        const ratio = maxPullLocal / dist;
+        pdx *= ratio;
+        pdy *= ratio;
+      }
+      const power = Math.min(Math.hypot(pdx, pdy) * 0.18, 22);
+      let simVX = pdx * power / 12;
+      let simVY = pdy * power / 12;
+
+      // Forward simulation for the curved arc (tuned approx to match the actual Matter physics arc)
+      let simX = birdPos.x;
+      let simY = birdPos.y;
+      const g = 0.72; // gravity per preview step
+
+      ctx.fillStyle = 'rgba(255, 240, 160, 0.75)'; // soft yellow/gold dots, good contrast on the bg
+      for (let i = 0; i < 75; i++) {
+        if (i % 3 === 0 && i > 1) {
+          // dotted line of sight style
+          ctx.beginPath();
+          ctx.arc(simX, simY, 2.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        simX += simVX * 0.62;
+        simY += simVY * 0.62;
+        simVY += g;
+
+        if (simY > 565 || simX > 1260 || simX < 30) break;
+      }
     }
 
     // UI overlay text (use refs so live values even if closure was from previous render)
