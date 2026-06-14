@@ -18,7 +18,7 @@ interface Block {
 
 interface Target {
   body: Matter.Body;
-  type: 'dish' | 'beerbottle' | 'pinata' | 'sugarskull';
+  type: 'pinata' | 'sugarskull';
   health: number;
 }
 
@@ -84,8 +84,6 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         // Enemy / old
         imgs.sugarskull = await loadImage('/sugarskull.png');
         // New stack targets
-        imgs.dish = await loadImage('/dishes.png');
-        imgs.beerbottle = await loadImage('/beerbottle.png');
         imgs.pinata = await loadImage('/pinata.png');
         // Luchador head for striker
         imgs.luchadorHead = await loadImage('/luchadorHead.png');
@@ -220,7 +218,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
     const standTopY = standY - standH / 2;
 
-    // Use new target system for all levels (dishes, beerbottles, pinata) on the stand
+    // Only pinatas on the stand
     // Different sizes for difficulty
     let rowCounts;
     if (levelNum === 1) rowCounts = [4,3,2,1];
@@ -235,31 +233,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       for (let i = 0; i < numInRow; i++) {
         const x = startX + i * 36;
         const y = standTopY - 14 - rowIdx * 31;  // vertical spacing
-        let t: 'dish' | 'beerbottle' | 'pinata';
-        // place pinata in prominent positions (top or middle of rows)
-        if ((rowIdx === rowCounts.length - 1 && i === Math.floor(numInRow/2)) || (Math.random() < 0.15 && !rowCounts.some((_,ri) => ri > rowIdx))) {
-          t = 'pinata';
-        } else {
-          t = Math.random() < 0.5 ? 'dish' : 'beerbottle';
-        }
+        const t: 'pinata' = 'pinata';  // only pinatas now
         let body: Matter.Body;
-        let health = 25;
-        if (t === 'pinata') {
-          body = Matter.Bodies.circle(x, y, 24, {
-            restitution: 0.25, friction: 0.5, density: 0.0005, label: 'target'
-          });
-          health = 55;
-        } else if (t === 'dish') {
-          body = Matter.Bodies.rectangle(x, y, 44, 15, {
-            restitution: 0.15, friction: 0.65, density: 0.001, label: 'target'
-          });
-          health = 20;
-        } else {
-          body = Matter.Bodies.rectangle(x, y, 18, 36, {
-            restitution: 0.2, friction: 0.75, density: 0.0008, label: 'target'
-          });
-          health = 26;
-        }
+        let health = 55;
+        body = Matter.Bodies.circle(x, y, 24, {
+          restitution: 0.25, friction: 0.5, density: 0.0005, label: 'target'
+        });
         Matter.World.add(world, body);
         enemiesRef.current.push({ body, type: t, health });
       }
@@ -539,7 +518,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.save();
       ctx.translate(pos.x, pos.y);
       ctx.rotate(angle);
-      // Wooden table/stand with legs (fits party theme with dishes/beer/pinata)
+      // Wooden table/stand with legs (for the pinata stack)
       ctx.fillStyle = '#5c4033';
       ctx.fillRect(-115, -11, 230, 22); // tabletop
       ctx.fillStyle = '#3a2a1f';
@@ -583,7 +562,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.restore();
     });
 
-    // Draw targets (dishes, beerbottles, pinata - random mix in triangle)
+    // Draw targets (only pinatas in triangle on stand)
     enemiesRef.current.forEach((target) => {
       const pos = target.body.position;
       const angle = target.body.angle;
@@ -593,14 +572,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.rotate(angle);
 
       let img: HTMLImageElement | null = null;
-      let sz = 36;
-      if (target.type === 'dish') {
-        img = imagesRef.current.dish || null;
-        sz = 42;
-      } else if (target.type === 'beerbottle') {
-        img = imagesRef.current.beerbottle || null;
-        sz = 32;
-      } else if (target.type === 'pinata') {
+      let sz = 50;
+      if (target.type === 'pinata') {
         img = imagesRef.current.pinata || null;
         sz = 50;
       } else {
@@ -895,13 +868,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
             onClick={onBack}
             className="px-3 py-1 bg-orange-600 hover:bg-orange-700 rounded text-xs font-bold"
           >
-            ← BACK TO MAIN GAME
+            BACK TO MAIN GAME
           </button>
           <div className="font-bold tracking-widest">CHANCLA STRIKE</div>
           <div className="text-orange-400">Level {level}</div>
         </div>
         <div>Score: <span className="font-mono text-yellow-400">{score}</span></div>
-        <div className="text-xs opacity-70">Pull back •Release to launch •Limited strikes</div>
+        <div className="text-xs opacity-70">Pull back • Release to launch • Limited strikes</div>
       </div>
 
       <div className="flex-1 flex items-center justify-center relative bg-black/30">
@@ -916,7 +889,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
         {/* READY screen overlay on initial page load - big start button, stage + floating sandal already visible behind */}
         {gameState === 'ready' && (
-          <div className="absolute inset-0 flex items-center justify-center z-20" style={{ background: 'rgba(26, 20, 15, 0.55)' }}>
+          <div className="absolute inset-0 flex items-center justify-center z-20" style={{ background: 'rgba(0, 0, 0, 0.75)' }}>
             <div className="text-center">
               <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
 
@@ -1041,7 +1014,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       </div>
 
       <div className="px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
-        <div>Pull back •Release to launch •Limited strikes</div>
+        <div>Pull back • Release to launch • Limited strikes</div>
       </div>
     </div>
   );
