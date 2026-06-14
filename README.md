@@ -64,38 +64,46 @@ See wrangler.toml.
 ### Alternatives for frontend (static Vite SPA)
 Since the API lives on the Cloudflare Worker (`WORKER_URL` in `src/api.ts`), you can host the frontend anywhere static:
 
-- **Netlify** (you said it's working):
-  ```powershell
-  npm run deploy:frontend
-  ```
-  Requires `netlify-cli` (`npm i -g netlify-cli`) + `netlify link` to your site.
-  Auto-deploys on Git push if repo connected in Netlify dashboard.
-  Add `netlify.toml` for SPA redirects (already present).
+- **Netlify** (recommended - you said it's working, now fully automated on push):
+  1. In Netlify dashboard, import your GitHub repo (betrnames/chanclazo).
+  2. It will detect Vite via netlify.toml (build: `npm run build`, publish: `dist`).
+  3. For the Worker API, your `WORKER_URL` in src/api.ts points to Cloudflare (fine, or proxy if desired).
+  4. Add custom domain chanclazo.com.
 
-- **Cloudflare Pages** (stays in CF ecosystem, great with your Worker/D1):
+  To trigger deploys on every `git push` (including via your push.bat), just connect the repo. No manual steps needed.
+
+  Local: `npm run deploy:frontend` (after `npm i -g netlify-cli` and linking your site).
+
+- **Cloudflare Pages** (native with your Worker/D1):
   ```powershell
   npm run deploy:pages
   ```
-  Or connect GitHub repo in Cloudflare Pages dashboard. Set build: `npm run build`, output: `dist`.
-  Can route custom domain easily (you likely use Cloudflare DNS for chanclazo.com).
+  Or dashboard connect. Use the same Git push flow.
 
-- **Vercel** (excellent DX, previews, reliable):
-  ```powershell
-  npm run deploy:vercel
-  ```
-  Requires `vercel` CLI. Connect repo for Git-based deploys. Add `vercel.json` (present).
+- **Vercel**:
+  Similar Git import, uses vercel.json.
 
-All these handle the SPA (client-side routing) with the provided config files.
+## Full GitHub Actions Automation (for Netlify)
+I've added `.github/workflows/deploy-netlify.yml` that runs on every push to main:
+- Checks out code
+- Builds with Node 20
+- Deploys to Netlify using CLI + secrets
 
-For custom domain + Bolt issues: Netlify/Vercel/Pages make custom domains trivial. Point DNS to them (or use CF proxy if needed).
+**Setup steps for full automation:**
+1. In Netlify: Go to your site → Site configuration → General → Site details → copy "API ID" (this is NETLIFY_SITE_ID).
+2. In Netlify: User settings → Applications → Personal access tokens → New access token (name it, copy it). This is NETLIFY_AUTH_TOKEN.
+3. In GitHub repo (betrnames/chanclazo):
+   - Settings → Secrets and variables → Actions → New repository secret:
+     - Name: `NETLIFY_AUTH_TOKEN` → value from step 2
+     - Name: `NETLIFY_SITE_ID` → value from step 1
+4. Now, just `git push` (or use your push.bat) and the workflow will build + deploy to Netlify automatically.
+5. You can also manually trigger from GitHub Actions tab.
+
+This replaces Bolt hosting entirely. Netlify will handle the SPA hosting reliably.
+
+See the workflow file for details. If you want to also automate the Worker deploy (`npm run deploy`), we can add a separate job/step (requires Cloudflare API token secret).
 
 ## Background
-Pivoted from Clawatron concept (April 2026) to chanclazo theme for cultural flavor + Vibejam 2026 submission (May).
-
-Built with bolt.new + Claude AI iteration.
-
-## Background
-
 Pivoted from Clawatron concept (April 2026) to chanclazo theme for cultural flavor + Vibejam 2026 submission (May).
 
 Built with bolt.new + Claude AI iteration.
