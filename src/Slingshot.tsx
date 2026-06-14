@@ -211,6 +211,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         const x = baseX + (c - (cols - 1) / 2) * spacing;
         const y = baseY + (r - (rows - 1) / 2) * spacing;
         const body = Matter.Bodies.circle(x, y, 18, {
+          isStatic: true,  // stay floating in pattern until struck
           restitution: 0.35, friction: 0.4, density: 0.0006, label: 'target'
         });
         Matter.World.add(world, body);
@@ -267,6 +268,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         if (!involvesGround && (enemy.body === bodyA || enemy.body === bodyB)) {
           const force = Math.abs(pair.collision.depth * 60);
           enemy.health -= force;
+          if (enemy.body.isStatic) {
+            Matter.Body.setStatic(enemy.body, false);
+          }
           if (enemy.health <= 0) {
             // Explode and destroy around it (chain reaction for nearby pinatas)
             if (enemy.type === 'pinata') {
@@ -279,6 +283,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
                 const dvec = Matter.Vector.sub(other.body.position, deadPos);
                 const dist = Matter.Vector.magnitude(dvec);
                 if (dist > 0 && dist < expRadius) {
+                  if (other.body.isStatic) {
+                    Matter.Body.setStatic(other.body, false);
+                  }
                   other.health -= expDmg * (1 - dist / expRadius);
                   // push nearby
                   const dir = Matter.Vector.normalise(dvec);
