@@ -97,6 +97,11 @@
   animation: floatLogo 1.6s ease-in-out infinite;
 }
 
+/* Periodic bob for easter egg attention (every ~9s for ~1.8s) */
+.pinata-bobbing img {
+  animation: floatLogo 1.6s ease-in-out 1;
+}
+
 /* ─── Chanclazo Game Animations ─────────────────────────────────────────────── */
 
 @keyframes popupFloat {

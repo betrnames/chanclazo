@@ -110,6 +110,10 @@ export default function App() {
   const [showNextLevelBtn, setShowNextLevelBtn] = useState(false);
   const [popups, setPopups] = useState<PopupEntry[]>([]);
 
+  // Easter egg: hidden pinata CTA in header
+  const [showEasterEggModal, setShowEasterEggModal] = useState(false);
+  const [pinataBobbing, setPinataBobbing] = useState(false);
+
   const texts = getTexts(lang);
   const levelConfig = LEVELS[currentLevel - 1];
 
@@ -137,6 +141,16 @@ export default function App() {
       stopMusic();
       homeMusicStarted.current = false;
     }
+  }, [phase]);
+
+  // Easter egg pinata: periodic bob animation every ~9s to draw attention (only on start/home)
+  useEffect(() => {
+    if (phase !== 'start') return;
+    const interval = setInterval(() => {
+      setPinataBobbing(true);
+      setTimeout(() => setPinataBobbing(false), 1800);
+    }, 9000);
+    return () => clearInterval(interval);
   }, [phase]);
 
   // ── Live presence (player count) — ping while playing, leave otherwise ─────
@@ -372,20 +386,19 @@ export default function App() {
 
           <LangToggle />
 
-          {/* Pinata CTA in header (right side) - idle pinata image with hover float like sandal logo, text below */}
+          {/* Easter egg: bigger idle pinata in header (right side). 
+              Periodic bob animation (every ~9s) to draw attention. Hover also bobs like sandal logo.
+              Click to "find" it → modal, then bonus game. No text (easter egg). */}
           <button
-            onClick={() => setPhase('slingshot')}
-            className="absolute top-3 right-24 z-50 flex flex-col items-center pinata-cta cursor-pointer active:opacity-80 transition-all"
+            onClick={() => setShowEasterEggModal(true)}
+            className={`absolute top-3 right-20 z-50 flex flex-col items-center pinata-cta cursor-pointer active:opacity-80 transition-all ${pinataBobbing ? 'pinata-bobbing' : ''}`}
           >
             <img
               src="/pinata.png"
               alt="Pinata"
-              className="w-7 h-7 object-contain drop-shadow-sm"
+              className="w-10 h-10 object-contain drop-shadow-sm"
               style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' }}
             />
-            <span className="text-[7px] font-black text-red-600 tracking-wider leading-none mt-0.5">
-              Limited bonus game
-            </span>
           </button>
 
           {/* ── Scroll content ── */}
@@ -1064,6 +1077,43 @@ export default function App() {
       ════════════════════════════════════════════════════════════════ */}
       {phase === 'slingshot' && (
         <Slingshot onBack={() => setPhase('start')} />
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          EASTER EGG MODAL (pinata in header)
+      ════════════════════════════════════════════════════════════════ */}
+      {showEasterEggModal && (
+        <div className="absolute inset-0 flex items-center justify-center z-[60]">
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+            onClick={() => setShowEasterEggModal(false)} 
+          />
+          <div className="relative z-10 bg-amber-50 border-2 border-yellow-400 shadow-2xl rounded-2xl p-6 max-w-[280px] text-center">
+            <div className="text-4xl mb-2">🥳</div>
+            <div className="text-xl font-black text-orange-800 mb-2 tracking-tight">
+              Congratulations!
+            </div>
+            <p className="text-sm text-orange-700 mb-4 leading-snug">
+              You found the bonus game. Enjoy!
+            </p>
+            <Button
+              size="lg"
+              onClick={() => {
+                setShowEasterEggModal(false);
+                setPhase('slingshot');
+              }}
+              className="w-full text-base font-black py-5 bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-[0_4px_0_#9a3412] active:shadow-[0_1px_0_#9a3412] active:translate-y-1 transition-all border-b-4 border-orange-800"
+            >
+              Play the Bonus Game
+            </Button>
+            <button
+              onClick={() => setShowEasterEggModal(false)}
+              className="mt-2 text-xs font-bold text-orange-600 hover:text-orange-800 underline"
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ════════════════════════════════════════════════════════════════
