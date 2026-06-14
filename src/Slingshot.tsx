@@ -215,7 +215,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           restitution: 0.35, friction: 0.4, density: 0.0006, label: 'target'
         });
         Matter.World.add(world, body);
-        enemiesRef.current.push({ body, type: 'pinata', health: 35 + levelNum * 10 });
+        enemiesRef.current.push({ body, type: 'pinata', health: 80 + levelNum * 5 }); // higher health so one shot doesn't wipe the grid
       }
     }
 
@@ -266,7 +266,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       for (let j = enemiesRef.current.length - 1; j >= 0; j--) {
         const enemy = enemiesRef.current[j];
         if (!involvesGround && (enemy.body === bodyA || enemy.body === bodyB)) {
-          const force = Math.abs(pair.collision.depth * 60);
+          const force = Math.min(Math.abs(pair.collision.depth * 55), 45); // cap direct hit damage
           enemy.health -= force;
           if (enemy.body.isStatic) {
             Matter.Body.setStatic(enemy.body, false);
@@ -275,8 +275,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
             // Explode and destroy around it (chain reaction for nearby pinatas)
             if (enemy.type === 'pinata') {
               const deadPos = enemy.body.position;
-              const expRadius = 90;
-              const expDmg = 32;
+              const expRadius = 55;  // smaller: only affects immediate neighbors in the grid
+              const expDmg = 18;     // mild area damage so it softens but doesn't one-shot the whole cluster
               for (let k = enemiesRef.current.length - 1; k >= 0; k--) {
                 const other = enemiesRef.current[k];
                 if (other.body === enemy.body) continue;
@@ -287,9 +287,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
                     Matter.Body.setStatic(other.body, false);
                   }
                   other.health -= expDmg * (1 - dist / expRadius);
-                  // push nearby
+                  // push nearby (main "explode" effect)
                   const dir = Matter.Vector.normalise(dvec);
-                  const f = 0.85 * (1 - dist / expRadius);
+                  const f = 0.9 * (1 - dist / expRadius);
                   Matter.Body.applyForce(other.body, other.body.position, Matter.Vector.mult(dir, f));
                   if (other.health <= 0) {
                     Matter.World.remove(worldRef.current!, other.body);
@@ -564,7 +564,10 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       let sz = 50;
       if (target.type === 'pinata') {
         img = imagesRef.current.pinata || null;
-        sz = 50;
+        // visual damage feedback: pinatas shrink as they take damage (makes "exploded/damaged" look)
+        const maxHealth = 80 + (levelRef.current || 1) * 5;
+        const healthRatio = Math.max(0.35, target.health / maxHealth);
+        sz = 50 * healthRatio;
       } else {
         img = imagesRef.current.sugarskull || null;
         sz = 36;
