@@ -8,7 +8,7 @@ import { LEVELS } from './game/types';
 import { createGame } from './game/engine';
 import type { GameInstance } from './game/types';
 import { getTexts } from './game/i18n';
-import { initAudio, setMuted, isMuted, startMusic, stopMusic, setMusicIntensity } from './game/sound';
+import { initAudio, setMuted, startMusic, stopMusic, setMusicIntensity } from './game/sound';
 import { createTouchState } from './game/controls';
 import type { TouchInputState } from './game/controls';
 import MobileTouchControls from './components/MobileTouchControls';
@@ -136,6 +136,34 @@ export default function App() {
       homeMusicStarted.current = false;
     }
   }, [phase]);
+
+  // ── Live presence (player count) — ping while playing, leave otherwise ─────
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    let iv: ReturnType<typeof setInterval> | null = null;
+    const ping = async () => {
+      const count = await pingPresence(sessionId.current);
+      setPlayerCount(count);
+    };
+    ping();
+    iv = setInterval(ping, 14000);
+    return () => { if (iv) clearInterval(iv); };
+  }, [phase]);
+
+  // Leave presence on phase change away from playing or on unmount
+  useEffect(() => {
+    if (phase === 'playing') return;
+    leavePresence(sessionId.current).catch(() => {});
+    setPlayerCount(0);
+  }, [phase]);
+
+  // Ensure leave on full unmount
+  useEffect(() => {
+    const sid = sessionId.current;
+    return () => {
+      leavePresence(sid).catch(() => {});
+    };
+  }, []);
 
   const toggleMute = useCallback(() => {
     const newMuted = !musicMuted;
@@ -476,20 +504,18 @@ export default function App() {
                   </p>
                 )}
 
-                {/* Ghost mode badge removed */}
-
                 <button
                   onClick={loadLeaderboard}
                   className="w-full text-xs font-black text-orange-700 opacity-70 hover:opacity-100 py-1 transition-opacity"
                   style={{ cursor: 'pointer' }}
                 >
-                  View Leaderboard
+                  {texts.ui.leaderboard}
                 </button>
                 <a
                   href="/lore"
                   className="block w-full text-center text-xs font-black text-orange-700 opacity-70 hover:opacity-100 py-1 transition-opacity"
                 >
-                  What is a Chanclazo?
+                  {texts.ui.whatIsChanclazo}
                 </a>
 
                 {/* Music mute toggle */}

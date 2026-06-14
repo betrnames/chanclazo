@@ -217,8 +217,9 @@ export function createGame(
     // ── Level completion check ────────────────────────────────────────────
     const levelDone = survivalTime >= levelConfig.surviveSecs && score >= levelConfig.minScore;
     if (levelDone) {
-      // Time bonus: extra 50 pts per second left (rounded)
-      const timeBonus = Math.floor((levelConfig.surviveSecs - survivalTime + levelConfig.surviveSecs) * 0 + 500);
+      // Time bonus: extra ~50 pts per second left (rounded)
+      const remaining = Math.max(0, levelConfig.surviveSecs - survivalTime);
+      const timeBonus = Math.floor(remaining * 50);
       score += timeBonus;
       running = false;
       stopMusic();

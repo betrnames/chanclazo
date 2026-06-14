@@ -23,7 +23,7 @@ export const TEXTS = {
       gameOver:   'GAME OVER!',
       victory:    '🎉 YOU SURVIVED!',
       victoryTitle: "MOM'S WRATH DEFEATED!",
-      subtitle:   'Chancla Strike v0.2.0',
+      subtitle:   'Chancla Strike',
       tagline:    '"When words fail, the chanclazo speaks!"',
       finalScore: 'Final Score',
       survived:   'Survived',
@@ -44,6 +44,8 @@ export const TEXTS = {
       nextLevel:  'Next Level →',
       timeBonus:  'Time Bonus',
       totalSurvival: 'Total Time',
+      leaderboard: 'View Leaderboard',
+      whatIsChanclazo: 'What is a Chanclazo?',
       rank: {
         legend: '🏆 LEGEND! Mom needs way more practice.',
         expert: '⭐ Expert dodger! Mom is shook.',
@@ -105,6 +107,8 @@ export const TEXTS = {
       nextLevel:  'Siguiente Nivel →',
       timeBonus:  'Bonus de Tiempo',
       totalSurvival: 'Tiempo Total',
+      leaderboard: 'Ver Clasificación',
+      whatIsChanclazo: '¿Qué es un Chanclazo?',
       rank: {
         legend: '🏆 ¡LEYENDA! Mamá necesita más práctica.',
         expert: '⭐ ¡Experto esquivador! Mamá está impresionada.',

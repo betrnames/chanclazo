@@ -1,3 +1,3 @@
 @echo off
-cd /d "C:\Projects\chanclazo game\project"
-call npx wrangler deploy --assets=./dist
+cd /d "%~dp0"
+call npm run deploy

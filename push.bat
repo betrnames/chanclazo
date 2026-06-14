@@ -1,5 +1,5 @@
 @echo off
-cd /d "C:\Projects\chanclazo game\project"
+cd /d "%~dp0"
 git add -A
-git commit -m "update game"
+git commit -m "polish game + live players"
 git push origin main

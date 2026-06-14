@@ -1,3 +1,3 @@
 @echo off
-cd /d "C:\Projects\chanclazo game\project"
-call npx vite build
+cd /d "%~dp0"
+call npm run build

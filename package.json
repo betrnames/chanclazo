@@ -1,13 +1,21 @@
 {
-  "name": "shadcn-ui-template",
+  "name": "chanclazo",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.2.1",
   "type": "module",
+  "description": "Chancla Strike — a 3D browser survival game. Dodge the chanclas (flip-flops) in escalating waves of mom rage. Latino culture love letter with Three.js, React, and Cloudflare.",
+  "author": "betrnames",
+  "homepage": "https://chanclazo.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/betrnames/chanclazo.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy --assets=./dist"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -37,6 +45,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260613.1",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

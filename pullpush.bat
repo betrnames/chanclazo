@@ -1,4 +1,4 @@
 @echo off
-cd /d "C:\Projects\chanclazo game\project"
+cd /d "%~dp0"
 git pull origin main --no-edit
 git push origin main
