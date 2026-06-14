@@ -157,20 +157,29 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Gravity - similar to original game feel
     engine.gravity.y = 1.2;
 
-    // Ground
-    const ground = Matter.Bodies.rectangle(640, 580, 1280, 40, {
-      isStatic: true,
-      restitution: 0.1,
-      friction: 0.8,
-    });
-    Matter.World.add(world, ground);
-    groundRef.current = ground;
-
-    // Left wall
+    // Left + right side walls (keep projectiles and targets inside horizontally)
     const leftWall = Matter.Bodies.rectangle(20, 300, 40, 600, { isStatic: true });
-    // Right wall
     const rightWall = Matter.Bodies.rectangle(1260, 300, 40, 600, { isStatic: true });
-    Matter.World.add(world, [leftWall, rightWall]);
+
+    // Invisible top + bottom containers (bounds) so the launched sandal/projectile cannot fly out of the screen above or below.
+    // These are static bodies with bounce; they have no visual representation (no draw code anywhere).
+    // Positioned with surfaces just outside the 0-600 play area so full projectile sprites (size ~60) stay visible on bounce.
+    // Bottom also acts as the (invisible) floor for any knocked-down pinatas.
+    const topBound = Matter.Bodies.rectangle(640, 40, 1300, 60, {
+      isStatic: true,
+      restitution: 0.75,
+      friction: 0.1,
+      label: 'bound'
+    });
+    const bottomBound = Matter.Bodies.rectangle(640, 600, 1300, 80, {
+      isStatic: true,
+      restitution: 0.3,
+      friction: 0.6,
+      label: 'bound'
+    });
+
+    Matter.World.add(world, [leftWall, rightWall, topBound, bottomBound]);
+    groundRef.current = bottomBound;  // used by collision skip logic (treat bottom as "ground" to protect initial settling)
 
     if (shouldBuildStack) {
       buildLevel(world, levelNum);
@@ -293,7 +302,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       const bodyA = pair.bodyA;
       const bodyB = pair.bodyB;
 
-      // Ignore collisions with the ground (prevents the pinatas from being destroyed by their own initial settling/fall)
+      // Ignore collisions with the bottom bound (prevents the pinatas from being destroyed by their own initial settling/fall; top bound is separate)
       const involvesGround = (bodyA === groundBody || bodyB === groundBody);
 
       // Damage blocks (reverse iterate for safe splice while removing)
@@ -526,7 +535,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       if (b && (b.label === 'chancla' || b.label === 'projectile')) {
         const v = b.velocity || { x: 0, y: 0 };
         const spd = Math.hypot(v.x, v.y);
-        if ((spd < 0.05 && b.position.y > 520) || b.position.y > 650 || b.position.x < -50 || b.position.x > 1330) {
+        if ((spd < 0.05 && b.position.y > 560) || b.position.y > 700 || b.position.x < -50 || b.position.x > 1330) {
           Matter.World.remove(world, b);
         }
       }
@@ -536,7 +545,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Background is provided by the fixed root div (full viewport cover via CSS).
-    // Only draw game elements (ground, targets, strikers, UI) here; they composite over the bg.
+    // Only draw game elements (targets, strikers, UI, blocks) here; they composite over the bg.
+    // (No visible ground/platform — brown bar removed; use invisible top/bottom bounds for containment.)
 
     // Advance chancla spin animation (~8 fps for visible spin on the 5x5 sheet)
     const now = performance.now();
@@ -551,12 +561,6 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       hoverOffset.y = Math.sin(t) * 10;           // vertical bob
       hoverOffset.x = Math.sin(t * 0.6) * 4;      // gentle side-to-side
     }
-
-    // Ground (drawn on top of bg; pinatas will fall here if knocked down)
-    ctx.fillStyle = 'rgba(92, 64, 51, 0.85)';
-    ctx.fillRect(0, 560, 1280, 40);
-    ctx.fillStyle = 'rgba(58, 42, 31, 0.9)';
-    ctx.fillRect(0, 555, 1280, 8);
 
     // Draw blocks
     blocksRef.current.forEach((block) => {
@@ -857,7 +861,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     canvas.width = 1280;
     canvas.height = 600;
 
-    // Setup engine/ground/walls + render loop, but do NOT build the enemy stack yet
+    // Setup engine + invisible bounds (top/bottom/sides) + render loop, but do NOT build the enemy stack yet
     initPhysics(1, false);
 
     // Random background for ready preview (and re-random on start for the game)
@@ -866,7 +870,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     bgThemeRef.current = randomTheme;
     setCurrentBgUrl(getBgUrl(randomTheme));
 
-    // Start render loop immediately so background + floating sandal are visible on ready screen
+    // Start render loop immediately so background + floating sandal (contained by invisible top/bottom) are visible on ready screen
     rafRef.current = requestAnimationFrame(renderLoop);
 
     return () => {
