@@ -323,9 +323,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const x = (('clientX' in e ? e.clientX : 0) - rect.left) * scaleX;
     const y = (('clientY' in e ? e.clientY : 0) - rect.top) * scaleY;
 
-    // Check if clicking near slingshot area
+    // Check if clicking near the floating sandal (larger hit area for bigger graphic)
     const dist = Math.hypot(x - slingshotPos.x, y - slingshotPos.y);
-    if (dist < 80) {
+    if (dist < 110) {
       dragRef.current.active = true;
       dragRef.current.start = { x, y };
       dragRef.current.current = { x, y };
@@ -347,7 +347,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const dx = x - slingshotPos.x;
     const dy = y - slingshotPos.y;
     const dist = Math.hypot(dx, dy);
-    const maxPull = 120;
+    const maxPull = 140; // a bit more room since sandal is bigger and floating
 
     let finalX = x;
     let finalY = y;
@@ -383,7 +383,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const vy = dy * power / 12;
 
     // Launch the chancla (sandal) projectile - only one type now
-    const birdBody = Matter.Bodies.circle(slingshotPos.x, slingshotPos.y, 21, {
+    const birdBody = Matter.Bodies.circle(slingshotPos.x, slingshotPos.y, 30, {
       restitution: 0.4,
       friction: 0.5,
       density: 0.0015,
@@ -474,6 +474,14 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     lastTimeRef.current = now;
     spinFrameRef.current = (spinFrameRef.current + (dt / 125)) % 25;
 
+    // Animated hover for the floating ready sandal (no slingshot device)
+    let hoverOffset = { x: 0, y: 0 };
+    if (!dragRef.current.active && gameStateRef.current === 'aiming') {
+      const t = (now / 1000) * 1.8;
+      hoverOffset.y = Math.sin(t) * 10;           // vertical bob
+      hoverOffset.x = Math.sin(t * 0.6) * 4;      // gentle side-to-side
+    }
+
     // Ground (drawn on top of bg for a solid stage floor the crates rest on)
     ctx.fillStyle = 'rgba(92, 64, 51, 0.85)';
     ctx.fillRect(0, 560, 1280, 40);
@@ -546,29 +554,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.restore();
     });
 
-    // Draw slingshot base and rubber
+    // Draw slingshot base and rubber  -- REMOVED per request (no more sling device)
     const drag = dragRef.current;
     const birdPos = drag.active 
       ? { x: drag.current.x, y: drag.current.y } 
       : { x: slingshotPos.x, y: slingshotPos.y };
-
-    // Posts
-    ctx.fillStyle = '#3a2a1f';
-    ctx.fillRect(slingshotPos.x - 8, slingshotPos.y - 60, 6, 70);
-    ctx.fillRect(slingshotPos.x + 2, slingshotPos.y - 60, 6, 70);
-
-    // Rubber bands
-    ctx.strokeStyle = '#8B0000';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(slingshotPos.x - 5, slingshotPos.y - 35);
-    ctx.lineTo(birdPos.x, birdPos.y);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(slingshotPos.x + 5, slingshotPos.y - 35);
-    ctx.lineTo(birdPos.x, birdPos.y);
-    ctx.stroke();
 
     // Draw launched projectiles (chancla_spin animated sprite sheet)
     const launchedChanclas: any[] = allBodies.filter((b: any) => {
@@ -592,13 +582,31 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
-        const size = 42;
+        const size = 60; // bigger sandal
         ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
         ctx.restore();
       }
     });
 
-    // Current held projectile (chancla on slingshot) - still spins for fun
+    // Ready floating sandal (starts here with animated hover bob + spin, no sling posts/rubber)
+    // Bigger size, always visible when not dragging
+    if (!drag.active && chanclaImg && gameStateRef.current === 'aiming') {
+      const fw = chanclaImg.width / cols;
+      const fh = chanclaImg.height / rows;
+      const sx = (frame % cols) * fw;
+      const sy = Math.floor(frame / cols) * fh;
+      const readyX = slingshotPos.x + hoverOffset.x;
+      const readyY = slingshotPos.y + hoverOffset.y;
+      ctx.save();
+      ctx.translate(readyX, readyY);
+      // extra gentle tilt for hover feel (combined with spin frame)
+      ctx.rotate(Math.sin((now / 1000) * 1.5) * 0.12);
+      const size = 60; // bigger
+      ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
+      ctx.restore();
+    }
+
+    // Currently pulled / aiming sandal (bigger, follows drag, still spins)
     if (drag.active && chanclaImg) {
       const fw = chanclaImg.width / cols;
       const fh = chanclaImg.height / rows;
@@ -606,7 +614,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       const sy = Math.floor(frame / cols) * fh;
       ctx.save();
       ctx.translate(birdPos.x, birdPos.y);
-      const size = 42;
+      const size = 60; // bigger
       ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
       ctx.restore();
     }
