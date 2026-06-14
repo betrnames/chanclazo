@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // ─── Game Phase ────────────────────────────────────────────────────────────────
-export type GamePhase = 'start' | 'playing' | 'level_complete' | 'victory' | 'gameover';
+export type GamePhase = 'start' | 'playing' | 'level_complete' | 'victory' | 'gameover' | 'slingshot';
 
 // ─── Level Config ──────────────────────────────────────────────────────────────
 export interface LevelConfig {
