@@ -38,6 +38,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   // Game objects
   const blocksRef = useRef<Block[]>([]);
   const enemiesRef = useRef<Target[]>([]);
+  const standsRef = useRef<Matter.Body[]>([]);
   const groundRef = useRef<Matter.Body | null>(null);
   const slingshotPos = { x: 180, y: 420 }; // left side
   const shotsLeftRef = useRef(4);
@@ -200,39 +201,58 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Clear previous
     blocksRef.current.forEach(b => Matter.World.remove(world, b.body));
     enemiesRef.current.forEach(e => Matter.World.remove(world, e.body));
+    standsRef.current.forEach(s => Matter.World.remove(world, s));
     blocksRef.current = [];
     enemiesRef.current = [];
+    standsRef.current = [];
 
     const baseY = 546; // resting on top of ground (ground top edge ~560)
     const baseX = 920;
 
     if (levelNum === 1) {
-      // Triangle stack: random mix of dishes, beerbottles, and one piñata
-      // No crates. Piñata is the special/big one, usually at the top.
-      const baseY = 542;
-      const baseX = 920;
+      // Elevated stand/table + triangle stack of random mix (dishes, beerbottles, one piñata on top)
+      // Positioned realistically on the right side so the arc from left slingshot feels natural.
+      // Stand is static platform; targets stacked on top in triangle formation.
+
+      const standX = 950;
+      const standY = 465;      // center of stand
+      const standW = 230;
+      const standH = 22;
+
+      const stand = Matter.Bodies.rectangle(standX, standY, standW, standH, {
+        isStatic: true,
+        restitution: 0.1,
+        friction: 0.8,
+        label: 'stand'
+      });
+      Matter.World.add(world, stand);
+      standsRef.current.push(stand);
+
+      const standTopY = standY - standH / 2;  // ~454
+
+      // Triangle positions on top of the stand (4-3-2-1)
       const positions: {x: number, y: number}[] = [
-        // bottom row 4
-        {x: baseX - 54, y: baseY},
-        {x: baseX - 18, y: baseY},
-        {x: baseX + 18, y: baseY},
-        {x: baseX + 54, y: baseY},
+        // bottom row 4, slightly above stand
+        {x: standX - 54, y: standTopY - 14},
+        {x: standX - 18, y: standTopY - 14},
+        {x: standX + 18, y: standTopY - 14},
+        {x: standX + 54, y: standTopY - 14},
         // row 3
-        {x: baseX - 36, y: baseY - 31},
-        {x: baseX,     y: baseY - 31},
-        {x: baseX + 36, y: baseY - 31},
+        {x: standX - 36, y: standTopY - 45},
+        {x: standX,     y: standTopY - 45},
+        {x: standX + 36, y: standTopY - 45},
         // row 2
-        {x: baseX - 18, y: baseY - 62},
-        {x: baseX + 18, y: baseY - 62},
+        {x: standX - 18, y: standTopY - 76},
+        {x: standX + 18, y: standTopY - 76},
         // top
-        {x: baseX, y: baseY - 93},
+        {x: standX, y: standTopY - 107},
       ];
 
       let pinataPlaced = false;
       positions.forEach((pos, idx) => {
         let t: 'dish' | 'beerbottle' | 'pinata';
         if (idx === positions.length - 1) {
-          t = 'pinata'; // force piñata at top
+          t = 'pinata';
           pinataPlaced = true;
         } else if (!pinataPlaced && idx >= 6 && Math.random() < 0.5) {
           t = 'pinata';
@@ -328,13 +348,14 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       const bodyA = pair.bodyA;
       const bodyB = pair.bodyB;
 
-      // Ignore collisions with the ground itself (prevents the stacks from being destroyed by their own initial settling/fall)
-      const involvesGround = (bodyA === groundBody || bodyB === groundBody);
+      // Ignore collisions with the ground or stand (prevents the stacks from being destroyed by their own initial settling/fall onto the platform)
+      const involvesGroundOrStand = (bodyA === groundBody || bodyB === groundBody) ||
+        standsRef.current.some(s => bodyA === s || bodyB === s);
 
       // Damage blocks (reverse iterate for safe splice while removing)
       for (let j = blocksRef.current.length - 1; j >= 0; j--) {
         const block = blocksRef.current[j];
-        if (!involvesGround && (block.body === bodyA || block.body === bodyB)) {
+        if (!involvesGroundOrStand && (block.body === bodyA || block.body === bodyB)) {
           const force = Math.abs(pair.collision.depth * 80);
           block.health -= force;
           if (block.health <= 0) {
@@ -352,7 +373,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       // Damage enemies (reverse iterate for safe splice)
       for (let j = enemiesRef.current.length - 1; j >= 0; j--) {
         const enemy = enemiesRef.current[j];
-        if (!involvesGround && (enemy.body === bodyA || enemy.body === bodyB)) {
+        if (!involvesGroundOrStand && (enemy.body === bodyA || enemy.body === bodyB)) {
           const force = Math.abs(pair.collision.depth * 60);
           enemy.health -= force;
           if (enemy.health <= 0) {
@@ -564,6 +585,25 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     ctx.fillRect(0, 560, 1280, 40);
     ctx.fillStyle = 'rgba(58, 42, 31, 0.9)';
     ctx.fillRect(0, 555, 1280, 8);
+
+    // Draw the stand/table/box for the elevated stack (realistic placement, not flat on ground)
+    standsRef.current.forEach((stand) => {
+      const pos = stand.position;
+      const angle = stand.angle;
+      ctx.save();
+      ctx.translate(pos.x, pos.y);
+      ctx.rotate(angle);
+      // Wooden table/stand with legs (fits party theme with dishes/beer/pinata)
+      ctx.fillStyle = '#5c4033';
+      ctx.fillRect(-115, -11, 230, 22); // tabletop
+      ctx.fillStyle = '#3a2a1f';
+      ctx.fillRect(-100, 11, 14, 55);   // left leg
+      ctx.fillRect(86, 11, 14, 55);     // right leg
+      ctx.strokeStyle = '#2a1f0f';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-115, -11, 230, 22);
+      ctx.restore();
+    });
 
     // Draw blocks
     blocksRef.current.forEach((block) => {
