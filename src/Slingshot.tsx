@@ -958,7 +958,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 32px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText('OUT OF CHANCLAS!', 640, 275);
+      ctx.fillText('OUT OF STRIKES!', 640, 275);
       ctx.font = '18px system-ui';
       ctx.fillText('Click to retry level', 640, 310);
       ctx.textAlign = 'left';
