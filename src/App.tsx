@@ -106,6 +106,7 @@ export default function App() {
   const [finalScore, setFinalScore] = useState(0);
   const [finalSurvival, setFinalSurvival] = useState(0);
   const [levelCompleteData, setLevelCompleteData] = useState({ level: 1, score: 0, timeBonus: 0 });
+  const [showNextLevelBtn, setShowNextLevelBtn] = useState(false);
   const [popups, setPopups] = useState<PopupEntry[]>([]);
 
   const texts = getTexts(lang);
@@ -265,6 +266,19 @@ export default function App() {
     setPopups([]);
     setPhase('playing');
   }, []);
+
+  // ── Delay next level button on level complete ──────────────────────────────
+  useEffect(() => {
+    if (phase !== 'level_complete') {
+      setShowNextLevelBtn(false);
+      return;
+    }
+    setShowNextLevelBtn(false);
+    const timer = setTimeout(() => {
+      setShowNextLevelBtn(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [phase]);
 
   // ── Engine lifecycle ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -821,21 +835,15 @@ export default function App() {
                 </div>
               )}
 
-              <Button
-                size="lg"
-                className="w-full text-xl font-black py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95"
-                onClick={() => startLevel(levelCompleteData.level + 1)}
-              >
-                {texts.ui.nextLevel}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full text-muted-foreground hover:text-foreground"
-                onClick={() => setPhase('start')}
-              >
-                {texts.ui.menu}
-              </Button>
+              {showNextLevelBtn && levelCompleteData.level < LEVELS.length && (
+                <Button
+                  size="lg"
+                  className="w-full text-xl font-black py-6 bg-orange-500 hover:bg-orange-600 text-white rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95"
+                  onClick={() => startLevel(levelCompleteData.level + 1)}
+                >
+                  {texts.ui.nextLevel}
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
