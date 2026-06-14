@@ -15,7 +15,10 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy --assets=./dist"
+    "deploy": "npm run build && wrangler deploy --assets=./dist",
+    "deploy:frontend": "npm run build && netlify deploy --prod --dir=dist",
+    "deploy:pages": "npm run build && wrangler pages deploy dist --project-name=chanclazo",
+    "deploy:vercel": "npm run build && vercel --prod"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

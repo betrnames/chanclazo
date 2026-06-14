@@ -53,15 +53,46 @@ Build: `npm run build`
 
 ## Deploy
 
-Uses wrangler + assets.
-
+### Cloudflare (current, Worker + Assets + D1)
 ```powershell
 npm run deploy
 ```
-
 Or manually: `npm run build && wrangler deploy --assets=./dist`
 
-See wrangler.toml for routes and D1 binding.
+See wrangler.toml.
+
+### Alternatives for frontend (static Vite SPA)
+Since the API lives on the Cloudflare Worker (`WORKER_URL` in `src/api.ts`), you can host the frontend anywhere static:
+
+- **Netlify** (you said it's working):
+  ```powershell
+  npm run deploy:frontend
+  ```
+  Requires `netlify-cli` (`npm i -g netlify-cli`) + `netlify link` to your site.
+  Auto-deploys on Git push if repo connected in Netlify dashboard.
+  Add `netlify.toml` for SPA redirects (already present).
+
+- **Cloudflare Pages** (stays in CF ecosystem, great with your Worker/D1):
+  ```powershell
+  npm run deploy:pages
+  ```
+  Or connect GitHub repo in Cloudflare Pages dashboard. Set build: `npm run build`, output: `dist`.
+  Can route custom domain easily (you likely use Cloudflare DNS for chanclazo.com).
+
+- **Vercel** (excellent DX, previews, reliable):
+  ```powershell
+  npm run deploy:vercel
+  ```
+  Requires `vercel` CLI. Connect repo for Git-based deploys. Add `vercel.json` (present).
+
+All these handle the SPA (client-side routing) with the provided config files.
+
+For custom domain + Bolt issues: Netlify/Vercel/Pages make custom domains trivial. Point DNS to them (or use CF proxy if needed).
+
+## Background
+Pivoted from Clawatron concept (April 2026) to chanclazo theme for cultural flavor + Vibejam 2026 submission (May).
+
+Built with bolt.new + Claude AI iteration.
 
 ## Background
 
