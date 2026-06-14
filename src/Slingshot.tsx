@@ -916,15 +916,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.fillText('Click anywhere to continue', 420, 320);
     }
     if (gameStateRef.current === 'lost') {
-      const isSandal = projectileTypeRef.current === 'chancla';
-      const outOfText = isSandal ? 'OUT OF SANDALS!' : 'OUT OF STRIKES!';
       // Dark box for visibility over any background
       ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
       ctx.fillRect(280, 235, 720, 110);
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 32px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText(outOfText, 640, 275);
+      ctx.fillText('OUT OF CHANCLAS!', 640, 275);
       ctx.font = '18px system-ui';
       ctx.fillText('Click to retry level', 640, 310);
       ctx.textAlign = 'left';

@@ -114,7 +114,6 @@ export default function App() {
   const [showEasterEggModal, setShowEasterEggModal] = useState(false);
   const lamaCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lamaImgRef = useRef<HTMLImageElement | null>(null);
-  const lamaRafRef = useRef<number | null>(null);
   const [lamaLoaded, setLamaLoaded] = useState(false);
 
   const texts = getTexts(lang);
@@ -146,7 +145,7 @@ export default function App() {
     }
   }, [phase]);
 
-  // Load running lama spritesheet for easter egg
+  // Load lama spritesheet for easter egg (static pose for now)
   useEffect(() => {
     const img = new Image();
     img.onload = () => {
@@ -154,86 +153,26 @@ export default function App() {
       setLamaLoaded(true);
     };
     img.src = '/runningLama.png';
-    return () => {
-      if (lamaRafRef.current) cancelAnimationFrame(lamaRafRef.current);
-    };
   }, []);
 
-  // In-place running animation for the lama easter egg in upper right.
-  // Randomly "starts running" (fast sprite cycle) from time to time for a few seconds,
-  // then returns to idle frame in the same position.
+  // Static lama pinata in upper right as easter egg (no run animation for now).
+  // Draws a single frame from the sheet. Click to trigger the "found the bonus game" modal.
   useEffect(() => {
-    if (phase !== 'start' || !lamaCanvasRef.current || !lamaImgRef.current || !lamaLoaded) {
-      if (lamaRafRef.current) {
-        cancelAnimationFrame(lamaRafRef.current);
-        lamaRafRef.current = null;
-      }
-      return;
-    }
+    if (phase !== 'start' || !lamaCanvasRef.current || !lamaImgRef.current || !lamaLoaded) return;
 
     const canvas = lamaCanvasRef.current;
     const ctx = canvas.getContext('2d', { alpha: true });
     const img = lamaImgRef.current;
     if (!ctx || !img) return;
 
-    const cols = 5;
     const frameSize = 256;
-    const numFrames = 5; // run cycle uses first row / 5 frames like other sheets
     const displaySize = 64;
-    let frame = 0;
-    let lastFrameTime = performance.now();
-    let isBursting = false;
-    let burstEnd = 0;
-    let nextBurst = performance.now() + 8000 + Math.random() * 6000;
+    ctx.clearRect(0, 0, displaySize, displaySize);
 
-    const animate = (time = performance.now()) => {
-      ctx.clearRect(0, 0, displaySize, displaySize);
-
-      const now = time;
-
-      // Periodic burst: start "running" randomly
-      if (!isBursting && now > nextBurst) {
-        isBursting = true;
-        burstEnd = now + 2200; // run anim for ~2.2s
-        nextBurst = now + 10000 + Math.random() * 10000; // next in 10-20s
-      }
-      if (isBursting && now > burstEnd) {
-        isBursting = false;
-        frame = 0; // return to idle
-      }
-
-      // Frame advance
-      const interval = isBursting ? 85 : 250;
-      if (now - lastFrameTime > interval) {
-        if (isBursting) {
-          frame = (frame + 1) % numFrames;
-        } else {
-          frame = 0;
-        }
-        lastFrameTime = now;
-      }
-
-      // Draw current frame using col/row math matching project spritesheets (5x5 grid)
-      const col = frame % cols;
-      const row = Math.floor(frame / cols);
-      const sx = col * frameSize;
-      const sy = row * frameSize;
-      ctx.drawImage(img, sx, sy, frameSize, frameSize, 0, 0, displaySize, displaySize);
-
-      lamaRafRef.current = requestAnimationFrame(animate);
-    };
-
-    // Initial idle frame
-    ctx.drawImage(img, 0, 0, frameSize, frameSize, 0, 0, displaySize, displaySize);
-
-    lamaRafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (lamaRafRef.current) {
-        cancelAnimationFrame(lamaRafRef.current);
-        lamaRafRef.current = null;
-      }
-    };
+    // Static frame (first tile, col 0 row 0 of 5x5 grid) - adjust sx/sy for better idle pose if needed
+    const sx = 0;
+    const sy = 0;
+    ctx.drawImage(img, sx, sy, frameSize, frameSize, 0, 0, displaySize, displaySize);
   }, [phase, lamaLoaded]);
 
   // ── Live presence (player count) — ping while playing, leave otherwise ─────
@@ -469,10 +408,8 @@ export default function App() {
 
           <LangToggle />
 
-          {/* Easter egg: lama in upper right (like previous pinata CTA).
-              Randomly starts "running" (fast sprite cycle from the sheet) from time to time
-              for a few seconds to draw attention, then returns to idle in same spot.
-              Click to find the bonus game (shows modal). */}
+          {/* Easter egg: lama pinata in upper right (static for now, no run animation).
+              Click to find the bonus game (shows modal). Sized and padded to not cut off or overlap lang. */}
           <canvas
             ref={lamaCanvasRef}
             width={64}
