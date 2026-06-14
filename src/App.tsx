@@ -115,6 +115,7 @@ export default function App() {
   const lamaCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lamaImgRef = useRef<HTMLImageElement | null>(null);
   const lamaRafRef = useRef<number | null>(null);
+  const [lamaLoaded, setLamaLoaded] = useState(false);
 
   const texts = getTexts(lang);
   const levelConfig = LEVELS[currentLevel - 1];
@@ -150,6 +151,7 @@ export default function App() {
     const img = new Image();
     img.onload = () => {
       lamaImgRef.current = img;
+      setLamaLoaded(true);
     };
     img.src = '/runningLama.png';
     return () => {
@@ -161,7 +163,7 @@ export default function App() {
   // Randomly "starts running" (fast sprite cycle) from time to time for a few seconds,
   // then returns to idle frame in the same position.
   useEffect(() => {
-    if (phase !== 'start' || !lamaCanvasRef.current || !lamaImgRef.current) {
+    if (phase !== 'start' || !lamaCanvasRef.current || !lamaImgRef.current || !lamaLoaded) {
       if (lamaRafRef.current) {
         cancelAnimationFrame(lamaRafRef.current);
         lamaRafRef.current = null;
@@ -229,7 +231,7 @@ export default function App() {
         lamaRafRef.current = null;
       }
     };
-  }, [phase]);
+  }, [phase, lamaLoaded]);
 
   // ── Live presence (player count) — ping while playing, leave otherwise ─────
   useEffect(() => {
