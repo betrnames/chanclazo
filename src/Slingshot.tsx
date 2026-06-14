@@ -38,7 +38,6 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   // Game objects
   const blocksRef = useRef<Block[]>([]);
   const enemiesRef = useRef<Target[]>([]);
-  const standsRef = useRef<Matter.Body[]>([]);
   const groundRef = useRef<Matter.Body | null>(null);
   const slingshotPos = { x: 180, y: 420 }; // left side
   const shotsLeftRef = useRef(4);
@@ -135,18 +134,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     if (shouldBuildStack) {
       buildLevel(world, levelNum);
 
-      if (levelNum === 1) {
-        // Extra manual settle steps for the pure skull triangle so it is perfectly at rest
-        // and does not visibly fall/shift on the very first render frames
-        for (let s = 0; s < 5; s++) {
-          Matter.Engine.update(engine, 1000 / 60);
-        }
-        // re-zero velocities after the settle passes
-        enemiesRef.current.forEach(e => {
-          Matter.Body.setVelocity(e.body, { x: 0, y: 0 });
-          Matter.Body.setAngularVelocity(e.body, 0);
-        });
+      // Extra manual settle steps for the floating pinata grid so it is perfectly at rest
+      // and does not visibly fall/shift on the very first render frames
+      for (let s = 0; s < 5; s++) {
+        Matter.Engine.update(engine, 1000 / 60);
       }
+      // re-zero velocities after the settle passes
+      enemiesRef.current.forEach(e => {
+        Matter.Body.setVelocity(e.body, { x: 0, y: 0 });
+        Matter.Body.setAngularVelocity(e.body, 0);
+      });
     } else {
       blocksRef.current = [];
       enemiesRef.current = [];
@@ -196,53 +193,30 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Clear previous
     blocksRef.current.forEach(b => Matter.World.remove(world, b.body));
     enemiesRef.current.forEach(e => Matter.World.remove(world, e.body));
-    standsRef.current.forEach(s => Matter.World.remove(world, s));
     blocksRef.current = [];
     enemiesRef.current = [];
-    standsRef.current = [];
 
-    // Common stand for all levels - elevated platform for realistic stack placement
-    const standX = 950;
-    const standY = 465;
-    const standW = 230;
-    const standH = 22;
+    // Floating square pattern of pinatas on the right side of the screen.
+    // Player must knock out all the lamas (pinatas).
+    let cols, rows;
+    if (levelNum <= 2) { cols=3; rows=3; }
+    else if (levelNum <= 4) { cols=4; rows=3; }
+    else { cols=4; rows=4; }
+    const spacing = 40;
+    const baseX = 1020;  // right side
+    const baseY = 360;   // floating mid-screen
 
-    const stand = Matter.Bodies.rectangle(standX, standY, standW, standH, {
-      isStatic: true,
-      restitution: 0.1,
-      friction: 0.8,
-      label: 'stand'
-    });
-    Matter.World.add(world, stand);
-    standsRef.current.push(stand);
-
-    const standTopY = standY - standH / 2;
-
-    // Only pinatas on the stand
-    // Different sizes for difficulty
-    let rowCounts;
-    if (levelNum === 1) rowCounts = [4,3,2,1];
-    else if (levelNum === 2) rowCounts = [5,4,3,2,1];
-    else if (levelNum === 3) rowCounts = [5,4,3,2,1,3]; // extra side cluster
-    else if (levelNum === 4) rowCounts = [6,5,4,3,2,1];
-    else rowCounts = [6,5,4,3,2,1,4]; // level 5 max
-
-    // Build triangle rows on the stand
-    rowCounts.forEach((numInRow, rowIdx) => {
-      const startX = standX - (numInRow - 1) * 18; // approx spacing
-      for (let i = 0; i < numInRow; i++) {
-        const x = startX + i * 36;
-        const y = standTopY - 14 - rowIdx * 31;  // vertical spacing
-        const t: 'pinata' = 'pinata';  // only pinatas now
-        let body: Matter.Body;
-        let health = 55;
-        body = Matter.Bodies.circle(x, y, 24, {
-          restitution: 0.25, friction: 0.5, density: 0.0005, label: 'target'
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = baseX + (c - (cols - 1) / 2) * spacing;
+        const y = baseY + (r - (rows - 1) / 2) * spacing;
+        const body = Matter.Bodies.circle(x, y, 18, {
+          restitution: 0.35, friction: 0.4, density: 0.0006, label: 'target'
         });
         Matter.World.add(world, body);
-        enemiesRef.current.push({ body, type: t, health });
+        enemiesRef.current.push({ body, type: 'pinata', health: 35 + levelNum * 10 });
       }
-    });
+    }
 
     // Zero any initial velocities so the stacks rest completely still on spawn (no pre-launch wobble or drop)
     blocksRef.current.forEach(b => {
@@ -266,14 +240,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       const bodyA = pair.bodyA;
       const bodyB = pair.bodyB;
 
-      // Ignore collisions with the ground or stand (prevents the stacks from being destroyed by their own initial settling/fall onto the platform)
-      const involvesGroundOrStand = (bodyA === groundBody || bodyB === groundBody) ||
-        standsRef.current.some(s => bodyA === s || bodyB === s);
+      // Ignore collisions with the ground (prevents the pinatas from being destroyed by their own initial settling/fall)
+      const involvesGround = (bodyA === groundBody || bodyB === groundBody);
 
       // Damage blocks (reverse iterate for safe splice while removing)
       for (let j = blocksRef.current.length - 1; j >= 0; j--) {
         const block = blocksRef.current[j];
-        if (!involvesGroundOrStand && (block.body === bodyA || block.body === bodyB)) {
+        if (!involvesGround && (block.body === bodyA || block.body === bodyB)) {
           const force = Math.abs(pair.collision.depth * 80);
           block.health -= force;
           if (block.health <= 0) {
@@ -291,10 +264,38 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       // Damage enemies (reverse iterate for safe splice)
       for (let j = enemiesRef.current.length - 1; j >= 0; j--) {
         const enemy = enemiesRef.current[j];
-        if (!involvesGroundOrStand && (enemy.body === bodyA || enemy.body === bodyB)) {
+        if (!involvesGround && (enemy.body === bodyA || enemy.body === bodyB)) {
           const force = Math.abs(pair.collision.depth * 60);
           enemy.health -= force;
           if (enemy.health <= 0) {
+            // Explode and destroy around it (chain reaction for nearby pinatas)
+            if (enemy.type === 'pinata') {
+              const deadPos = enemy.body.position;
+              const expRadius = 90;
+              const expDmg = 32;
+              for (let k = enemiesRef.current.length - 1; k >= 0; k--) {
+                const other = enemiesRef.current[k];
+                if (other.body === enemy.body) continue;
+                const dvec = Matter.Vector.sub(other.body.position, deadPos);
+                const dist = Matter.Vector.magnitude(dvec);
+                if (dist > 0 && dist < expRadius) {
+                  other.health -= expDmg * (1 - dist / expRadius);
+                  // push nearby
+                  const dir = Matter.Vector.normalise(dvec);
+                  const f = 0.85 * (1 - dist / expRadius);
+                  Matter.Body.applyForce(other.body, other.body.position, Matter.Vector.mult(dir, f));
+                  if (other.health <= 0) {
+                    Matter.World.remove(worldRef.current!, other.body);
+                    enemiesRef.current.splice(k, 1);
+                    setScore(s => {
+                      const ns = s + 150;
+                      scoreRef.current = ns;
+                      return ns;
+                    });
+                  }
+                }
+              }
+            }
             Matter.World.remove(worldRef.current!, enemy.body);
             enemiesRef.current.splice(j, 1);
             setScore(s => {
@@ -505,30 +506,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       hoverOffset.x = Math.sin(t * 0.6) * 4;      // gentle side-to-side
     }
 
-    // Ground (drawn on top of bg for a solid stage floor the stack rests on)
+    // Ground (drawn on top of bg; pinatas will fall here if knocked down)
     ctx.fillStyle = 'rgba(92, 64, 51, 0.85)';
     ctx.fillRect(0, 560, 1280, 40);
     ctx.fillStyle = 'rgba(58, 42, 31, 0.9)';
     ctx.fillRect(0, 555, 1280, 8);
-
-    // Draw the stand/table/box for the elevated stack (realistic placement, not flat on ground)
-    standsRef.current.forEach((stand) => {
-      const pos = stand.position;
-      const angle = stand.angle;
-      ctx.save();
-      ctx.translate(pos.x, pos.y);
-      ctx.rotate(angle);
-      // Wooden table/stand with legs (for the pinata stack)
-      ctx.fillStyle = '#5c4033';
-      ctx.fillRect(-115, -11, 230, 22); // tabletop
-      ctx.fillStyle = '#3a2a1f';
-      ctx.fillRect(-100, 11, 14, 55);   // left leg
-      ctx.fillRect(86, 11, 14, 55);     // right leg
-      ctx.strokeStyle = '#2a1f0f';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-115, -11, 230, 22);
-      ctx.restore();
-    });
 
     // Draw blocks
     blocksRef.current.forEach((block) => {
@@ -562,7 +544,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.restore();
     });
 
-    // Draw targets (only pinatas in triangle on stand)
+    // Draw targets (floating square grid of pinatas/llama pinatas on right)
     enemiesRef.current.forEach((target) => {
       const pos = target.body.position;
       const angle = target.body.angle;
