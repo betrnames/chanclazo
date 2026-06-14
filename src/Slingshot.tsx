@@ -735,7 +735,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           <div className="text-orange-400">Level {level}</div>
         </div>
         <div>Score: <span className="font-mono text-yellow-400">{score}</span></div>
-        <div className="text-xs opacity-70">Drag the character back on the slingshot • Release to launch • Limited launches</div>
+        <div className="text-xs opacity-70">Drag the floating sandal back • Release to launch • Limited launches</div>
       </div>
 
       <div className="flex-1 flex items-center justify-center relative bg-black/30">
