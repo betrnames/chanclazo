@@ -414,7 +414,7 @@ export default function App() {
             ref={lamaCanvasRef}
             width={64}
             height={64}
-            className="absolute z-[55] pointer-events-auto cursor-pointer"
+            className="absolute z-[55] pointer-events-auto cursor-pointer lama-cta"
             style={{
               top: '8px',
               right: '150px',

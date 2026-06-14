@@ -761,6 +761,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.rotate(angle);
           const size = 65;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
+          // Animated glowing stroke around the strike element (pulsing for attention + glow)
+          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
+          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
+          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         } else {
           ctx.save();
@@ -768,6 +775,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.rotate(angle);
           const size = 65;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
+          // Animated glowing stroke around the strike element (pulsing for attention + glow)
+          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
+          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
+          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         }
       }
@@ -792,11 +806,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.rotate(Math.sin((now / 1000) * 1.5) * 0.12);
           const size = 75;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
-          // Bright ring to make the strike element more noticeable
-          ctx.strokeStyle = 'rgba(255, 255, 200, 0.9)';
-          ctx.lineWidth = 4;
+          // Animated glowing stroke around the strike element (pulsing for attention + glow)
+          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
+          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
+          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
           ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 7, 0, Math.PI * 2);
+          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         } else {
@@ -806,11 +821,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.translate(readyX, readyY);
           const size = 75;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
-          // Bright ring to make the strike element more noticeable
-          ctx.strokeStyle = 'rgba(255, 255, 200, 0.9)';
-          ctx.lineWidth = 4;
+          // Animated glowing stroke around the strike element (pulsing for attention + glow)
+          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
+          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
+          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
           ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 7, 0, Math.PI * 2);
+          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         }
@@ -833,11 +849,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.translate(birdPos.x, birdPos.y);
           const size = 70;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
-          // Bright ring to make the strike element more noticeable (when aiming)
-          ctx.strokeStyle = 'rgba(255, 255, 200, 0.85)';
-          ctx.lineWidth = 3.5;
+          // Animated glowing stroke around the strike element (pulsing for attention + glow)
+          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
+          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
+          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
           ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 6, 0, Math.PI * 2);
+          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         } else {
@@ -845,11 +862,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.translate(birdPos.x, birdPos.y);
           const size = 70;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
-          // Bright ring to make the strike element more noticeable (when aiming)
-          ctx.strokeStyle = 'rgba(255, 255, 200, 0.85)';
-          ctx.lineWidth = 3.5;
+          // Animated glowing stroke around the strike element (pulsing for attention + glow)
+          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
+          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
+          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
           ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 6, 0, Math.PI * 2);
+          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         }

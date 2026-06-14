@@ -92,7 +92,10 @@
   50%       { transform: translateY(-6px) rotate(3deg); }
 }
 
-/* (previous pinata easter egg styles removed - now using running lama) */
+/* Lama pinata CTA hover animation in upper right (to draw attention like sandal logo) */
+.lama-cta:hover {
+  animation: floatLogo 1.6s ease-in-out infinite;
+}
 
 /* ─── Chanclazo Game Animations ─────────────────────────────────────────────── */
 
