@@ -92,9 +92,9 @@
   50%       { transform: translateY(-6px) rotate(3deg); }
 }
 
-/* Lama pinata CTA hover animation in upper right (to draw attention like sandal logo) */
-.lama-cta:hover {
-  animation: floatLogo 1.6s ease-in-out infinite;
+/* Lama pinata CTA constant floating animation in upper right (idle, draws attention like sandal logo) */
+.lama-cta {
+  animation: floatLogo 2.5s ease-in-out infinite;
 }
 
 /* ─── Chanclazo Game Animations ─────────────────────────────────────────────── */

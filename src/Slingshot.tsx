@@ -761,13 +761,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.rotate(angle);
           const size = 65;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
-          // Animated glowing stroke around the strike element (pulsing for attention + glow)
-          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
-          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
-          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
-          ctx.stroke();
+          // Animated glow stroke that follows the exact shape of the element (using shadow on a redrawn version of the sprite)
+          ctx.save();
+          const glowA = Math.sin(now / 200) * 0.4 + 0.6;
+          ctx.shadowColor = `rgba(255, 255, 150, ${glowA})`;
+          ctx.shadowBlur = 8 + Math.sin(now / 150) * 6;
+          ctx.shadowOffsetX = Math.sin(now / 180) * 1.5;
+          ctx.shadowOffsetY = Math.cos(now / 170) * 1;
+          const gSize = size * (1.05 + Math.sin(now / 160) * 0.02);
+          ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -gSize/2, -gSize/2, gSize, gSize);
+          ctx.restore();
           ctx.restore();
         } else {
           ctx.save();
@@ -775,13 +778,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.rotate(angle);
           const size = 65;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
-          // Animated glowing stroke around the strike element (pulsing for attention + glow)
-          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
-          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
-          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
-          ctx.stroke();
+          // Animated glow stroke that follows the exact shape of the element (using shadow on a redrawn version of the sprite)
+          ctx.save();
+          const glowA = Math.sin(now / 200) * 0.4 + 0.6;
+          ctx.shadowColor = `rgba(255, 255, 150, ${glowA})`;
+          ctx.shadowBlur = 8 + Math.sin(now / 150) * 6;
+          ctx.shadowOffsetX = Math.sin(now / 180) * 1.5;
+          ctx.shadowOffsetY = Math.cos(now / 170) * 1;
+          const gSize = size * (1.05 + Math.sin(now / 160) * 0.02);
+          ctx.drawImage(projImg, -gSize/2, -gSize/2, gSize, gSize);
+          ctx.restore();
           ctx.restore();
         }
       }
@@ -806,13 +812,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.rotate(Math.sin((now / 1000) * 1.5) * 0.12);
           const size = 75;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
-          // Animated glowing stroke around the strike element (pulsing for attention + glow)
-          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
-          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
-          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
-          ctx.stroke();
+          // Animated glow stroke that follows the exact shape of the element (using shadow on a redrawn version of the sprite)
+          ctx.save();
+          const glowA = Math.sin(now / 200) * 0.4 + 0.6;
+          ctx.shadowColor = `rgba(255, 255, 150, ${glowA})`;
+          ctx.shadowBlur = 8 + Math.sin(now / 150) * 6;
+          ctx.shadowOffsetX = Math.sin(now / 180) * 1.5;
+          ctx.shadowOffsetY = Math.cos(now / 170) * 1;
+          const gSize = size * (1.05 + Math.sin(now / 160) * 0.02);
+          ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -gSize/2, -gSize/2, gSize, gSize);
+          ctx.restore();
           ctx.restore();
         } else {
           const readyX = slingshotPos.x + hoverOffset.x;
@@ -821,13 +830,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.translate(readyX, readyY);
           const size = 75;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
-          // Animated glowing stroke around the strike element (pulsing for attention + glow)
-          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
-          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
-          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
-          ctx.stroke();
+          // Animated glow stroke that follows the exact shape of the element (using shadow on a redrawn version of the sprite)
+          ctx.save();
+          const glowA = Math.sin(now / 200) * 0.4 + 0.6;
+          ctx.shadowColor = `rgba(255, 255, 150, ${glowA})`;
+          ctx.shadowBlur = 8 + Math.sin(now / 150) * 6;
+          ctx.shadowOffsetX = Math.sin(now / 180) * 1.5;
+          ctx.shadowOffsetY = Math.cos(now / 170) * 1;
+          const gSize = size * (1.05 + Math.sin(now / 160) * 0.02);
+          ctx.drawImage(projImg, -gSize/2, -gSize/2, gSize, gSize);
+          ctx.restore();
           ctx.restore();
         }
       }
@@ -849,26 +861,32 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.translate(birdPos.x, birdPos.y);
           const size = 70;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
-          // Animated glowing stroke around the strike element (pulsing for attention + glow)
-          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
-          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
-          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
-          ctx.stroke();
+          // Animated glow stroke that follows the exact shape of the element (using shadow on a redrawn version of the sprite)
+          ctx.save();
+          const glowA = Math.sin(now / 200) * 0.4 + 0.6;
+          ctx.shadowColor = `rgba(255, 255, 150, ${glowA})`;
+          ctx.shadowBlur = 8 + Math.sin(now / 150) * 6;
+          ctx.shadowOffsetX = Math.sin(now / 180) * 1.5;
+          ctx.shadowOffsetY = Math.cos(now / 170) * 1;
+          const gSize = size * (1.05 + Math.sin(now / 160) * 0.02);
+          ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -gSize/2, -gSize/2, gSize, gSize);
+          ctx.restore();
           ctx.restore();
         } else {
           ctx.save();
           ctx.translate(birdPos.x, birdPos.y);
           const size = 70;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
-          // Animated glowing stroke around the strike element (pulsing for attention + glow)
-          const pulse = Math.sin(now / 180) * 0.35 + 0.65;
-          ctx.strokeStyle = `rgba(255, 255, 180, ${pulse})`;
-          ctx.lineWidth = 2.5 + Math.sin(now / 220) * 2.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, size/2 + 4 + Math.sin(now / 150) * 4, 0, Math.PI * 2);
-          ctx.stroke();
+          // Animated glow stroke that follows the exact shape of the element (using shadow on a redrawn version of the sprite)
+          ctx.save();
+          const glowA = Math.sin(now / 200) * 0.4 + 0.6;
+          ctx.shadowColor = `rgba(255, 255, 150, ${glowA})`;
+          ctx.shadowBlur = 8 + Math.sin(now / 150) * 6;
+          ctx.shadowOffsetX = Math.sin(now / 180) * 1.5;
+          ctx.shadowOffsetY = Math.cos(now / 170) * 1;
+          const gSize = size * (1.05 + Math.sin(now / 160) * 0.02);
+          ctx.drawImage(projImg, -gSize/2, -gSize/2, gSize, gSize);
+          ctx.restore();
           ctx.restore();
         }
       }
