@@ -916,11 +916,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.fillText('Click anywhere to continue', 420, 320);
     }
     if (gameStateRef.current === 'lost') {
-      ctx.fillStyle = '#f87171';
+      // Dark box for visibility over any background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fillRect(280, 235, 720, 110);
+      ctx.fillStyle = '#fff';
       ctx.font = 'bold 32px system-ui';
-      ctx.fillText('OUT OF SANDALS!', 420, 280);
+      ctx.textAlign = 'center';
+      ctx.fillText('OUT OF SANDALS!', 640, 275);
       ctx.font = '18px system-ui';
-      ctx.fillText('Click to retry level', 470, 320);
+      ctx.fillText('Click to retry level', 640, 310);
+      ctx.textAlign = 'left';
     }
 
     rafRef.current = requestAnimationFrame(renderLoop);
