@@ -496,27 +496,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background drawn full screen inside the canvas (which is now 100% viewport).
-    // Uses cover to fill the logical 1280x600 (then CSS stretches the whole to full screen).
-    const theme = bgThemeRef.current;
-    let bgKey = 'bg';
-    if (theme === 'casa') bgKey = 'bgCasa';
-    else if (theme === 'mercado') bgKey = 'bgMercado';
-    else if (theme === 'plaza') bgKey = 'bgPlaza';
-    else if (theme === 'arena') bgKey = 'bgArena';
-    else if (theme === 'lasalla') bgKey = 'bgLasalla';
-    const bgImg = imagesRef.current[bgKey] || imagesRef.current.bg;
-    if (bgImg) {
-      const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
-      const dw = bgImg.width * scale;
-      const dh = bgImg.height * scale;
-      const dx = (canvas.width - dw) / 2;
-      const dy = (canvas.height - dh) / 2;
-      ctx.drawImage(bgImg, dx, dy, dw, dh);
-    } else {
-      ctx.fillStyle = '#3a2f1f';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    // Background is set on the root div as full-screen cover (no container for bg).
+    // Only draw game elements here (they will appear over the bg).
 
     // Advance chancla spin animation (~8 fps for visible spin on the 5x5 sheet)
     const now = performance.now();
@@ -932,127 +913,129 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         <div>Pull back • Release to launch • Limited strikes</div>
       </div>
 
-      {/* READY overlay - full screen on top for the choose UI */}
+      {/* READY overlay - covers the main area but not the header/footer */}
       {gameState === 'ready' && (
-        <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(0, 0, 0, 0.75)' }}>
-          <div className="text-center">
-            <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
+        <div className="absolute left-0 right-0 z-30" style={{ top: '44px', bottom: '36px', background: 'rgba(0, 0, 0, 0.75)' }}>
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
 
-            {/* Striker selector only - background is now random per play */}
-            <div className="mb-3">
-              <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE</p>
-              <div className="flex items-end justify-center gap-2 py-1">
-                {(() => {
-                  const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
-                  const idx = order.indexOf(projectileType);
-                  const leftId = order[(idx - 1 + 3) % 3];
-                  const centerId = projectileType;
-                  const rightId = order[(idx + 1) % 3];
-
-                  const getStriker = (id: 'chancla' | 'sugarskull' | 'luchador') => {
-                    if (id === 'chancla') return { name: 'SANDAL', avatar: '/chancla_spin.png' };
-                    if (id === 'sugarskull') return { name: 'SKULL', avatar: '/sugarskull.png' };
-                    return { name: 'LUCHADOR', avatar: '/luchadorHead.png' };
-                  };
-
-                  const left = getStriker(leftId);
-                  const center = getStriker(centerId);
-                  const right = getStriker(rightId);
-
-                  return (
-                    <>
-                      <button
-                        onClick={() => { setProjectileType(leftId); projectileTypeRef.current = leftId; }}
-                        className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
-                      >
-                        <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
-                          leftId === 'chancla' ? {
-                            backgroundImage: `url(${left.avatar})`,
-                            backgroundSize: '500% 500%',
-                            backgroundPosition: '0% 0%',
-                            imageRendering: 'pixelated',
-                            backgroundRepeat: 'no-repeat'
-                          } : {}
-                        }>
-                          {leftId !== 'chancla' && <img src={left.avatar} alt={left.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
-                        </div>
-                        <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{left.name}</span>
-                      </button>
-
-                      <button
-                        onClick={() => { /* current */ }}
-                        className="flex flex-col items-center transition-all scale-[1.15]"
-                      >
-                        <div className="h-20 w-20 flex items-center justify-center overflow-hidden -mt-2" style={
-                          centerId === 'chancla' ? {
-                            backgroundImage: `url(${center.avatar})`,
-                            backgroundSize: '500% 500%',
-                            backgroundPosition: '0% 0%',
-                            imageRendering: 'pixelated',
-                            backgroundRepeat: 'no-repeat'
-                          } : {}
-                        }>
-                          {centerId !== 'chancla' && <img src={center.avatar} alt={center.name} className="max-h-20 max-w-20 object-contain drop-shadow-lg" style={{ imageRendering: 'pixelated' }} />}
-                        </div>
-                        <span className="text-[9px] font-black text-orange-100 -mt-1 tracking-wider">{center.name}</span>
-                      </button>
-
-                      <button
-                        onClick={() => { setProjectileType(rightId); projectileTypeRef.current = rightId; }}
-                        className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
-                      >
-                        <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
-                          rightId === 'chancla' ? {
-                            backgroundImage: `url(${right.avatar})`,
-                            backgroundSize: '500% 500%',
-                            backgroundPosition: '0% 0%',
-                            imageRendering: 'pixelated',
-                            backgroundRepeat: 'no-repeat'
-                          } : {}
-                        }>
-                          {rightId !== 'chancla' && <img src={right.avatar} alt={right.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
-                        </div>
-                        <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{right.name}</span>
-                      </button>
-                    </>
-                  );
-                })()}
-              </div>
-
-              <div className="flex justify-center gap-2 pt-0.5">
-                <button
-                  onClick={() => {
+              {/* Striker selector only - background is now random per play */}
+              <div className="mb-3">
+                <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE</p>
+                <div className="flex items-end justify-center gap-2 py-1">
+                  {(() => {
                     const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
                     const idx = order.indexOf(projectileType);
-                    const next = order[(idx - 1 + 3) % 3];
-                    setProjectileType(next);
-                    projectileTypeRef.current = next;
-                  }}
-                  className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
-                >
-                  ←
-                </button>
-                <button
-                  onClick={() => {
-                    const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
-                    const idx = order.indexOf(projectileType);
-                    const next = order[(idx + 1) % 3];
-                    setProjectileType(next);
-                    projectileTypeRef.current = next;
-                  }}
-                  className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
-                >
-                  →
-                </button>
+                    const leftId = order[(idx - 1 + 3) % 3];
+                    const centerId = projectileType;
+                    const rightId = order[(idx + 1) % 3];
+
+                    const getStriker = (id: 'chancla' | 'sugarskull' | 'luchador') => {
+                      if (id === 'chancla') return { name: 'SANDAL', avatar: '/chancla_spin.png' };
+                      if (id === 'sugarskull') return { name: 'SKULL', avatar: '/sugarskull.png' };
+                      return { name: 'LUCHADOR', avatar: '/luchadorHead.png' };
+                    };
+
+                    const left = getStriker(leftId);
+                    const center = getStriker(centerId);
+                    const right = getStriker(rightId);
+
+                    return (
+                      <>
+                        <button
+                          onClick={() => { setProjectileType(leftId); projectileTypeRef.current = leftId; }}
+                          className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
+                        >
+                          <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
+                            leftId === 'chancla' ? {
+                              backgroundImage: `url(${left.avatar})`,
+                              backgroundSize: '500% 500%',
+                              backgroundPosition: '0% 0%',
+                              imageRendering: 'pixelated',
+                              backgroundRepeat: 'no-repeat'
+                            } : {}
+                          }>
+                            {leftId !== 'chancla' && <img src={left.avatar} alt={left.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
+                          </div>
+                          <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{left.name}</span>
+                        </button>
+
+                        <button
+                          onClick={() => { /* current */ }}
+                          className="flex flex-col items-center transition-all scale-[1.15]"
+                        >
+                          <div className="h-20 w-20 flex items-center justify-center overflow-hidden -mt-2" style={
+                            centerId === 'chancla' ? {
+                              backgroundImage: `url(${center.avatar})`,
+                              backgroundSize: '500% 500%',
+                              backgroundPosition: '0% 0%',
+                              imageRendering: 'pixelated',
+                              backgroundRepeat: 'no-repeat'
+                            } : {}
+                          }>
+                            {centerId !== 'chancla' && <img src={center.avatar} alt={center.name} className="max-h-20 max-w-20 object-contain drop-shadow-lg" style={{ imageRendering: 'pixelated' }} />}
+                          </div>
+                          <span className="text-[9px] font-black text-orange-100 -mt-1 tracking-wider">{center.name}</span>
+                        </button>
+
+                        <button
+                          onClick={() => { setProjectileType(rightId); projectileTypeRef.current = rightId; }}
+                          className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
+                        >
+                          <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
+                            rightId === 'chancla' ? {
+                              backgroundImage: `url(${right.avatar})`,
+                              backgroundSize: '500% 500%',
+                              backgroundPosition: '0% 0%',
+                              imageRendering: 'pixelated',
+                              backgroundRepeat: 'no-repeat'
+                            } : {}
+                          }>
+                            {rightId !== 'chancla' && <img src={right.avatar} alt={right.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
+                          </div>
+                          <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{right.name}</span>
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="flex justify-center gap-2 pt-0.5">
+                  <button
+                    onClick={() => {
+                      const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                      const idx = order.indexOf(projectileType);
+                      const next = order[(idx - 1 + 3) % 3];
+                      setProjectileType(next);
+                      projectileTypeRef.current = next;
+                    }}
+                    className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
+                  >
+                    ←
+                  </button>
+                  <button
+                    onClick={() => {
+                      const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                      const idx = order.indexOf(projectileType);
+                      const next = order[(idx + 1) % 3];
+                      setProjectileType(next);
+                      projectileTypeRef.current = next;
+                    }}
+                    className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
+                  >
+                    →
+                  </button>
+                </div>
               </div>
+
+              <button
+                onClick={beginGame}
+                className="mt-1 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
+              >
+                START
+              </button>
             </div>
-
-            <button
-              onClick={beginGame}
-              className="mt-1 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
-            >
-              START
-            </button>
           </div>
         </div>
       )}
