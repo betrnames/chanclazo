@@ -1,5 +1,5 @@
 @echo off
 cd /d "%~dp0"
 git add -A
-git commit -m "polish game + live players"
+git commit -m "update (auto deploys via netlify on push)"
 git push origin main

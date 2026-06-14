@@ -83,25 +83,59 @@ Since the API lives on the Cloudflare Worker (`WORKER_URL` in `src/api.ts`), you
 - **Vercel**:
   Similar Git import, uses vercel.json.
 
-## Full GitHub Actions Automation (for Netlify)
-I've added `.github/workflows/deploy-netlify.yml` that runs on every push to main:
-- Checks out code
-- Builds with Node 20
-- Deploys to Netlify using CLI + secrets
+## Netlify Automation (Recommended - you already have it working)
 
-**Setup steps for full automation:**
-1. In Netlify: Go to your site → Site configuration → General → Site details → copy "API ID" (this is NETLIFY_SITE_ID).
-2. In Netlify: User settings → Applications → Personal access tokens → New access token (name it, copy it). This is NETLIFY_AUTH_TOKEN.
-3. In GitHub repo (betrnames/chanclazo):
-   - Settings → Secrets and variables → Actions → New repository secret:
-     - Name: `NETLIFY_AUTH_TOKEN` → value from step 2
-     - Name: `NETLIFY_SITE_ID` → value from step 1
-4. Now, just `git push` (or use your push.bat) and the workflow will build + deploy to Netlify automatically.
-5. You can also manually trigger from GitHub Actions tab.
+### Easiest way (Native Netlify GitHub integration - no secrets or Actions needed)
+1. Go to https://app.netlify.com/ and log in (use the account where your working site is).
+2. Click "Add new site" > "Import an existing project".
+3. Connect GitHub (authorize if needed) and select the "betrnames/chanclazo" repo.
+4. Netlify will auto-detect the `netlify.toml`:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+5. Click "Deploy site".
+6. Once deployed, go to **Site configuration > Domain management** and add your custom domain `chanclazo.com` (or whatever).
+7. **That's it.** Every time you `git push` (or run your push.bat), Netlify will automatically build and deploy the frontend. The API stays on your Cloudflare Worker.
 
-This replaces Bolt hosting entirely. Netlify will handle the SPA hosting reliably.
+This is the simplest "set it and forget it" automation.
 
-See the workflow file for details. If you want to also automate the Worker deploy (`npm run deploy`), we can add a separate job/step (requires Cloudflare API token secret).
+### Alternative: Full GitHub Actions control (using the workflow I added)
+I've created `.github/workflows/deploy-netlify.yml` that runs on every push.
+
+**One-time setup (copy these exact steps):**
+1. Log into Netlify (https://app.netlify.com).
+2. Find your existing site (the one that's "working").
+3. Click the site name > **Site configuration** (left sidebar) > **General** > **Site details**.
+4. Scroll to "Site information" and copy the value next to **API ID** (e.g. something like "12345678-1234-1234-1234-123456789abc"). This is your `NETLIFY_SITE_ID`.
+5. At the top right, click your avatar > **User settings** (or go to https://app.netlify.com/user/settings).
+6. In the left menu, click **Applications**.
+7. Under "Personal access tokens", click **New access token**.
+8. Give it a name like "Grok Chanclazo Deploy", choose "No expiry" or 1 year, then click **Generate token**.
+9. **Copy the token immediately** (you won't see it again). This is your `NETLIFY_AUTH_TOKEN`.
+10. Now go to your GitHub repo: https://github.com/betrnames/chanclazo/settings/secrets/actions
+11. Click **New repository secret** twice:
+    - First secret:
+      - Name: `NETLIFY_AUTH_TOKEN`
+      - Secret: paste the token from step 9
+    - Second secret:
+      - Name: `NETLIFY_SITE_ID`
+      - Secret: paste the API ID from step 4
+12. Save them.
+
+**Now it works:**
+- Just run your normal `push.bat` (or git push).
+- Go to the "Actions" tab in GitHub to watch the "Deploy to Netlify" workflow run.
+- It will build and deploy to your Netlify site automatically.
+- You can also click "Run workflow" manually in the Actions tab.
+
+The workflow file is fully commented if you want to tweak it later (e.g. add Worker deploy too).
+
+This fully automates publishing on every commit/push using "Grok build" (the Actions + Netlify).
+
+If you run into any error in the Actions logs (e.g. permission issues), paste the error here and I'll fix the workflow.
+
+For the Cloudflare Worker part (the backend), you can still run `npm run deploy` manually, or I can add it to the same workflow if you give me a Cloudflare API token secret name.
+
+Your netlify.toml and the build are already correct for SPA + your current setup.
 
 ## Background
 Pivoted from Clawatron concept (April 2026) to chanclazo theme for cultural flavor + Vibejam 2026 submission (May).
