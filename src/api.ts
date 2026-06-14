@@ -1,4 +1,10 @@
-export const WORKER_URL = 'https://chanclazo-worker.betrnames.workers.dev';
+// WORKER_URL base for API calls.
+// - '' (empty) + relative paths (e.g. fetch('/score')) for proxy setups (Netlify/Vercel/CF Pages with redirects in netlify.toml)
+//   → lets the WHOLE site live under https://chanclazo.com (frontend + API, no CORS hassle)
+// - Set VITE_WORKER_URL=https://chanclazo-worker.betrnames.workers.dev (or your custom subdomain) for direct calls
+// Local dev: vite.config.ts proxy makes relative paths work.
+// See netlify.toml for the production proxy rules.
+export const WORKER_URL = import.meta.env.VITE_WORKER_URL || '';
 
 export interface LeaderboardEntry {
   handle: string;

@@ -67,12 +67,15 @@ Since the API lives on the Cloudflare Worker (`WORKER_URL` in `src/api.ts`), you
 - **Netlify** (recommended - you said it's working, now fully automated on push):
   1. In Netlify dashboard, import your GitHub repo (betrnames/chanclazo).
   2. It will detect Vite via netlify.toml (build: `npm run build`, publish: `dist`).
-  3. For the Worker API, your `WORKER_URL` in src/api.ts points to Cloudflare (fine, or proxy if desired).
-  4. Add custom domain chanclazo.com.
+  3. Add custom domain chanclazo.com (and www if desired). Netlify gives DNS instructions (CNAME record usually).
+  4. Since we have proxy redirects in netlify.toml for the API paths (/score, /leaderboard, /ghost, /presence), the **entire site including API calls** will be under https://chanclazo.com (no CORS, unified domain).
+  5. Update your `VITE_WORKER_URL` if needed, but with relative paths + proxy it's not required (see src/api.ts).
 
   To trigger deploys on every `git push` (including via your push.bat), just connect the repo. No manual steps needed.
 
-  Local: `npm run deploy:frontend` (after `npm i -g netlify-cli` and linking your site).
+  Local dev: `npm run dev` (vite proxy handles API calls to the worker).
+
+  Local deploy test: `npm run deploy:frontend` (after `npm i -g netlify-cli` and `netlify link`).
 
 - **Cloudflare Pages** (native with your Worker/D1):
   ```powershell

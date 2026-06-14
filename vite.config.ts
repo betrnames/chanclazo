@@ -7,6 +7,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
+    proxy: {
+      // Proxy API routes to the Cloudflare Worker during local dev
+      // This lets us use relative paths like /score everywhere
+      '/score': 'https://chanclazo-worker.betrnames.workers.dev',
+      '/leaderboard': 'https://chanclazo-worker.betrnames.workers.dev',
+      '/ghost': 'https://chanclazo-worker.betrnames.workers.dev',
+      '/presence': 'https://chanclazo-worker.betrnames.workers.dev',
+    },
   },
   resolve: {
     alias: {
