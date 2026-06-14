@@ -110,9 +110,61 @@ export default function App() {
   const [showNextLevelBtn, setShowNextLevelBtn] = useState(false);
   const [popups, setPopups] = useState<PopupEntry[]>([]);
 
-  // Easter egg: hidden pinata CTA in header
+  // Easter egg: running lama that crosses the screen from time to time
   const [showEasterEggModal, setShowEasterEggModal] = useState(false);
-  const [pinataBobbing, setPinataBobbing] = useState(false);
+  const lamaCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lamaImgRef = useRef<HTMLImageElement | null>(null);
+  const lamaRafRef = useRef<number | null>(null);
+  const lamaActiveRef = useRef(false);
+
+  const startLamaRun = () => {
+    const img = lamaImgRef.current;
+    const canvas = lamaCanvasRef.current;
+    if (!img || !canvas || lamaActiveRef.current) return;
+    lamaActiveRef.current = true;
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return;
+    const frameSize = 160;
+    const numFrames = 8; // 1280 / 160 = 8 frames, assuming row-based running animation
+    let currentFrame = 0;
+    let posX = -200;
+    const speed = 4.5;
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    if (dir < 0) {
+      posX = window.innerWidth + 80;
+    }
+    const animate = () => {
+      if (!lamaActiveRef.current || !ctx || !img) {
+        lamaActiveRef.current = false;
+        return;
+      }
+      ctx.clearRect(0, 0, frameSize, frameSize);
+      ctx.save();
+      if (dir < 0) {
+        ctx.scale(-1, 1);
+        ctx.translate(-frameSize, 0);
+      }
+      // Use first row of the spritesheet for the running cycle
+      const sx = currentFrame * frameSize;
+      const sy = 0;
+      ctx.drawImage(img, sx, sy, frameSize, frameSize, 0, 0, frameSize, frameSize);
+      ctx.restore();
+      posX += speed * dir;
+      canvas.style.left = `${posX}px`;
+      currentFrame = (currentFrame + 1) % numFrames;
+      const vw = window.innerWidth;
+      if ((dir > 0 && posX > vw + 120) || (dir < 0 && posX < -250)) {
+        lamaActiveRef.current = false;
+        canvas.style.display = 'none';
+        return;
+      }
+      lamaRafRef.current = requestAnimationFrame(animate);
+    };
+    canvas.style.top = `${35 + Math.random() * 40}%`; // random vertical lane so it feels alive
+    canvas.style.left = `${posX}px`;
+    canvas.style.display = 'block';
+    lamaRafRef.current = requestAnimationFrame(animate);
+  };
 
   const texts = getTexts(lang);
   const levelConfig = LEVELS[currentLevel - 1];
@@ -143,14 +195,39 @@ export default function App() {
     }
   }, [phase]);
 
-  // Easter egg pinata: periodic bob animation every ~9s to draw attention (only on start/home)
+  // Load running lama spritesheet for easter egg
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      lamaImgRef.current = img;
+    };
+    img.src = '/runningLama.png';
+    return () => {
+      if (lamaRafRef.current) cancelAnimationFrame(lamaRafRef.current);
+    };
+  }, []);
+
+  // Easter egg: trigger running lama across screen every so often (only on start/home)
   useEffect(() => {
     if (phase !== 'start') return;
     const interval = setInterval(() => {
-      setPinataBobbing(true);
-      setTimeout(() => setPinataBobbing(false), 1800);
-    }, 9000);
+      if (!lamaActiveRef.current && lamaImgRef.current) {
+        startLamaRun();
+      }
+    }, 14000); // every ~14s
     return () => clearInterval(interval);
+  }, [phase]);
+
+  // Stop lama if leaving start screen
+  useEffect(() => {
+    if (phase !== 'start' && lamaActiveRef.current) {
+      lamaActiveRef.current = false;
+      if (lamaRafRef.current) {
+        cancelAnimationFrame(lamaRafRef.current);
+      }
+      const c = lamaCanvasRef.current;
+      if (c) c.style.display = 'none';
+    }
   }, [phase]);
 
   // ── Live presence (player count) — ping while playing, leave otherwise ─────
@@ -386,20 +463,32 @@ export default function App() {
 
           <LangToggle />
 
-          {/* Easter egg: bigger idle pinata in header (right side). 
-              Periodic bob animation (every ~9s) to draw attention. Hover also bobs like sandal logo.
-              Click to "find" it → modal, then bonus game. No text (easter egg). */}
-          <button
-            onClick={() => setShowEasterEggModal(true)}
-            className={`absolute top-3 right-28 z-50 flex flex-col items-center pinata-cta cursor-pointer active:opacity-80 transition-all ${pinataBobbing ? 'pinata-bobbing' : ''}`}
-          >
-            <img
-              src="/pinata.png"
-              alt="Pinata"
-              className="w-12 h-12 object-contain drop-shadow-md"
-              style={{ filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))' }}
-            />
-          </button>
+          {/* Easter egg running lama: crosses the screen periodically. Click it to "find" the bonus game. */}
+          <canvas
+            ref={lamaCanvasRef}
+            width={160}
+            height={160}
+            className="absolute z-[55] pointer-events-auto cursor-pointer"
+            style={{
+              top: '52%',
+              left: '-200px',
+              display: 'none',
+              imageRendering: 'pixelated',
+            }}
+            onClick={() => {
+              if (lamaActiveRef.current) {
+                lamaActiveRef.current = false;
+                if (lamaRafRef.current) {
+                  cancelAnimationFrame(lamaRafRef.current);
+                }
+                const c = lamaCanvasRef.current;
+                if (c) {
+                  c.style.display = 'none';
+                }
+                setShowEasterEggModal(true);
+              }
+            }}
+          />
 
           {/* ── Scroll content ── */}
           <div className="relative z-10 min-h-full flex flex-col items-center justify-between px-3 py-6">
@@ -1080,7 +1169,7 @@ export default function App() {
       )}
 
       {/* ════════════════════════════════════════════════════════════════
-          EASTER EGG MODAL (pinata in header)
+          EASTER EGG MODAL (running lama across screen)
       ════════════════════════════════════════════════════════════════ */}
       {showEasterEggModal && (
         <div className="absolute inset-0 flex items-center justify-center z-[60]">

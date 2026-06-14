@@ -92,15 +92,7 @@
   50%       { transform: translateY(-6px) rotate(3deg); }
 }
 
-/* Pinata CTA hover animation - matches the sandal logo float on the homepage */
-.pinata-cta:hover img {
-  animation: floatLogo 1.6s ease-in-out infinite;
-}
-
-/* Periodic bob for easter egg attention (every ~9s for ~1.8s) */
-.pinata-bobbing img {
-  animation: floatLogo 1.6s ease-in-out 1;
-}
+/* (previous pinata easter egg styles removed - now using running lama) */
 
 /* ─── Chanclazo Game Animations ─────────────────────────────────────────────── */
 
