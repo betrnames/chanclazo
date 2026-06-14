@@ -853,6 +853,10 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Setup engine/ground/walls + render loop, but do NOT build the enemy stack yet
     initPhysics(1, false);
 
+    // Random background for ready preview (and re-random on start for the game)
+    const themes: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
+    bgThemeRef.current = themes[Math.floor(Math.random() * themes.length)];
+
     // Start render loop immediately so background + floating sandal are visible on ready screen
     rafRef.current = requestAnimationFrame(renderLoop);
 
@@ -1031,14 +1035,14 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
               >
                 START
               </button>
-              <div className="text-orange-200 text-sm mt-4 tracking-[2px] font-bold">GRAB THE STRIKER • DRAG TO AIM • RELEASE TO DESTROY THE STACK</div>
+              <div className="text-orange-200 text-sm mt-4 tracking-[2px] font-bold">PULL BACK • RELEASE TO LAUNCH • LIMITED STRIKES</div>
             </div>
           </div>
         )}
       </div>
 
       <div className="px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
-        <div>Drag your chosen striker (sandal or skull) • Release to launch • Destroy the random stack!</div>
+        <div>Pull back Release to launch limited strikes</div>
       </div>
     </div>
   );
