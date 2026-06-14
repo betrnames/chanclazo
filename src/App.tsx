@@ -115,56 +115,6 @@ export default function App() {
   const lamaCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lamaImgRef = useRef<HTMLImageElement | null>(null);
   const lamaRafRef = useRef<number | null>(null);
-  const lamaActiveRef = useRef(false);
-
-  const startLamaRun = () => {
-    const img = lamaImgRef.current;
-    const canvas = lamaCanvasRef.current;
-    if (!img || !canvas || lamaActiveRef.current) return;
-    lamaActiveRef.current = true;
-    const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
-    const frameSize = 160;
-    const numFrames = 8; // 1280 / 160 = 8 frames, assuming row-based running animation
-    let currentFrame = 0;
-    let posX = -200;
-    const speed = 4.5;
-    const dir = Math.random() > 0.5 ? 1 : -1;
-    if (dir < 0) {
-      posX = window.innerWidth + 80;
-    }
-    const animate = () => {
-      if (!lamaActiveRef.current || !ctx || !img) {
-        lamaActiveRef.current = false;
-        return;
-      }
-      ctx.clearRect(0, 0, frameSize, frameSize);
-      ctx.save();
-      if (dir < 0) {
-        ctx.scale(-1, 1);
-        ctx.translate(-frameSize, 0);
-      }
-      // Use first row of the spritesheet for the running cycle
-      const sx = currentFrame * frameSize;
-      const sy = 0;
-      ctx.drawImage(img, sx, sy, frameSize, frameSize, 0, 0, frameSize, frameSize);
-      ctx.restore();
-      posX += speed * dir;
-      canvas.style.left = `${posX}px`;
-      currentFrame = (currentFrame + 1) % numFrames;
-      const vw = window.innerWidth;
-      if ((dir > 0 && posX > vw + 120) || (dir < 0 && posX < -250)) {
-        lamaActiveRef.current = false;
-        canvas.style.display = 'none';
-        return;
-      }
-      lamaRafRef.current = requestAnimationFrame(animate);
-    };
-    canvas.style.top = `${35 + Math.random() * 40}%`; // random vertical lane so it feels alive
-    canvas.style.left = `${posX}px`;
-    canvas.style.display = 'block';
-    lamaRafRef.current = requestAnimationFrame(animate);
-  };
 
   const texts = getTexts(lang);
   const levelConfig = LEVELS[currentLevel - 1];
@@ -207,27 +157,78 @@ export default function App() {
     };
   }, []);
 
-  // Easter egg: trigger running lama across screen every so often (only on start/home)
+  // In-place running animation for the lama easter egg in upper right.
+  // Randomly "starts running" (fast sprite cycle) from time to time for a few seconds,
+  // then returns to idle frame in the same position.
   useEffect(() => {
-    if (phase !== 'start') return;
-    const interval = setInterval(() => {
-      if (!lamaActiveRef.current && lamaImgRef.current) {
-        startLamaRun();
-      }
-    }, 14000); // every ~14s
-    return () => clearInterval(interval);
-  }, [phase]);
-
-  // Stop lama if leaving start screen
-  useEffect(() => {
-    if (phase !== 'start' && lamaActiveRef.current) {
-      lamaActiveRef.current = false;
+    if (phase !== 'start' || !lamaCanvasRef.current || !lamaImgRef.current) {
       if (lamaRafRef.current) {
         cancelAnimationFrame(lamaRafRef.current);
+        lamaRafRef.current = null;
       }
-      const c = lamaCanvasRef.current;
-      if (c) c.style.display = 'none';
+      return;
     }
+
+    const canvas = lamaCanvasRef.current;
+    const ctx = canvas.getContext('2d', { alpha: true });
+    const img = lamaImgRef.current;
+    if (!ctx || !img) return;
+
+    const frameSize = 160;
+    const numFrames = 8;
+    const displaySize = 48;
+    let frame = 0;
+    let lastFrameTime = performance.now();
+    let isBursting = false;
+    let burstEnd = 0;
+    let nextBurst = performance.now() + 8000 + Math.random() * 6000;
+
+    const animate = (time = performance.now()) => {
+      ctx.clearRect(0, 0, displaySize, displaySize);
+
+      const now = time;
+
+      // Periodic burst: start "running" randomly
+      if (!isBursting && now > nextBurst) {
+        isBursting = true;
+        burstEnd = now + 2200; // run anim for ~2.2s
+        nextBurst = now + 10000 + Math.random() * 10000; // next in 10-20s
+      }
+      if (isBursting && now > burstEnd) {
+        isBursting = false;
+        frame = 0; // return to idle
+      }
+
+      // Frame advance
+      const interval = isBursting ? 85 : 250;
+      if (now - lastFrameTime > interval) {
+        if (isBursting) {
+          frame = (frame + 1) % numFrames;
+        } else {
+          frame = 0;
+        }
+        lastFrameTime = now;
+      }
+
+      // Draw current frame (row 0 assumed for running cycle)
+      const sx = frame * frameSize;
+      const sy = 0;
+      ctx.drawImage(img, sx, sy, frameSize, frameSize, 0, 0, displaySize, displaySize);
+
+      lamaRafRef.current = requestAnimationFrame(animate);
+    };
+
+    // Initial idle frame
+    ctx.drawImage(img, 0, 0, frameSize, frameSize, 0, 0, displaySize, displaySize);
+
+    lamaRafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (lamaRafRef.current) {
+        cancelAnimationFrame(lamaRafRef.current);
+        lamaRafRef.current = null;
+      }
+    };
   }, [phase]);
 
   // ── Live presence (player count) — ping while playing, leave otherwise ─────
@@ -463,30 +464,22 @@ export default function App() {
 
           <LangToggle />
 
-          {/* Easter egg running lama: crosses the screen periodically. Click it to "find" the bonus game. */}
+          {/* Easter egg: lama in upper right (like previous pinata CTA).
+              Randomly starts "running" (fast sprite cycle from the sheet) from time to time
+              for a few seconds to draw attention, then returns to idle in same spot.
+              Click to find the bonus game (shows modal). */}
           <canvas
             ref={lamaCanvasRef}
-            width={160}
-            height={160}
+            width={48}
+            height={48}
             className="absolute z-[55] pointer-events-auto cursor-pointer"
             style={{
-              top: '52%',
-              left: '-200px',
-              display: 'none',
+              top: '12px',
+              right: '112px',
               imageRendering: 'pixelated',
             }}
             onClick={() => {
-              if (lamaActiveRef.current) {
-                lamaActiveRef.current = false;
-                if (lamaRafRef.current) {
-                  cancelAnimationFrame(lamaRafRef.current);
-                }
-                const c = lamaCanvasRef.current;
-                if (c) {
-                  c.style.display = 'none';
-                }
-                setShowEasterEggModal(true);
-              }
+              setShowEasterEggModal(true);
             }}
           />
 
@@ -1169,7 +1162,7 @@ export default function App() {
       )}
 
       {/* ════════════════════════════════════════════════════════════════
-          EASTER EGG MODAL (running lama across screen)
+          EASTER EGG MODAL (lama in upper right)
       ════════════════════════════════════════════════════════════════ */}
       {showEasterEggModal && (
         <div className="absolute inset-0 flex items-center justify-center z-[60]">
