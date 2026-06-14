@@ -78,7 +78,7 @@ export default function App() {
   const [phase, setPhase] = useState<GamePhase>(() =>
     portalRef.isPortal ? 'playing' : 'start'
   );
-  const [gender, setGender] = useState<CharacterGender>('boy');
+  const [gender, setGender] = useState<CharacterGender>('luchador');
   const [handle, setHandle] = useState<string>(() => {
     if (portalRef.isPortal && portalRef.username) {
       localStorage.setItem('chanclazo-handle', portalRef.username);
@@ -176,9 +176,10 @@ export default function App() {
     const img = lamaImgRef.current;
     if (!ctx || !img) return;
 
-    const frameSize = 160;
-    const numFrames = 8;
-    const displaySize = 48;
+    const cols = 5;
+    const frameSize = 256;
+    const numFrames = 5; // run cycle uses first row / 5 frames like other sheets
+    const displaySize = 64;
     let frame = 0;
     let lastFrameTime = performance.now();
     let isBursting = false;
@@ -212,9 +213,11 @@ export default function App() {
         lastFrameTime = now;
       }
 
-      // Draw current frame (row 0 assumed for running cycle)
-      const sx = frame * frameSize;
-      const sy = 0;
+      // Draw current frame using col/row math matching project spritesheets (5x5 grid)
+      const col = frame % cols;
+      const row = Math.floor(frame / cols);
+      const sx = col * frameSize;
+      const sy = row * frameSize;
       ctx.drawImage(img, sx, sy, frameSize, frameSize, 0, 0, displaySize, displaySize);
 
       lamaRafRef.current = requestAnimationFrame(animate);
@@ -472,13 +475,14 @@ export default function App() {
               Click to find the bonus game (shows modal). */}
           <canvas
             ref={lamaCanvasRef}
-            width={48}
-            height={48}
+            width={64}
+            height={64}
             className="absolute z-[55] pointer-events-auto cursor-pointer"
             style={{
-              top: '12px',
-              right: '112px',
+              top: '8px',
+              right: '150px',
               imageRendering: 'pixelated',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
             }}
             onClick={() => {
               setShowEasterEggModal(true);
