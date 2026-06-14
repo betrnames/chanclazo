@@ -231,6 +231,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       Matter.World.add(world, skull2);
       enemiesRef.current.push({ body: skull2, health: 12 });
     }
+
+    // Zero any initial velocities so the stacks rest completely still on spawn (no pre-launch wobble or drop)
+    blocksRef.current.forEach(b => {
+      Matter.Body.setVelocity(b.body, { x: 0, y: 0 });
+      Matter.Body.setAngularVelocity(b.body, 0);
+    });
+    enemiesRef.current.forEach(e => {
+      Matter.Body.setVelocity(e.body, { x: 0, y: 0 });
+      Matter.Body.setAngularVelocity(e.body, 0);
+    });
   };
 
 
