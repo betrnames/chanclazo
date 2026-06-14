@@ -375,9 +375,9 @@ export default function App() {
           {/* Small fluorescent yellow CTA in header for bonus game (removed from card below) */}
           <button
             onClick={() => setPhase('slingshot')}
-            className="absolute top-3 left-3 z-50 px-2.5 py-0.5 text-[10px] font-black bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500 text-black rounded shadow border border-yellow-500 transition-all active:scale-[0.97]"
+            className="absolute top-3 left-3 z-50 px-2 py-0.5 text-[9px] font-black tracking-wider bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500 text-black rounded shadow border border-yellow-500 transition-all active:scale-[0.97]"
           >
-            BONUS
+            BONUS GAME
           </button>
 
           {/* ── Scroll content ── */}
