@@ -372,6 +372,14 @@ export default function App() {
 
           <LangToggle />
 
+          {/* Small fluorescent yellow CTA in header for bonus game (removed from card below) */}
+          <button
+            onClick={() => setPhase('slingshot')}
+            className="absolute top-3 left-3 z-50 px-2.5 py-0.5 text-[10px] font-black bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500 text-black rounded shadow border border-yellow-500 transition-all active:scale-[0.97]"
+          >
+            BONUS
+          </button>
+
           {/* ── Scroll content ── */}
           <div className="relative z-10 min-h-full flex flex-col items-center justify-between px-3 py-6">
 
@@ -544,15 +552,6 @@ export default function App() {
                   onClick={() => { initAudio(); startLevel(1); }}
                 >
                   {texts.ui.play}
-                </Button>
-
-                {/* Bonus Game - slingshot mode entry */}
-                <Button
-                  size="lg"
-                  className="w-full text-xl font-black py-6 bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-2xl shadow-[0_6px_0_#9a3412] active:shadow-[0_2px_0_#9a3412] active:translate-y-1 transition-all border-b-4 border-orange-800"
-                  onClick={() => setPhase('slingshot')}
-                >
-                  Bonus Game
                 </Button>
 
                 {/* Live player count - more prominent (no icon) */}
