@@ -23,6 +23,19 @@ interface Target {
   visualSize?: number;
 }
 
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  size: number;
+  color: string;
+  rot: number;
+  rotSpeed: number;
+  shape: 'rect' | 'circle';
+}
+
 const Slingshot = ({ onBack }: SlingshotProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [, setShotsLeft] = useState(4);
@@ -79,6 +92,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   // Game objects
   const blocksRef = useRef<Block[]>([]);
   const enemiesRef = useRef<Target[]>([]);
+  const particlesRef = useRef<Particle[]>([]);
   const groundRef = useRef<Matter.Body | null>(null);
   const slingshotPos = { x: 180, y: 420 }; // left side
   const shotsLeftRef = useRef(4);
@@ -332,10 +346,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           if (enemy.body.isStatic) {
             Matter.Body.setStatic(enemy.body, false);
           }
+          // Small visual burst of pieces on hit (piñata "when hit" feedback, before big death explode)
+          if (enemy.type === 'pinata' && force > 8) {
+            const p = enemy.body.position;
+            spawnExplosion(p.x + (Math.random() - 0.5) * 15, p.y + (Math.random() - 0.5) * 15, 3 + (force > 25 ? 2 : 0));
+          }
           if (enemy.health <= 0) {
+            const deadPos = enemy.body.position;
+            spawnExplosion(deadPos.x, deadPos.y, 14);
             // Explode and destroy around it (chain reaction for nearby pinatas)
             if (enemy.type === 'pinata') {
-              const deadPos = enemy.body.position;
               const expRadius = 55;  // smaller: only affects immediate neighbors in the grid
               const expDmg = 18;     // mild area damage so it softens but doesn't one-shot the whole cluster
               for (let k = enemiesRef.current.length - 1; k >= 0; k--) {
@@ -353,6 +373,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
                   const f = 0.9 * (1 - dist / expRadius);
                   Matter.Body.applyForce(other.body, other.body.position, Matter.Vector.mult(dir, f));
                   if (other.health <= 0) {
+                    const otherPos = other.body.position;
+                    spawnExplosion(otherPos.x, otherPos.y, 8);
                     Matter.World.remove(worldRef.current!, other.body);
                     enemiesRef.current.splice(k, 1);
                     setScore(s => {
@@ -512,6 +534,27 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     }
   };
 
+  const spawnExplosion = (x: number, y: number, count = 12) => {
+    const colors = ['#FFEB3B', '#FF5722', '#E91E63', '#9C27B0', '#FF9800', '#4CAF50', '#03A9F4', '#FFC107', '#00BCD4'];
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.8 + Math.random() * 5.5;
+      const isRect = Math.random() > 0.35;
+      particlesRef.current.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed * 0.75 - 2.2, // upward bias
+        life: 0.75 + Math.random() * 0.5,
+        size: isRect ? 4 + Math.random() * 8 : 2.5 + Math.random() * 5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.45,
+        shape: isRect ? 'rect' : 'circle',
+      });
+    }
+  };
+
   // Main render + physics loop (drives the Matter updates + custom 2D draw)
   const renderLoop = () => {
     const canvas = canvasRef.current;
@@ -639,6 +682,44 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
       ctx.restore();
     });
+
+    // Piñata explosion particles (confetti, paper shreds, candy pieces) - drawn on top
+    const particles = particlesRef.current;
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.18; // gravity for pieces falling
+      p.life -= 0.023;
+      p.rot += p.rotSpeed;
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.globalAlpha = Math.max(0.08, p.life);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      const s = p.size;
+      if (p.shape === 'rect') {
+        // elongated shreds / piñata paper
+        ctx.fillRect(-s * 0.8, -s * 0.25, s * 1.6, s * 0.5);
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = 0.6;
+        ctx.strokeRect(-s * 0.8, -s * 0.25, s * 1.6, s * 0.5);
+      } else {
+        // round candy / bead pieces
+        ctx.beginPath();
+        ctx.arc(0, 0, s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.beginPath();
+        ctx.arc(-s * 0.25, -s * 0.25, s * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
 
     // Draw slingshot base and rubber  -- REMOVED per request (no more sling device)
     const drag = dragRef.current;
@@ -824,6 +905,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       Matter.Engine.clear(engineRef.current);
     }
 
+    particlesRef.current = []; // clear any flying explosion pieces from previous level
+
     setLevel(newLevel);
     levelRef.current = newLevel;
     // Only reset score for brand new game (level 1); advancing levels carries score + win bonus
@@ -904,6 +987,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       engineRef.current = null;
       worldRef.current = null;
       runnerRef.current = null;
+      particlesRef.current = [];
     };
   }, []);
 
