@@ -43,6 +43,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const scoreRef = useRef(0);
   const gameStateRef = useRef<'aiming' | 'launched' | 'won' | 'lost'>('aiming');
   const rafRef = useRef<number | null>(null);
+  const spinFrameRef = useRef(0);
+  const lastTimeRef = useRef(performance.now());
 
   // Drag state
   const dragRef = useRef<{ active: boolean; start: {x:number,y:number}; current: {x:number,y:number} }>({
@@ -70,7 +72,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const loadAll = async () => {
       const imgs: Record<string, HTMLImageElement | null> = {};
       try {
-        // Projectile: always the chancla_spin for this mode
+        // Background for the stage - Mexican Dia de los Muertos inspired
+        imgs.bg = await loadImage('/slingshot_bg.jpg');
+        // Projectile: chancla_spin sprite sheet (5x5 animated spins)
         imgs.chancla = await loadImage('/chancla_spin.png');
         // Enemy
         imgs.sugarskull = await loadImage('/sugarskull.png');
@@ -365,7 +369,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const vy = dy * power / 12;
 
     // Launch the chancla (sandal) projectile - only one type now
-    const birdBody = Matter.Bodies.circle(slingshotPos.x, slingshotPos.y, 18, {
+    const birdBody = Matter.Bodies.circle(slingshotPos.x, slingshotPos.y, 21, {
       restitution: 0.4,
       friction: 0.5,
       density: 0.0015,
@@ -441,14 +445,25 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background (reuse livingroom feel or simple)
-    ctx.fillStyle = '#3a2f1f';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Background - Dia de los Muertos Mexican stage (set the festive scene)
+    const bgImg = imagesRef.current.bg;
+    if (bgImg) {
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+    } else {
+      ctx.fillStyle = '#3a2f1f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
-    // Ground
-    ctx.fillStyle = '#5c4033';
+    // Advance chancla spin animation (~8 fps for visible spin on the 5x5 sheet)
+    const now = performance.now();
+    const dt = now - lastTimeRef.current;
+    lastTimeRef.current = now;
+    spinFrameRef.current = (spinFrameRef.current + (dt / 125)) % 25;
+
+    // Ground (drawn on top of bg for a solid stage floor the crates rest on)
+    ctx.fillStyle = 'rgba(92, 64, 51, 0.85)';
     ctx.fillRect(0, 560, 1280, 40);
-    ctx.fillStyle = '#3a2a1f';
+    ctx.fillStyle = 'rgba(58, 42, 31, 0.9)';
     ctx.fillRect(0, 555, 1280, 8);
 
     // Draw blocks
@@ -541,7 +556,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     ctx.lineTo(birdPos.x, birdPos.y);
     ctx.stroke();
 
-    // Draw launched projectiles (always the chancla sandal now)
+    // Draw launched projectiles (chancla_spin animated sprite sheet)
     const launchedChanclas: any[] = allBodies.filter((b: any) => {
       if (!b || b.label !== 'chancla') return false;
       const v = b.velocity || { x: 0, y: 0 };
@@ -549,25 +564,36 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       return spd > 0.1;
     });
     const chanclaImg = imagesRef.current.chancla;
+    const cols = 5;
+    const rows = 5;
+    const frame = Math.floor(spinFrameRef.current);
     launchedChanclas.forEach((body: any) => {
       const pos = body.position;
       const angle = body.angle;
       if (chanclaImg) {
+        const fw = chanclaImg.width / cols;
+        const fh = chanclaImg.height / rows;
+        const sx = (frame % cols) * fw;
+        const sy = Math.floor(frame / cols) * fh;
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(angle);
-        const size = 36;
-        ctx.drawImage(chanclaImg, -size/2, -size/2, size, size);
+        const size = 42;
+        ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
         ctx.restore();
       }
     });
 
-    // Current held projectile (chancla on slingshot)
+    // Current held projectile (chancla on slingshot) - still spins for fun
     if (drag.active && chanclaImg) {
+      const fw = chanclaImg.width / cols;
+      const fh = chanclaImg.height / rows;
+      const sx = (frame % cols) * fw;
+      const sy = Math.floor(frame / cols) * fh;
       ctx.save();
       ctx.translate(birdPos.x, birdPos.y);
-      const size = 36;
-      ctx.drawImage(chanclaImg, -size/2, -size/2, size, size);
+      const size = 42;
+      ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
       ctx.restore();
     }
 
