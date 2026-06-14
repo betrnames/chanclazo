@@ -196,26 +196,28 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     blocksRef.current = [];
     enemiesRef.current = [];
 
-    // Floating square pattern of pinatas on the right side of the screen.
-    // Player must knock out all the lamas (pinatas).
+    // Bigger floating square/rect grid of pinatas on the right side.
+    // More targets = more challenging, requires better shots and chain explosions.
     let cols, rows;
-    if (levelNum <= 2) { cols=3; rows=3; }
-    else if (levelNum <= 4) { cols=4; rows=3; }
-    else { cols=4; rows=4; }
-    const spacing = 40;
-    const baseX = 1020;  // right side
-    const baseY = 360;   // floating mid-screen
+    if (levelNum === 1) { cols = 4; rows = 4; }      // 16 pinatas
+    else if (levelNum === 2) { cols = 5; rows = 4; } // 20
+    else if (levelNum === 3) { cols = 5; rows = 5; } // 25
+    else if (levelNum === 4) { cols = 6; rows = 5; } // 30
+    else { cols = 6; rows = 6; }                     // 36 for max challenge
+    const spacing = 38;  // slightly tighter for bigger formations
+    const baseX = 1000;  // right side, room for larger grid
+    const baseY = 340;   // floating, centered vertically a bit higher
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const x = baseX + (c - (cols - 1) / 2) * spacing;
         const y = baseY + (r - (rows - 1) / 2) * spacing;
-        const body = Matter.Bodies.circle(x, y, 18, {
+        const body = Matter.Bodies.circle(x, y, 17, {  // slightly smaller r for denser pack
           isStatic: true,  // stay floating in pattern until struck
           restitution: 0.35, friction: 0.4, density: 0.0006, label: 'target'
         });
         Matter.World.add(world, body);
-        enemiesRef.current.push({ body, type: 'pinata', health: 80 + levelNum * 5 }); // higher health so one shot doesn't wipe the grid
+        enemiesRef.current.push({ body, type: 'pinata', health: 80 + levelNum * 5 });
       }
     }
 
@@ -493,7 +495,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     else if (theme === 'lasalla') bgKey = 'bgLasalla';
     let bgImg = imagesRef.current[bgKey] || imagesRef.current.bg;
     if (bgImg) {
-      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      // Full screen cover: scale to fill entire canvas (preserves aspect, crops edges if needed)
+      const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
+      const dw = bgImg.width * scale;
+      const dh = bgImg.height * scale;
+      const dx = (canvas.width - dw) / 2;
+      const dy = (canvas.height - dh) / 2;
+      ctx.drawImage(bgImg, dx, dy, dw, dh);
     } else {
       ctx.fillStyle = '#3a2f1f';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
