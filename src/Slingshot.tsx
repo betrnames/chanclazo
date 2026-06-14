@@ -29,8 +29,6 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const [level, setLevel] = useState(1);
   const [gameState, setGameState] = useState<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
   const [projectileType, setProjectileType] = useState<'chancla' | 'sugarskull' | 'luchador'>('chancla');
-  const [bgTheme, setBgTheme] = useState<'original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla'>('casa');
-  const [readyPhase, setReadyPhase] = useState<'striker' | 'background'>('striker');
 
   // Matter.js refs
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -829,7 +827,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   // Start from the READY screen (called by the big button on page load)
   const beginGame = () => {
     projectileTypeRef.current = projectileType;
-    bgThemeRef.current = bgTheme;
+    // Random background each play (no user choice)
+    const themes: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
+    bgThemeRef.current = themes[Math.floor(Math.random() * themes.length)];
     startLevel(1);
   };
 
@@ -893,11 +893,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           >
             ← BACK TO MAIN GAME
           </button>
-          <div className="font-bold tracking-widest">ANGRY CHANCLAS</div>
+          <div className="font-bold tracking-widest">CHANCLA STRIKE</div>
           <div className="text-orange-400">Level {level}</div>
         </div>
         <div>Score: <span className="font-mono text-yellow-400">{score}</span></div>
-        <div className="text-xs opacity-70">Drag your striker back • Release to launch • Limited launches</div>
+        <div className="text-xs opacity-70">Pull back Release to launch limited strikes</div>
       </div>
 
       <div className="flex-1 flex items-center justify-center relative bg-black/30">
@@ -916,216 +916,121 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
             <div className="text-center">
               <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
 
-              {readyPhase === 'striker' && (
-                <>
-                  {/* Striker selector - 3 tier like main game characters: Sandal, Skull, Luchador Head */}
-                  <div className="mb-3">
-                    <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE STRIKER</p>
-                    <div className="flex items-end justify-center gap-2 py-1">
-                      {(() => {
-                        const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
-                        const idx = order.indexOf(projectileType);
-                        const leftId = order[(idx - 1 + 3) % 3];
-                        const centerId = projectileType;
-                        const rightId = order[(idx + 1) % 3];
+              {/* Striker selector only - background is now random per play */}
+              <div className="mb-3">
+                <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE STRIKER</p>
+                <div className="flex items-end justify-center gap-2 py-1">
+                  {(() => {
+                    const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                    const idx = order.indexOf(projectileType);
+                    const leftId = order[(idx - 1 + 3) % 3];
+                    const centerId = projectileType;
+                    const rightId = order[(idx + 1) % 3];
 
-                        const getStriker = (id: 'chancla' | 'sugarskull' | 'luchador') => {
-                          if (id === 'chancla') return { name: 'SANDAL', avatar: '/chancla_spin.png' };
-                          if (id === 'sugarskull') return { name: 'SKULL', avatar: '/sugarskull.png' };
-                          return { name: 'LUCHADOR', avatar: '/luchadorHead.png' };
-                        };
+                    const getStriker = (id: 'chancla' | 'sugarskull' | 'luchador') => {
+                      if (id === 'chancla') return { name: 'SANDAL', avatar: '/chancla_spin.png' };
+                      if (id === 'sugarskull') return { name: 'SKULL', avatar: '/sugarskull.png' };
+                      return { name: 'LUCHADOR', avatar: '/luchadorHead.png' };
+                    };
 
-                        const left = getStriker(leftId);
-                        const center = getStriker(centerId);
-                        const right = getStriker(rightId);
+                    const left = getStriker(leftId);
+                    const center = getStriker(centerId);
+                    const right = getStriker(rightId);
 
-                        return (
-                          <>
-                            <button
-                              onClick={() => { setProjectileType(leftId); projectileTypeRef.current = leftId; }}
-                              className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
-                            >
-                              <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
-                                leftId === 'chancla' ? {
-                                  backgroundImage: `url(${left.avatar})`,
-                                  backgroundSize: '500% 500%',
-                                  backgroundPosition: '0% 0%',
-                                  imageRendering: 'pixelated',
-                                  backgroundRepeat: 'no-repeat'
-                                } : {}
-                              }>
-                                {leftId !== 'chancla' && <img src={left.avatar} alt={left.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
-                              </div>
-                              <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{left.name}</span>
-                            </button>
+                    return (
+                      <>
+                        <button
+                          onClick={() => { setProjectileType(leftId); projectileTypeRef.current = leftId; }}
+                          className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
+                        >
+                          <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
+                            leftId === 'chancla' ? {
+                              backgroundImage: `url(${left.avatar})`,
+                              backgroundSize: '500% 500%',
+                              backgroundPosition: '0% 0%',
+                              imageRendering: 'pixelated',
+                              backgroundRepeat: 'no-repeat'
+                            } : {}
+                          }>
+                            {leftId !== 'chancla' && <img src={left.avatar} alt={left.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
+                          </div>
+                          <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{left.name}</span>
+                        </button>
 
-                            <button
-                              onClick={() => { /* current */ }}
-                              className="flex flex-col items-center transition-all scale-[1.15]"
-                            >
-                              <div className="h-20 w-20 flex items-center justify-center overflow-hidden -mt-2" style={
-                                centerId === 'chancla' ? {
-                                  backgroundImage: `url(${center.avatar})`,
-                                  backgroundSize: '500% 500%',
-                                  backgroundPosition: '0% 0%',
-                                  imageRendering: 'pixelated',
-                                  backgroundRepeat: 'no-repeat'
-                                } : {}
-                              }>
-                                {centerId !== 'chancla' && <img src={center.avatar} alt={center.name} className="max-h-20 max-w-20 object-contain drop-shadow-lg" style={{ imageRendering: 'pixelated' }} />}
-                              </div>
-                              <span className="text-[9px] font-black text-orange-100 -mt-1 tracking-wider">{center.name}</span>
-                            </button>
+                        <button
+                          onClick={() => { /* current */ }}
+                          className="flex flex-col items-center transition-all scale-[1.15]"
+                        >
+                          <div className="h-20 w-20 flex items-center justify-center overflow-hidden -mt-2" style={
+                            centerId === 'chancla' ? {
+                              backgroundImage: `url(${center.avatar})`,
+                              backgroundSize: '500% 500%',
+                              backgroundPosition: '0% 0%',
+                              imageRendering: 'pixelated',
+                              backgroundRepeat: 'no-repeat'
+                            } : {}
+                          }>
+                            {centerId !== 'chancla' && <img src={center.avatar} alt={center.name} className="max-h-20 max-w-20 object-contain drop-shadow-lg" style={{ imageRendering: 'pixelated' }} />}
+                          </div>
+                          <span className="text-[9px] font-black text-orange-100 -mt-1 tracking-wider">{center.name}</span>
+                        </button>
 
-                            <button
-                              onClick={() => { setProjectileType(rightId); projectileTypeRef.current = rightId; }}
-                              className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
-                            >
-                              <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
-                                rightId === 'chancla' ? {
-                                  backgroundImage: `url(${right.avatar})`,
-                                  backgroundSize: '500% 500%',
-                                  backgroundPosition: '0% 0%',
-                                  imageRendering: 'pixelated',
-                                  backgroundRepeat: 'no-repeat'
-                                } : {}
-                              }>
-                                {rightId !== 'chancla' && <img src={right.avatar} alt={right.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
-                              </div>
-                              <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{right.name}</span>
-                            </button>
-                          </>
-                        );
-                      })()}
-                    </div>
+                        <button
+                          onClick={() => { setProjectileType(rightId); projectileTypeRef.current = rightId; }}
+                          className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
+                        >
+                          <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
+                            rightId === 'chancla' ? {
+                              backgroundImage: `url(${right.avatar})`,
+                              backgroundSize: '500% 500%',
+                              backgroundPosition: '0% 0%',
+                              imageRendering: 'pixelated',
+                              backgroundRepeat: 'no-repeat'
+                            } : {}
+                          }>
+                            {rightId !== 'chancla' && <img src={right.avatar} alt={right.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
+                          </div>
+                          <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{right.name}</span>
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
 
-                    <div className="flex justify-center gap-2 pt-0.5">
-                      <button
-                        onClick={() => {
-                          const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
-                          const idx = order.indexOf(projectileType);
-                          const next = order[(idx - 1 + 3) % 3];
-                          setProjectileType(next);
-                          projectileTypeRef.current = next;
-                        }}
-                        className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
-                      >
-                        ←
-                      </button>
-                      <button
-                        onClick={() => {
-                          const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
-                          const idx = order.indexOf(projectileType);
-                          const next = order[(idx + 1) % 3];
-                          setProjectileType(next);
-                          projectileTypeRef.current = next;
-                        }}
-                        className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
-                      >
-                        →
-                      </button>
-                    </div>
-                  </div>
-
+                <div className="flex justify-center gap-2 pt-0.5">
                   <button
-                    onClick={() => setReadyPhase('background')}
-                    className="mt-2 px-8 py-4 text-2xl font-black bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white rounded-2xl shadow-[0_6px_0_#9a3412] active:shadow-[0_2px_0_#9a3412] active:translate-y-1 border-b-4 border-orange-900 transition-all"
+                    onClick={() => {
+                      const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                      const idx = order.indexOf(projectileType);
+                      const next = order[(idx - 1 + 3) % 3];
+                      setProjectileType(next);
+                      projectileTypeRef.current = next;
+                    }}
+                    className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
                   >
-                    NEXT → CHOOSE BACKGROUND
-                  </button>
-                </>
-              )}
-
-              {readyPhase === 'background' && (
-                <>
-                  {/* Background selector - 3 tier like characters */}
-                  <div className="mb-2">
-                    <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE BACKGROUND</p>
-                    <div className="flex items-end justify-center gap-2 py-1">
-                      {(() => {
-                        const bgOrder: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
-                        const idx = bgOrder.indexOf(bgTheme);
-                        const leftId = bgOrder[(idx - 1 + 6) % 6];
-                        const centerId = bgTheme;
-                        const rightId = bgOrder[(idx + 1) % 6];
-
-                        const getBg = (id: 'original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla') => {
-                          if (id === 'original') return { name: 'ORIGINAL', avatar: '/slingshot_bg.jpg' };
-                          if (id === 'casa') return { name: 'LA CASA', avatar: '/bg_casa.jpg' };
-                          if (id === 'mercado') return { name: 'EL MERCADO', avatar: '/bg_mercado.jpg' };
-                          if (id === 'plaza') return { name: 'LA PLAZA', avatar: '/bg_plaza.jpg' };
-                          if (id === 'arena') return { name: 'LA ARENA', avatar: '/bg_arena.jpg' };
-                          return { name: 'EL LAS ALLA', avatar: '/bg_lasalla.jpg' };
-                        };
-
-                        const left = getBg(leftId);
-                        const center = getBg(centerId);
-                        const right = getBg(rightId);
-
-                        return (
-                          <>
-                            <button
-                              onClick={() => { setBgTheme(leftId); bgThemeRef.current = leftId; }}
-                              className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
-                            >
-                              <div className="h-14 w-14 flex items-center justify-center overflow-hidden border border-orange-300">
-                                <img src={left.avatar} alt={left.name} className="max-h-12 max-w-12 object-cover" style={{ imageRendering: 'pixelated' }} />
-                              </div>
-                              <span className="text-[6px] font-black text-orange-200 mt-0.5 tracking-wider">{left.name}</span>
-                            </button>
-
-                            <button onClick={() => { /* current */ }} className="flex flex-col items-center transition-all scale-[1.1]">
-                              <div className="h-20 w-20 flex items-center justify-center overflow-hidden -mt-1 border border-orange-400">
-                                <img src={center.avatar} alt={center.name} className="max-h-20 max-w-20 object-cover drop-shadow" style={{ imageRendering: 'pixelated' }} />
-                              </div>
-                              <span className="text-[8px] font-black text-orange-100 -mt-0.5 tracking-wider">{center.name}</span>
-                            </button>
-
-                            <button
-                              onClick={() => { setBgTheme(rightId); bgThemeRef.current = rightId; }}
-                              className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
-                            >
-                              <div className="h-14 w-14 flex items-center justify-center overflow-hidden border border-orange-300">
-                                <img src={right.avatar} alt={right.name} className="max-h-12 max-w-12 object-cover" style={{ imageRendering: 'pixelated' }} />
-                              </div>
-                              <span className="text-[6px] font-black text-orange-200 mt-0.5 tracking-wider">{right.name}</span>
-                            </button>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    <div className="flex justify-center gap-2 pt-0.5">
-                      <button onClick={() => {
-                        const bgOrder: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
-                        const idx = bgOrder.indexOf(bgTheme);
-                        const next = bgOrder[(idx - 1 + 6) % 6];
-                        setBgTheme(next); bgThemeRef.current = next;
-                      }} className="text-orange-400 hover:text-orange-200 text-base font-black px-1">←</button>
-                      <button onClick={() => {
-                        const bgOrder: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
-                        const idx = bgOrder.indexOf(bgTheme);
-                        const next = bgOrder[(idx + 1) % 6];
-                        setBgTheme(next); bgThemeRef.current = next;
-                      }} className="text-orange-400 hover:text-orange-200 text-base font-black px-1">→</button>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={beginGame}
-                    className="mt-1 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
-                  >
-                    START
+                    ←
                   </button>
                   <button
-                    onClick={() => setReadyPhase('striker')}
-                    className="mt-2 text-sm font-black text-orange-300 hover:text-orange-100"
+                    onClick={() => {
+                      const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                      const idx = order.indexOf(projectileType);
+                      const next = order[(idx + 1) % 3];
+                      setProjectileType(next);
+                      projectileTypeRef.current = next;
+                    }}
+                    className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
                   >
-                    ← BACK TO STRIKER
+                    →
                   </button>
-                </>
-              )}
+                </div>
+              </div>
 
+              <button
+                onClick={beginGame}
+                className="mt-1 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
+              >
+                START
+              </button>
               <div className="text-orange-200 text-sm mt-4 tracking-[2px] font-bold">GRAB THE STRIKER • DRAG TO AIM • RELEASE TO DESTROY THE STACK</div>
             </div>
           </div>
