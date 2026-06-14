@@ -28,7 +28,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [gameState, setGameState] = useState<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
-  const [projectileType, setProjectileType] = useState<'chancla' | 'sugarskull'>('chancla');
+  const [projectileType, setProjectileType] = useState<'chancla' | 'sugarskull' | 'luchador'>('chancla');
 
   // Matter.js refs
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -48,7 +48,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const rafRef = useRef<number | null>(null);
   const spinFrameRef = useRef(0);
   const lastTimeRef = useRef(performance.now());
-  const projectileTypeRef = useRef<'chancla' | 'sugarskull'>('chancla');
+  const projectileTypeRef = useRef<'chancla' | 'sugarskull' | 'luchador'>('chancla');
 
   // Drag state
   const dragRef = useRef<{ active: boolean; start: {x:number,y:number}; current: {x:number,y:number} }>({
@@ -86,6 +86,15 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         imgs.dish = await loadImage('/dishes.png');
         imgs.beerbottle = await loadImage('/beerbottle.png');
         imgs.pinata = await loadImage('/pinata.png');
+        // Luchador head for striker
+        imgs.luchadorHead = await loadImage('/luchadorHead.png');
+        // 5+ backgrounds for different themes
+        imgs.bg = await loadImage('/slingshot_bg.jpg');
+        imgs.bgCasa = await loadImage('/bg_casa.jpg');
+        imgs.bgMercado = await loadImage('/bg_mercado.jpg');
+        imgs.bgPlaza = await loadImage('/bg_plaza.jpg');
+        imgs.bgArena = await loadImage('/bg_arena.jpg');
+        imgs.bgLasalla = await loadImage('/bg_lasalla.jpg');
         // Fallbacks for other images if needed elsewhere
         imgs.boy = await loadImage('/boy.png');
         imgs.girl = await loadImage('/girl.png');
@@ -184,19 +193,6 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     }
   };
 
-  const addCrate = (world: Matter.World, x: number, y: number, w = 48, h = 28, type: 'wood' | 'stone' | 'ice' = 'wood') => {
-    let options = { restitution: 0.1, friction: 0.7, density: 0.0015 }; // lower bounce so stacks settle cleanly on ground
-    if (type === 'stone') {
-      options = { restitution: 0.05, friction: 0.9, density: 0.004 };
-    } else if (type === 'ice') {
-      options = { restitution: 0.2, friction: 0.2, density: 0.0008 };
-    }
-    const body = Matter.Bodies.rectangle(x, y, w, h, options);
-    Matter.World.add(world, body);
-    const health = type === 'stone' ? 90 : type === 'ice' ? 30 : 45;
-    blocksRef.current.push({ body, type, health });
-  };
-
   const buildLevel = (world: Matter.World, levelNum: number) => {
     // Clear previous
     blocksRef.current.forEach(b => Matter.World.remove(world, b.body));
@@ -206,125 +202,67 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     enemiesRef.current = [];
     standsRef.current = [];
 
-    const baseY = 546; // resting on top of ground (ground top edge ~560)
-    const baseX = 920;
+    // Common stand for all levels - elevated platform for realistic stack placement
+    const standX = 950;
+    const standY = 465;
+    const standW = 230;
+    const standH = 22;
 
-    if (levelNum === 1) {
-      // Elevated stand/table + triangle stack of random mix (dishes, beerbottles, one piñata on top)
-      // Positioned realistically on the right side so the arc from left slingshot feels natural.
-      // Stand is static platform; targets stacked on top in triangle formation.
+    const stand = Matter.Bodies.rectangle(standX, standY, standW, standH, {
+      isStatic: true,
+      restitution: 0.1,
+      friction: 0.8,
+      label: 'stand'
+    });
+    Matter.World.add(world, stand);
+    standsRef.current.push(stand);
 
-      const standX = 950;
-      const standY = 465;      // center of stand
-      const standW = 230;
-      const standH = 22;
+    const standTopY = standY - standH / 2;
 
-      const stand = Matter.Bodies.rectangle(standX, standY, standW, standH, {
-        isStatic: true,
-        restitution: 0.1,
-        friction: 0.8,
-        label: 'stand'
-      });
-      Matter.World.add(world, stand);
-      standsRef.current.push(stand);
+    // Use new target system for all levels (dishes, beerbottles, pinata) on the stand
+    // Different sizes for difficulty
+    let rowCounts;
+    if (levelNum === 1) rowCounts = [4,3,2,1];
+    else if (levelNum === 2) rowCounts = [5,4,3,2,1];
+    else if (levelNum === 3) rowCounts = [5,4,3,2,1,3]; // extra side cluster
+    else if (levelNum === 4) rowCounts = [6,5,4,3,2,1];
+    else rowCounts = [6,5,4,3,2,1,4]; // level 5 max
 
-      const standTopY = standY - standH / 2;  // ~454
-
-      // Triangle positions on top of the stand (4-3-2-1)
-      const positions: {x: number, y: number}[] = [
-        // bottom row 4, slightly above stand
-        {x: standX - 54, y: standTopY - 14},
-        {x: standX - 18, y: standTopY - 14},
-        {x: standX + 18, y: standTopY - 14},
-        {x: standX + 54, y: standTopY - 14},
-        // row 3
-        {x: standX - 36, y: standTopY - 45},
-        {x: standX,     y: standTopY - 45},
-        {x: standX + 36, y: standTopY - 45},
-        // row 2
-        {x: standX - 18, y: standTopY - 76},
-        {x: standX + 18, y: standTopY - 76},
-        // top
-        {x: standX, y: standTopY - 107},
-      ];
-
-      let pinataPlaced = false;
-      positions.forEach((pos, idx) => {
+    // Build triangle rows on the stand
+    rowCounts.forEach((numInRow, rowIdx) => {
+      const startX = standX - (numInRow - 1) * 18; // approx spacing
+      for (let i = 0; i < numInRow; i++) {
+        const x = startX + i * 36;
+        const y = standTopY - 14 - rowIdx * 31;  // vertical spacing
         let t: 'dish' | 'beerbottle' | 'pinata';
-        if (idx === positions.length - 1) {
+        // place pinata in prominent positions (top or middle of rows)
+        if ((rowIdx === rowCounts.length - 1 && i === Math.floor(numInRow/2)) || (Math.random() < 0.15 && !rowCounts.some((_,ri) => ri > rowIdx))) {
           t = 'pinata';
-          pinataPlaced = true;
-        } else if (!pinataPlaced && idx >= 6 && Math.random() < 0.5) {
-          t = 'pinata';
-          pinataPlaced = true;
         } else {
           t = Math.random() < 0.5 ? 'dish' : 'beerbottle';
         }
-
         let body: Matter.Body;
         let health = 25;
         if (t === 'pinata') {
-          body = Matter.Bodies.circle(pos.x, pos.y, 24, {
+          body = Matter.Bodies.circle(x, y, 24, {
             restitution: 0.25, friction: 0.5, density: 0.0005, label: 'target'
           });
           health = 55;
         } else if (t === 'dish') {
-          body = Matter.Bodies.rectangle(pos.x, pos.y, 44, 15, {
+          body = Matter.Bodies.rectangle(x, y, 44, 15, {
             restitution: 0.15, friction: 0.65, density: 0.001, label: 'target'
           });
           health = 20;
         } else {
-          body = Matter.Bodies.rectangle(pos.x, pos.y, 18, 36, {
+          body = Matter.Bodies.rectangle(x, y, 18, 36, {
             restitution: 0.2, friction: 0.75, density: 0.0008, label: 'target'
           });
           health = 26;
         }
         Matter.World.add(world, body);
         enemiesRef.current.push({ body, type: t, health });
-      });
-    } else if (levelNum === 2) {
-      // Wider pyramid-ish with 2 skulls
-      for (let i = 0; i < 4; i++) {
-        addCrate(world, baseX - 20 + i * 48, baseY, 45, 26, i % 2 === 0 ? 'wood' : 'stone');
       }
-      addCrate(world, baseX + 4, baseY - 30, 45, 26, 'ice');
-      addCrate(world, baseX + 52, baseY - 30, 45, 26, 'ice');
-      const skull1 = Matter.Bodies.circle(baseX + 28, baseY - 65, 18, {
-        restitution: 0.4, friction: 0.3, density: 0.0007, label: 'sugarskull'
-      });
-      Matter.World.add(world, skull1);
-      enemiesRef.current.push({ body: skull1, type: 'sugarskull', health: 18 });
-      // side small stack
-      addCrate(world, baseX + 140, baseY, 40, 25, 'wood');
-      addCrate(world, baseX + 140, baseY - 28, 40, 25, 'stone');
-      const skull2 = Matter.Bodies.circle(baseX + 140, baseY - 58, 16, {
-        restitution: 0.35, friction: 0.35, density: 0.0006, label: 'sugarskull'
-      });
-      Matter.World.add(world, skull2);
-      enemiesRef.current.push({ body: skull2, type: 'sugarskull', health: 14 });
-    } else {
-      // Level 3: bigger challenge
-      for (let i = 0; i < 5; i++) {
-        addCrate(world, baseX - 40 + i * 46, baseY, 42, 25, 'wood');
-      }
-      for (let i = 0; i < 3; i++) {
-        addCrate(world, baseX - 10 + i * 46, baseY - 28, 42, 25, 'stone');
-      }
-      addCrate(world, baseX + 15, baseY - 56, 42, 25, 'ice');
-      const skull1 = Matter.Bodies.circle(baseX + 36, baseY - 88, 17, {
-        restitution: 0.3, friction: 0.4, density: 0.0006, label: 'sugarskull'
-      });
-      Matter.World.add(world, skull1);
-      enemiesRef.current.push({ body: skull1, type: 'sugarskull', health: 16 });
-      // floating small stack on right
-      addCrate(world, baseX + 160, baseY - 10, 38, 24, 'stone');
-      addCrate(world, baseX + 160, baseY - 38, 38, 24, 'ice');
-      const skull2 = Matter.Bodies.circle(baseX + 160, baseY - 68, 15, {
-        restitution: 0.4, friction: 0.3, density: 0.0005, label: 'sugarskull'
-      });
-      Matter.World.add(world, skull2);
-      enemiesRef.current.push({ body: skull2, type: 'sugarskull', health: 12 });
-    }
+    });
 
     // Zero any initial velocities so the stacks rest completely still on spawn (no pre-launch wobble or drop)
     blocksRef.current.forEach(b => {
@@ -557,8 +495,14 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background - Dia de los Muertos Mexican stage (set the festive scene)
-    const bgImg = imagesRef.current.bg;
+    // Background - themed per level (La Casa, El Mercado, La Plaza, La Arena, El Las Alla + original)
+    let bgImg = imagesRef.current.bg;
+    const lvl = levelRef.current || 1;
+    if (lvl === 1) bgImg = imagesRef.current.bgCasa || bgImg;
+    else if (lvl === 2) bgImg = imagesRef.current.bgMercado || bgImg;
+    else if (lvl === 3) bgImg = imagesRef.current.bgPlaza || bgImg;
+    else if (lvl === 4) bgImg = imagesRef.current.bgArena || bgImg;
+    else if (lvl >= 5) bgImg = imagesRef.current.bgLasalla || bgImg;
     if (bgImg) {
       ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
     } else {
@@ -698,7 +642,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       const pos = body.position;
       const angle = body.angle;
       const pType = (body as any).projectileType || 'chancla';
-      const projImg = pType === 'sugarskull' ? imagesRef.current.sugarskull : imagesRef.current.chancla;
+      let projImg = imagesRef.current.chancla;
+      if (pType === 'sugarskull') projImg = imagesRef.current.sugarskull;
+      else if (pType === 'luchador') projImg = imagesRef.current.luchadorHead;
       if (projImg) {
         if (pType === 'chancla') {
           const fw = imagesRef.current.chancla!.width / cols;
@@ -725,7 +671,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Ready floating striker (chancla or sugarskull based on choice, with hover)
     if (!drag.active && (gameStateRef.current === 'aiming' || gameStateRef.current === 'ready')) {
       const pType = projectileTypeRef.current;
-      const projImg = pType === 'sugarskull' ? imagesRef.current.sugarskull : imagesRef.current.chancla;
+      let projImg = imagesRef.current.chancla;
+      if (pType === 'sugarskull') projImg = imagesRef.current.sugarskull;
+      else if (pType === 'luchador') projImg = imagesRef.current.luchadorHead;
       if (projImg) {
         if (pType === 'chancla') {
           const fw = imagesRef.current.chancla!.width / cols;
@@ -755,7 +703,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Currently pulled / aiming striker (bigger, follows drag)
     if (drag.active) {
       const pType = projectileTypeRef.current;
-      const projImg = pType === 'sugarskull' ? imagesRef.current.sugarskull : imagesRef.current.chancla;
+      let projImg = imagesRef.current.chancla;
+      if (pType === 'sugarskull') projImg = imagesRef.current.sugarskull;
+      else if (pType === 'luchador') projImg = imagesRef.current.luchadorHead;
       if (projImg) {
         if (pType === 'chancla') {
           const fw = imagesRef.current.chancla!.width / cols;
@@ -961,21 +911,87 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
             <div className="text-center">
               <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
 
-              {/* Projectile choice - user picks sandal or sugarskull as the striker */}
-              <div className="mb-4">
-                <div className="text-orange-300 text-xs tracking-[2px] mb-1.5">CHOOSE YOUR STRIKER</div>
-                <div className="flex gap-3 justify-center">
+              {/* Striker selector - 3 tier like main game characters: Sandal, Skull, Luchador Head */}
+              <div className="mb-3">
+                <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE STRIKER</p>
+                <div className="flex items-end justify-center gap-2 py-1">
+                  {(() => {
+                    const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                    const idx = order.indexOf(projectileType);
+                    const leftId = order[(idx - 1 + 3) % 3];
+                    const centerId = projectileType;
+                    const rightId = order[(idx + 1) % 3];
+
+                    const getStriker = (id: 'chancla' | 'sugarskull' | 'luchador') => {
+                      if (id === 'chancla') return { name: 'SANDAL', avatar: '/chancla_spin.png' };
+                      if (id === 'sugarskull') return { name: 'SKULL', avatar: '/sugarskull.png' };
+                      return { name: 'LUCHADOR', avatar: '/luchadorHead.png' };
+                    };
+
+                    const left = getStriker(leftId);
+                    const center = getStriker(centerId);
+                    const right = getStriker(rightId);
+
+                    return (
+                      <>
+                        <button
+                          onClick={() => { setProjectileType(leftId); projectileTypeRef.current = leftId; }}
+                          className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
+                        >
+                          <div className="h-14 w-14 flex items-center justify-center overflow-hidden">
+                            <img src={left.avatar} alt={left.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />
+                          </div>
+                          <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{left.name}</span>
+                        </button>
+
+                        <button
+                          onClick={() => { /* current */ }}
+                          className="flex flex-col items-center transition-all scale-[1.15]"
+                        >
+                          <div className="h-20 w-20 flex items-center justify-center overflow-hidden -mt-2">
+                            <img src={center.avatar} alt={center.name} className="max-h-20 max-w-20 object-contain drop-shadow-lg" style={{ imageRendering: 'pixelated' }} />
+                          </div>
+                          <span className="text-[9px] font-black text-orange-100 -mt-1 tracking-wider">{center.name}</span>
+                        </button>
+
+                        <button
+                          onClick={() => { setProjectileType(rightId); projectileTypeRef.current = rightId; }}
+                          className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
+                        >
+                          <div className="h-14 w-14 flex items-center justify-center overflow-hidden">
+                            <img src={right.avatar} alt={right.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />
+                          </div>
+                          <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{right.name}</span>
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="flex justify-center gap-2 pt-0.5">
                   <button
-                    onClick={() => { setProjectileType('chancla'); projectileTypeRef.current = 'chancla'; }}
-                    className={`px-5 py-2 text-sm font-bold rounded-xl border transition-all ${projectileType === 'chancla' ? 'bg-orange-600 border-orange-400 scale-105' : 'bg-black/40 border-orange-800 hover:border-orange-500'}`}
+                    onClick={() => {
+                      const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                      const idx = order.indexOf(projectileType);
+                      const next = order[(idx - 1 + 3) % 3];
+                      setProjectileType(next);
+                      projectileTypeRef.current = next;
+                    }}
+                    className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
                   >
-                    🩴 SANDAL
+                    ←
                   </button>
                   <button
-                    onClick={() => { setProjectileType('sugarskull'); projectileTypeRef.current = 'sugarskull'; }}
-                    className={`px-5 py-2 text-sm font-bold rounded-xl border transition-all ${projectileType === 'sugarskull' ? 'bg-orange-600 border-orange-400 scale-105' : 'bg-black/40 border-orange-800 hover:border-orange-500'}`}
+                    onClick={() => {
+                      const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                      const idx = order.indexOf(projectileType);
+                      const next = order[(idx + 1) % 3];
+                      setProjectileType(next);
+                      projectileTypeRef.current = next;
+                    }}
+                    className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
                   >
-                    💀 SKULL
+                    →
                   </button>
                 </div>
               </div>
