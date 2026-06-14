@@ -16,8 +16,9 @@ interface Block {
   health: number;
 }
 
-interface Enemy {
+interface Target {
   body: Matter.Body;
+  type: 'dish' | 'beerbottle' | 'pinata' | 'sugarskull';
   health: number;
 }
 
@@ -27,6 +28,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [gameState, setGameState] = useState<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
+  const [projectileType, setProjectileType] = useState<'chancla' | 'sugarskull'>('chancla');
 
   // Matter.js refs
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -35,7 +37,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
   // Game objects
   const blocksRef = useRef<Block[]>([]);
-  const enemiesRef = useRef<Enemy[]>([]);
+  const enemiesRef = useRef<Target[]>([]);
   const groundRef = useRef<Matter.Body | null>(null);
   const slingshotPos = { x: 180, y: 420 }; // left side
   const shotsLeftRef = useRef(4);
@@ -45,6 +47,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const rafRef = useRef<number | null>(null);
   const spinFrameRef = useRef(0);
   const lastTimeRef = useRef(performance.now());
+  const projectileTypeRef = useRef<'chancla' | 'sugarskull'>('chancla');
 
   // Drag state
   const dragRef = useRef<{ active: boolean; start: {x:number,y:number}; current: {x:number,y:number} }>({
@@ -76,8 +79,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         imgs.bg = await loadImage('/slingshot_bg.jpg');
         // Projectile: chancla_spin sprite sheet (5x5 animated spins)
         imgs.chancla = await loadImage('/chancla_spin.png');
-        // Enemy
+        // Enemy / old
         imgs.sugarskull = await loadImage('/sugarskull.png');
+        // New stack targets
+        imgs.dish = await loadImage('/dishes.png');
+        imgs.beerbottle = await loadImage('/beerbottle.png');
+        imgs.pinata = await loadImage('/pinata.png');
         // Fallbacks for other images if needed elsewhere
         imgs.boy = await loadImage('/boy.png');
         imgs.girl = await loadImage('/girl.png');
@@ -200,66 +207,61 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const baseX = 920;
 
     if (levelNum === 1) {
-      // Pure triangle stack of ONLY sugarskulls (no crates at all)
-      // Stable hexagonal/triangle packing so it holds together on game start
-      // Bigger stack, ready to be knocked down by the chancla
-      const baseY = 542; // exact resting: ground top 560 - r
+      // Triangle stack: random mix of dishes, beerbottles, and one piñata
+      // No crates. Piñata is the special/big one, usually at the top.
+      const baseY = 542;
       const baseX = 920;
-      const r = 18;
-      const spacingX = r * 2;     // 36
-      const spacingY = r * 1.732; // ~31.2 for proper triangle packing (skulls sit in grooves)
+      const positions: {x: number, y: number}[] = [
+        // bottom row 4
+        {x: baseX - 54, y: baseY},
+        {x: baseX - 18, y: baseY},
+        {x: baseX + 18, y: baseY},
+        {x: baseX + 54, y: baseY},
+        // row 3
+        {x: baseX - 36, y: baseY - 31},
+        {x: baseX,     y: baseY - 31},
+        {x: baseX + 36, y: baseY - 31},
+        // row 2
+        {x: baseX - 18, y: baseY - 62},
+        {x: baseX + 18, y: baseY - 62},
+        // top
+        {x: baseX, y: baseY - 93},
+      ];
 
-      // Bottom row: 4 skulls
-      for (let i = 0; i < 4; i++) {
-        const x = baseX - 54 + i * spacingX;
-        const skull = Matter.Bodies.circle(x, baseY, r, {
-          restitution: 0.05,   // very low bounce for stability
-          friction: 0.95,
-          density: 0.001,
-          label: 'sugarskull'
-        });
-        Matter.World.add(world, skull);
-        enemiesRef.current.push({ body: skull, health: 25 });
-      }
+      let pinataPlaced = false;
+      positions.forEach((pos, idx) => {
+        let t: 'dish' | 'beerbottle' | 'pinata';
+        if (idx === positions.length - 1) {
+          t = 'pinata'; // force piñata at top
+          pinataPlaced = true;
+        } else if (!pinataPlaced && idx >= 6 && Math.random() < 0.5) {
+          t = 'pinata';
+          pinataPlaced = true;
+        } else {
+          t = Math.random() < 0.5 ? 'dish' : 'beerbottle';
+        }
 
-      // Row 2: 3 skulls (offset by r)
-      const y2 = baseY - spacingY;
-      for (let i = 0; i < 3; i++) {
-        const x = baseX - 36 + i * spacingX;
-        const skull = Matter.Bodies.circle(x, y2, r, {
-          restitution: 0.05,
-          friction: 0.95,
-          density: 0.001,
-          label: 'sugarskull'
-        });
-        Matter.World.add(world, skull);
-        enemiesRef.current.push({ body: skull, health: 22 });
-      }
-
-      // Row 3: 2 skulls
-      const y3 = y2 - spacingY;
-      for (let i = 0; i < 2; i++) {
-        const x = baseX - 18 + i * spacingX;
-        const skull = Matter.Bodies.circle(x, y3, r, {
-          restitution: 0.05,
-          friction: 0.95,
-          density: 0.001,
-          label: 'sugarskull'
-        });
-        Matter.World.add(world, skull);
-        enemiesRef.current.push({ body: skull, health: 20 });
-      }
-
-      // Top: 1 skull
-      const y4 = y3 - spacingY;
-      const skullTop = Matter.Bodies.circle(baseX, y4, r, {
-        restitution: 0.05,
-        friction: 0.95,
-        density: 0.001,
-        label: 'sugarskull'
+        let body: Matter.Body;
+        let health = 25;
+        if (t === 'pinata') {
+          body = Matter.Bodies.circle(pos.x, pos.y, 24, {
+            restitution: 0.25, friction: 0.5, density: 0.0005, label: 'target'
+          });
+          health = 55;
+        } else if (t === 'dish') {
+          body = Matter.Bodies.rectangle(pos.x, pos.y, 44, 15, {
+            restitution: 0.15, friction: 0.65, density: 0.001, label: 'target'
+          });
+          health = 20;
+        } else {
+          body = Matter.Bodies.rectangle(pos.x, pos.y, 18, 36, {
+            restitution: 0.2, friction: 0.75, density: 0.0008, label: 'target'
+          });
+          health = 26;
+        }
+        Matter.World.add(world, body);
+        enemiesRef.current.push({ body, type: t, health });
       });
-      Matter.World.add(world, skullTop);
-      enemiesRef.current.push({ body: skullTop, health: 28 });
     } else if (levelNum === 2) {
       // Wider pyramid-ish with 2 skulls
       for (let i = 0; i < 4; i++) {
@@ -271,7 +273,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         restitution: 0.4, friction: 0.3, density: 0.0007, label: 'sugarskull'
       });
       Matter.World.add(world, skull1);
-      enemiesRef.current.push({ body: skull1, health: 18 });
+      enemiesRef.current.push({ body: skull1, type: 'sugarskull', health: 18 });
       // side small stack
       addCrate(world, baseX + 140, baseY, 40, 25, 'wood');
       addCrate(world, baseX + 140, baseY - 28, 40, 25, 'stone');
@@ -279,7 +281,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         restitution: 0.35, friction: 0.35, density: 0.0006, label: 'sugarskull'
       });
       Matter.World.add(world, skull2);
-      enemiesRef.current.push({ body: skull2, health: 14 });
+      enemiesRef.current.push({ body: skull2, type: 'sugarskull', health: 14 });
     } else {
       // Level 3: bigger challenge
       for (let i = 0; i < 5; i++) {
@@ -293,7 +295,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         restitution: 0.3, friction: 0.4, density: 0.0006, label: 'sugarskull'
       });
       Matter.World.add(world, skull1);
-      enemiesRef.current.push({ body: skull1, health: 16 });
+      enemiesRef.current.push({ body: skull1, type: 'sugarskull', health: 16 });
       // floating small stack on right
       addCrate(world, baseX + 160, baseY - 10, 38, 24, 'stone');
       addCrate(world, baseX + 160, baseY - 38, 38, 24, 'ice');
@@ -301,7 +303,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         restitution: 0.4, friction: 0.3, density: 0.0005, label: 'sugarskull'
       });
       Matter.World.add(world, skull2);
-      enemiesRef.current.push({ body: skull2, health: 12 });
+      enemiesRef.current.push({ body: skull2, type: 'sugarskull', health: 12 });
     }
 
     // Zero any initial velocities so the stacks rest completely still on spawn (no pre-launch wobble or drop)
@@ -461,8 +463,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       restitution: 0.4,
       friction: 0.5,
       density: 0.0015,
-      label: 'chancla',
+      label: 'projectile',
     });
+    (birdBody as any).projectileType = projectileTypeRef.current;
 
     Matter.Body.setVelocity(birdBody, { x: vx, y: vy });
 
@@ -594,34 +597,41 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.restore();
     });
 
-    // Draw enemies (sugar skulls using user image)
-    const skullImg = imagesRef.current.sugarskull;
-    enemiesRef.current.forEach((enemy) => {
-      const pos = enemy.body.position;
-      const angle = enemy.body.angle;
+    // Draw targets (dishes, beerbottles, pinata - random mix in triangle)
+    enemiesRef.current.forEach((target) => {
+      const pos = target.body.position;
+      const angle = target.body.angle;
 
       ctx.save();
       ctx.translate(pos.x, pos.y);
       ctx.rotate(angle);
 
-      if (skullImg) {
-        const s = 38;
-        ctx.drawImage(skullImg, -s/2, -s/2, s, s);
+      let img: HTMLImageElement | null = null;
+      let sz = 36;
+      if (target.type === 'dish') {
+        img = imagesRef.current.dish || null;
+        sz = 42;
+      } else if (target.type === 'beerbottle') {
+        img = imagesRef.current.beerbottle || null;
+        sz = 32;
+      } else if (target.type === 'pinata') {
+        img = imagesRef.current.pinata || null;
+        sz = 50;
       } else {
-        // fallback simple skull
+        img = imagesRef.current.sugarskull || null;
+        sz = 36;
+      }
+
+      if (img) {
+        ctx.drawImage(img, -sz/2, -sz/2, sz, sz);
+      } else {
+        // fallback
         ctx.fillStyle = '#f1e7d2';
         ctx.beginPath();
-        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.arc(0, 0, sz/2, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#222';
         ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.fillStyle = '#222';
-        ctx.fillRect(-6, -5, 4, 4);
-        ctx.fillRect(2, -5, 4, 4);
-        ctx.beginPath();
-        ctx.moveTo(-5, 6);
-        ctx.lineTo(5, 6);
         ctx.stroke();
       }
 
@@ -634,63 +644,97 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ? { x: drag.current.x, y: drag.current.y } 
       : { x: slingshotPos.x, y: slingshotPos.y };
 
-    // Draw launched projectiles (chancla_spin animated sprite sheet)
-    const launchedChanclas: any[] = allBodies.filter((b: any) => {
-      if (!b || b.label !== 'chancla') return false;
+    // Draw launched projectiles (chancla or sugarskull depending on user choice)
+    const launchedProjectiles: any[] = allBodies.filter((b: any) => {
+      if (!b || (b.label !== 'chancla' && b.label !== 'projectile')) return false;
       const v = b.velocity || { x: 0, y: 0 };
       const spd = Math.hypot(v.x, v.y);
       return spd > 0.1;
     });
-    const chanclaImg = imagesRef.current.chancla;
     const cols = 5;
     const rows = 5;
     const frame = Math.floor(spinFrameRef.current);
-    launchedChanclas.forEach((body: any) => {
+    launchedProjectiles.forEach((body: any) => {
       const pos = body.position;
       const angle = body.angle;
-      if (chanclaImg) {
-        const fw = chanclaImg.width / cols;
-        const fh = chanclaImg.height / rows;
-        const sx = (frame % cols) * fw;
-        const sy = Math.floor(frame / cols) * fh;
-        ctx.save();
-        ctx.translate(pos.x, pos.y);
-        ctx.rotate(angle);
-        const size = 60; // bigger sandal
-        ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
-        ctx.restore();
+      const pType = (body as any).projectileType || 'chancla';
+      const projImg = pType === 'sugarskull' ? imagesRef.current.sugarskull : imagesRef.current.chancla;
+      if (projImg) {
+        if (pType === 'chancla') {
+          const fw = imagesRef.current.chancla!.width / cols;
+          const fh = imagesRef.current.chancla!.height / rows;
+          const sx = (frame % cols) * fw;
+          const sy = Math.floor(frame / cols) * fh;
+          ctx.save();
+          ctx.translate(pos.x, pos.y);
+          ctx.rotate(angle);
+          const size = 60;
+          ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.translate(pos.x, pos.y);
+          ctx.rotate(angle);
+          const size = 60;
+          ctx.drawImage(projImg, -size/2, -size/2, size, size);
+          ctx.restore();
+        }
       }
     });
 
-    // Ready floating sandal (starts here with animated hover bob + spin, no sling posts/rubber)
-    // Bigger size, always visible when not dragging
-    if (!drag.active && chanclaImg && (gameStateRef.current === 'aiming' || gameStateRef.current === 'ready')) {
-      const fw = chanclaImg.width / cols;
-      const fh = chanclaImg.height / rows;
-      const sx = (frame % cols) * fw;
-      const sy = Math.floor(frame / cols) * fh;
-      const readyX = slingshotPos.x + hoverOffset.x;
-      const readyY = slingshotPos.y + hoverOffset.y;
-      ctx.save();
-      ctx.translate(readyX, readyY);
-      // extra gentle tilt for hover feel (combined with spin frame)
-      ctx.rotate(Math.sin((now / 1000) * 1.5) * 0.12);
-      const size = 60; // bigger
-      ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
-      ctx.restore();
+    // Ready floating striker (chancla or sugarskull based on choice, with hover)
+    if (!drag.active && (gameStateRef.current === 'aiming' || gameStateRef.current === 'ready')) {
+      const pType = projectileTypeRef.current;
+      const projImg = pType === 'sugarskull' ? imagesRef.current.sugarskull : imagesRef.current.chancla;
+      if (projImg) {
+        if (pType === 'chancla') {
+          const fw = imagesRef.current.chancla!.width / cols;
+          const fh = imagesRef.current.chancla!.height / rows;
+          const sx = (frame % cols) * fw;
+          const sy = Math.floor(frame / cols) * fh;
+          const readyX = slingshotPos.x + hoverOffset.x;
+          const readyY = slingshotPos.y + hoverOffset.y;
+          ctx.save();
+          ctx.translate(readyX, readyY);
+          ctx.rotate(Math.sin((now / 1000) * 1.5) * 0.12);
+          const size = 60;
+          ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
+          ctx.restore();
+        } else {
+          const readyX = slingshotPos.x + hoverOffset.x;
+          const readyY = slingshotPos.y + hoverOffset.y;
+          ctx.save();
+          ctx.translate(readyX, readyY);
+          const size = 60;
+          ctx.drawImage(projImg, -size/2, -size/2, size, size);
+          ctx.restore();
+        }
+      }
     }
 
-    // Currently pulled / aiming sandal (bigger, follows drag, still spins)
-    if (drag.active && chanclaImg) {
-      const fw = chanclaImg.width / cols;
-      const fh = chanclaImg.height / rows;
-      const sx = (frame % cols) * fw;
-      const sy = Math.floor(frame / cols) * fh;
-      ctx.save();
-      ctx.translate(birdPos.x, birdPos.y);
-      const size = 60; // bigger
-      ctx.drawImage(chanclaImg, sx, sy, fw, fh, -size/2, -size/2, size, size);
-      ctx.restore();
+    // Currently pulled / aiming striker (bigger, follows drag)
+    if (drag.active) {
+      const pType = projectileTypeRef.current;
+      const projImg = pType === 'sugarskull' ? imagesRef.current.sugarskull : imagesRef.current.chancla;
+      if (projImg) {
+        if (pType === 'chancla') {
+          const fw = imagesRef.current.chancla!.width / cols;
+          const fh = imagesRef.current.chancla!.height / rows;
+          const sx = (frame % cols) * fw;
+          const sy = Math.floor(frame / cols) * fh;
+          ctx.save();
+          ctx.translate(birdPos.x, birdPos.y);
+          const size = 60;
+          ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.translate(birdPos.x, birdPos.y);
+          const size = 60;
+          ctx.drawImage(projImg, -size/2, -size/2, size, size);
+          ctx.restore();
+        }
+      }
     }
 
     // Curved dotted trajectory preview (line of sight) while the sandal is grabbed
@@ -790,6 +834,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
   // Start from the READY screen (called by the big button on page load)
   const beginGame = () => {
+    projectileTypeRef.current = projectileType;
     startLevel(1);
   };
 
@@ -857,7 +902,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           <div className="text-orange-400">Level {level}</div>
         </div>
         <div>Score: <span className="font-mono text-yellow-400">{score}</span></div>
-        <div className="text-xs opacity-70">Drag the floating sandal back • Release to launch • Limited launches</div>
+        <div className="text-xs opacity-70">Drag your striker back • Release to launch • Limited launches</div>
       </div>
 
       <div className="flex-1 flex items-center justify-center relative bg-black/30">
@@ -875,20 +920,40 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           <div className="absolute inset-0 flex items-center justify-center z-20" style={{ background: 'rgba(26, 20, 15, 0.55)' }}>
             <div className="text-center">
               <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
+
+              {/* Projectile choice - user picks sandal or sugarskull as the striker */}
+              <div className="mb-4">
+                <div className="text-orange-300 text-xs tracking-[2px] mb-1.5">CHOOSE YOUR STRIKER</div>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => { setProjectileType('chancla'); projectileTypeRef.current = 'chancla'; }}
+                    className={`px-5 py-2 text-sm font-bold rounded-xl border transition-all ${projectileType === 'chancla' ? 'bg-orange-600 border-orange-400 scale-105' : 'bg-black/40 border-orange-800 hover:border-orange-500'}`}
+                  >
+                    🩴 SANDAL
+                  </button>
+                  <button
+                    onClick={() => { setProjectileType('sugarskull'); projectileTypeRef.current = 'sugarskull'; }}
+                    className={`px-5 py-2 text-sm font-bold rounded-xl border transition-all ${projectileType === 'sugarskull' ? 'bg-orange-600 border-orange-400 scale-105' : 'bg-black/40 border-orange-800 hover:border-orange-500'}`}
+                  >
+                    💀 SKULL
+                  </button>
+                </div>
+              </div>
+
               <button
                 onClick={beginGame}
-                className="mt-2 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
+                className="mt-1 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
               >
                 START
               </button>
-              <div className="text-orange-200 text-sm mt-4 tracking-[2px] font-bold">GRAB THE SANDAL • DRAG TO AIM • RELEASE TO DESTROY THE STACK</div>
+              <div className="text-orange-200 text-sm mt-4 tracking-[2px] font-bold">GRAB THE STRIKER • DRAG TO AIM • RELEASE TO DESTROY THE STACK</div>
             </div>
           </div>
         )}
       </div>
 
       <div className="px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
-        <div>Drag back the spinning chancla • Release to launch • Knock down the sugarskull stack!</div>
+        <div>Drag your chosen striker (sandal or skull) • Release to launch • Destroy the random stack!</div>
       </div>
     </div>
   );
