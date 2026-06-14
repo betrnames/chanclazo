@@ -372,12 +372,20 @@ export default function App() {
 
           <LangToggle />
 
-          {/* Small red CTA in header (right side) for bonus game (removed from card below) */}
+          {/* Pinata CTA in header (right side) - idle pinata image with hover float like sandal logo, text below */}
           <button
             onClick={() => setPhase('slingshot')}
-            className="absolute top-3 right-24 z-50 px-2 py-0.5 text-[9px] font-black tracking-wider bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded shadow border border-red-800 transition-all active:scale-[0.97]"
+            className="absolute top-3 right-24 z-50 flex flex-col items-center pinata-cta cursor-pointer active:opacity-80 transition-all"
           >
-            BONUS GAME
+            <img
+              src="/pinata.png"
+              alt="Pinata"
+              className="w-7 h-7 object-contain drop-shadow-sm"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' }}
+            />
+            <span className="text-[7px] font-black text-red-600 tracking-wider leading-none mt-0.5">
+              Limited bonus game
+            </span>
           </button>
 
           {/* ── Scroll content ── */}

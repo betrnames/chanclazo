@@ -92,6 +92,11 @@
   50%       { transform: translateY(-6px) rotate(3deg); }
 }
 
+/* Pinata CTA hover animation - matches the sandal logo float on the homepage */
+.pinata-cta:hover img {
+  animation: floatLogo 1.6s ease-in-out infinite;
+}
+
 /* ─── Chanclazo Game Animations ─────────────────────────────────────────────── */
 
 @keyframes popupFloat {
