@@ -874,7 +874,7 @@ export default function App() {
 
               {/* Next level preview */}
               {levelCompleteData.level < LEVELS.length && (
-                <div className="rounded-lg border-2 border-orange-200 bg-orange-50/50 px-4 py-3">
+                <div className="rounded-lg border-2 border-orange-200 bg-orange-50 px-4 py-3">
                   <p className="text-xs font-black text-orange-700 uppercase tracking-wider mb-1">
                     Next: Level {levelCompleteData.level + 1}
                   </p>
