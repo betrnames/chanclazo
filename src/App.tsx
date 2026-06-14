@@ -546,13 +546,13 @@ export default function App() {
                   {texts.ui.play}
                 </Button>
 
-                {/* Slingshot bonus mode - Angry Birds style with chanclazo twist */}
+                {/* Bonus Game - slingshot mode entry */}
                 <Button
                   size="lg"
-                  className="w-full text-xl font-black py-6 bg-gradient-to-b from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-2xl shadow-[0_6px_0_#4c1d95] active:shadow-[0_2px_0_#4c1d95] active:translate-y-1 transition-all border-b-4 border-purple-900"
+                  className="w-full text-xl font-black py-6 bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-2xl shadow-[0_6px_0_#9a3412] active:shadow-[0_2px_0_#9a3412] active:translate-y-1 transition-all border-b-4 border-orange-800"
                   onClick={() => setPhase('slingshot')}
                 >
-                  🩴 Chancla Strike (Bonus)
+                  Bonus Game
                 </Button>
 
                 {/* Live player count - more prominent (no icon) */}
