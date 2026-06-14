@@ -594,6 +594,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.restore();
     });
 
+    // Transparent square (same 75% dark bg as the ready panel) behind the pinata grid
+    // Gives the targets depth and separates them from the random full-screen backgrounds during gameplay.
+    if (enemiesRef.current.length > 0) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.fillRect(760, 70, 460, 460);
+    }
+
     // Draw targets (floating square grid of pinatas/llama pinatas on right)
     enemiesRef.current.forEach((target) => {
       const pos = target.body.position;
@@ -996,12 +1003,20 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       <div className="absolute bottom-0 left-0 right-0 z-20 px-4 py-1 bg-black/60" />
 
 
-      {/* READY overlay - covers the main area but not the header/footer */}
+      {/* READY panel - centered transparent square (75% dark) instead of full overlay */}
       {gameState === 'ready' && (
-        <div className="absolute left-0 right-0 z-30" style={{ top: '44px', bottom: '36px', background: 'rgba(0, 0, 0, 0.75)' }}>
+        <div className="absolute left-0 right-0 z-30" style={{ top: '44px', bottom: '36px' }}>
           <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
+            <div 
+              className="rounded-2xl flex items-center justify-center"
+              style={{
+                width: 'min(420px, 85vw)',
+                height: 'min(420px, 85vw)',
+                background: 'rgba(0, 0, 0, 0.75)'
+              }}
+            >
+              <div className="text-center p-4">
+                <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
 
               {/* Striker selector only - background is now random per play */}
               <div className="mb-3">
@@ -1118,6 +1133,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
               >
                 START
               </button>
+              </div>
             </div>
           </div>
         </div>
