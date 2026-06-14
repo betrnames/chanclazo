@@ -196,7 +196,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     blocksRef.current = [];
     enemiesRef.current = [];
 
-    const baseY = 546; // resting on top of ground (ground top edge ~560, crate half h=14)
+    const baseY = 546; // resting on top of ground (ground top edge ~560)
     const baseX = 920;
 
     if (levelNum === 1) {
@@ -556,7 +556,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       hoverOffset.x = Math.sin(t * 0.6) * 4;      // gentle side-to-side
     }
 
-    // Ground (drawn on top of bg for a solid stage floor the crates rest on)
+    // Ground (drawn on top of bg for a solid stage floor the stack rests on)
     ctx.fillStyle = 'rgba(92, 64, 51, 0.85)';
     ctx.fillRect(0, 560, 1280, 40);
     ctx.fillStyle = 'rgba(58, 42, 31, 0.9)';
@@ -888,7 +888,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       </div>
 
       <div className="px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
-        <div>Drag back the spinning chancla • Release to launch • Knock down the crates &amp; sugarskulls!</div>
+        <div>Drag back the spinning chancla • Release to launch • Knock down the sugarskull stack!</div>
       </div>
     </div>
   );
