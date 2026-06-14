@@ -53,13 +53,14 @@ Build: `npm run build`
 
 ## Deploy
 
-### Cloudflare (current, Worker + Assets + D1)
+### Cloudflare Worker (API + D1 only - frontend now on Netlify)
 ```powershell
-npm run deploy
+npm run deploy:worker
 ```
-Or manually: `npm run build && wrangler deploy --assets=./dist`
 
-See wrangler.toml.
+(Use the legacy `npm run deploy` only if you want the worker to also serve static assets.)
+
+See updated wrangler.toml (assets section removed for API-only).
 
 ### Alternatives for frontend (static Vite SPA)
 Since the API lives on the Cloudflare Worker (`WORKER_URL` in `src/api.ts`), you can host the frontend anywhere static:
