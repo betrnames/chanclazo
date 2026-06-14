@@ -372,10 +372,10 @@ export default function App() {
 
           <LangToggle />
 
-          {/* Small fluorescent yellow CTA in header for bonus game (removed from card below) */}
+          {/* Small red CTA in header (right side) for bonus game (removed from card below) */}
           <button
             onClick={() => setPhase('slingshot')}
-            className="absolute top-3 left-3 z-50 px-2 py-0.5 text-[9px] font-black tracking-wider bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500 text-black rounded shadow border border-yellow-500 transition-all active:scale-[0.97]"
+            className="absolute top-3 right-24 z-50 px-2 py-0.5 text-[9px] font-black tracking-wider bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded shadow border border-red-800 transition-all active:scale-[0.97]"
           >
             BONUS GAME
           </button>

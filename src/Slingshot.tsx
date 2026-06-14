@@ -594,11 +594,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.restore();
     });
 
-    // Transparent square (same 75% dark bg as the ready panel) behind the pinata grid
-    // Gives the targets depth and separates them from the random full-screen backgrounds during gameplay.
+    // Larger transparent square (45% opacity dark) behind the pinata grid with extra padding
+    // so the pinatas are fully inside the square for depth and separation from the random backgrounds.
     if (enemiesRef.current.length > 0) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-      ctx.fillRect(760, 70, 460, 460);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillRect(720, 30, 540, 540);
     }
 
     // Draw targets (floating square grid of pinatas/llama pinatas on right)
