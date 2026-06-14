@@ -20,6 +20,7 @@ interface Target {
   body: Matter.Body;
   type: 'pinata' | 'sugarskull';
   health: number;
+  visualSize?: number;
 }
 
 const Slingshot = ({ onBack }: SlingshotProps) => {
@@ -29,6 +30,18 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const [level, setLevel] = useState(1);
   const [gameState, setGameState] = useState<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
   const [projectileType, setProjectileType] = useState<'chancla' | 'sugarskull' | 'luchador'>('chancla');
+  const [currentBgUrl, setCurrentBgUrl] = useState('/slingshot_bg.jpg');
+  const [gameRect, setGameRect] = useState({ left: 0, top: 0, width: 1280, height: 600 });
+
+  const getBgUrl = (theme: 'original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla') => {
+    if (theme === 'original') return '/slingshot_bg.jpg';
+    if (theme === 'casa') return '/bg_casa.jpg';
+    if (theme === 'mercado') return '/bg_mercado.jpg';
+    if (theme === 'plaza') return '/bg_plaza.jpg';
+    if (theme === 'arena') return '/bg_arena.jpg';
+    if (theme === 'lasalla') return '/bg_lasalla.jpg';
+    return '/slingshot_bg.jpg';
+  };
 
   // Matter.js refs
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -196,28 +209,35 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     blocksRef.current = [];
     enemiesRef.current = [];
 
-    // Bigger floating square/rect grid of pinatas on the right side.
-    // More targets = more challenging, requires better shots and chain explosions.
+    // Much bigger floating square grid covering ~75% of the right side of the screen.
+    // Almost the entire right side for a more epic challenging formation.
+    const gridLeft = 1280 * 0.25;
+    const gridRight = 1280 * 0.97;
+    const gridTop = 50;
+    const gridBottom = 550;
+
     let cols, rows;
-    if (levelNum === 1) { cols = 4; rows = 4; }      // 16 pinatas
-    else if (levelNum === 2) { cols = 5; rows = 4; } // 20
-    else if (levelNum === 3) { cols = 5; rows = 5; } // 25
-    else if (levelNum === 4) { cols = 6; rows = 5; } // 30
-    else { cols = 6; rows = 6; }                     // 36 for max challenge
-    const spacing = 38;  // slightly tighter for bigger formations
-    const baseX = 1000;  // right side, room for larger grid
-    const baseY = 340;   // floating, centered vertically a bit higher
+    if (levelNum === 1) { cols = 5; rows = 5; }
+    else if (levelNum === 2) { cols = 6; rows = 5; }
+    else if (levelNum === 3) { cols = 6; rows = 6; }
+    else if (levelNum === 4) { cols = 7; rows = 6; }
+    else { cols = 8; rows = 7; }
+
+    const spacingX = (gridRight - gridLeft) / (cols - 1);
+    const spacingY = (gridBottom - gridTop) / (rows - 1);
+    const pinataR = Math.min(spacingX, spacingY) * 0.4;
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        const x = baseX + (c - (cols - 1) / 2) * spacing;
-        const y = baseY + (r - (rows - 1) / 2) * spacing;
-        const body = Matter.Bodies.circle(x, y, 17, {  // slightly smaller r for denser pack
-          isStatic: true,  // stay floating in pattern until struck
+        const x = gridLeft + c * spacingX;
+        const y = gridTop + r * spacingY;
+        const body = Matter.Bodies.circle(x, y, pinataR, {
+          isStatic: true,
           restitution: 0.35, friction: 0.4, density: 0.0006, label: 'target'
         });
         Matter.World.add(world, body);
-        enemiesRef.current.push({ body, type: 'pinata', health: 80 + levelNum * 5 });
+        const visualSize = pinataR * 2.3;
+        enemiesRef.current.push({ body, type: 'pinata', health: 80 + levelNum * 5, visualSize });
       }
     }
 
@@ -485,27 +505,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background - user selected on ready screen
-    const theme = bgThemeRef.current;
-    let bgKey = 'bg';
-    if (theme === 'casa') bgKey = 'bgCasa';
-    else if (theme === 'mercado') bgKey = 'bgMercado';
-    else if (theme === 'plaza') bgKey = 'bgPlaza';
-    else if (theme === 'arena') bgKey = 'bgArena';
-    else if (theme === 'lasalla') bgKey = 'bgLasalla';
-    let bgImg = imagesRef.current[bgKey] || imagesRef.current.bg;
-    if (bgImg) {
-      // Full screen cover: scale to fill entire canvas (preserves aspect, crops edges if needed)
-      const scale = Math.max(canvas.width / bgImg.width, canvas.height / bgImg.height);
-      const dw = bgImg.width * scale;
-      const dh = bgImg.height * scale;
-      const dx = (canvas.width - dw) / 2;
-      const dy = (canvas.height - dh) / 2;
-      ctx.drawImage(bgImg, dx, dy, dw, dh);
-    } else {
-      ctx.fillStyle = '#3a2f1f';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    // Note: background is now a separate full-screen CSS layer (cover) for entire screen fill like the main game.
+    // Only game elements (ground, targets, striker, UI) are drawn here on the aspect-preserved canvas.
 
     // Advance chancla spin animation (~8 fps for visible spin on the 5x5 sheet)
     const now = performance.now();
@@ -572,10 +573,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       let sz = 50;
       if (target.type === 'pinata') {
         img = imagesRef.current.pinata || null;
-        // visual damage feedback: pinatas shrink as they take damage (makes "exploded/damaged" look)
+        // visual damage feedback: pinatas shrink as they take damage
+        const baseSz = target.visualSize || 50;
         const maxHealth = 80 + (levelRef.current || 1) * 5;
         const healthRatio = Math.max(0.35, target.health / maxHealth);
-        sz = 50 * healthRatio;
+        sz = baseSz * healthRatio;
       } else {
         img = imagesRef.current.sugarskull || null;
         sz = 36;
@@ -802,7 +804,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     projectileTypeRef.current = projectileType;
     // Random background each play (no user choice)
     const themes: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
-    bgThemeRef.current = themes[Math.floor(Math.random() * themes.length)];
+    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+    bgThemeRef.current = randomTheme;
+    setCurrentBgUrl(getBgUrl(randomTheme));
     startLevel(1);
   };
 
@@ -828,7 +832,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
     // Random background for ready preview (and re-random on start for the game)
     const themes: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
-    bgThemeRef.current = themes[Math.floor(Math.random() * themes.length)];
+    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+    bgThemeRef.current = randomTheme;
+    setCurrentBgUrl(getBgUrl(randomTheme));
 
     // Start render loop immediately so background + floating sandal are visible on ready screen
     rafRef.current = requestAnimationFrame(renderLoop);
@@ -860,9 +866,57 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     };
   }, []);
 
+  // Fit game rect preserving aspect for the canvas layer (letterboxed centered game area)
+  useEffect(() => {
+    const updateRect = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const aspect = 1280 / 600;
+      let w = vw;
+      let h = w / aspect;
+      if (h > vh) {
+        h = vh;
+        w = h * aspect;
+      }
+      const left = (vw - w) / 2;
+      const top = (vh - h) / 2;
+      setGameRect({ left, top, width: w, height: h });
+    };
+    updateRect();
+    window.addEventListener('resize', updateRect);
+    return () => window.removeEventListener('resize', updateRect);
+  }, []);
+
   return (
-    <div className="fixed inset-0 bg-[#1a140f] z-50 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-2 bg-black/60 text-white text-sm">
+    <div className="fixed inset-0 bg-[#1a140f] z-50 relative">
+      {/* Full screen background layer - fills the entire screen with cover (like the main game) */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `url(${currentBgUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
+
+      {/* Game canvas layer - aspect preserved, centered/letterboxed, game elements only (pinatas, striker, ground, UI text) */}
+      <canvas
+        ref={canvasRef}
+        width={1280}
+        height={600}
+        className="absolute z-10 border border-orange-900/30 shadow-2xl cursor-crosshair"
+        style={{
+          left: gameRect.left,
+          top: gameRect.top,
+          width: gameRect.width,
+          height: gameRect.height
+        }}
+        onClick={handleCanvasClick}
+      />
+
+      {/* Header - overlaid on top of full bg */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-2 bg-black/60 text-white text-sm">
         <div className="flex items-center gap-4">
           <button 
             onClick={onBack}
@@ -877,145 +931,135 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         <div className="text-xs opacity-70">Pull back • Release to launch • Limited strikes</div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center relative bg-black/30">
-        <canvas 
-          ref={canvasRef} 
-          width={1280}
-          height={600}
-          className="border border-orange-900/50 shadow-2xl cursor-crosshair"
-          style={{ width: 'min(100%, 1280px)', height: 'auto' }}
-          onClick={handleCanvasClick}
-        />
-
-        {/* READY screen overlay on initial page load - big start button, stage + floating sandal already visible behind */}
-        {gameState === 'ready' && (
-          <div className="absolute inset-0 flex items-center justify-center z-20" style={{ background: 'rgba(0, 0, 0, 0.75)' }}>
-            <div className="text-center">
-              <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
-
-              {/* Striker selector only - background is now random per play */}
-              <div className="mb-3">
-                <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE</p>
-                <div className="flex items-end justify-center gap-2 py-1">
-                  {(() => {
-                    const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
-                    const idx = order.indexOf(projectileType);
-                    const leftId = order[(idx - 1 + 3) % 3];
-                    const centerId = projectileType;
-                    const rightId = order[(idx + 1) % 3];
-
-                    const getStriker = (id: 'chancla' | 'sugarskull' | 'luchador') => {
-                      if (id === 'chancla') return { name: 'SANDAL', avatar: '/chancla_spin.png' };
-                      if (id === 'sugarskull') return { name: 'SKULL', avatar: '/sugarskull.png' };
-                      return { name: 'LUCHADOR', avatar: '/luchadorHead.png' };
-                    };
-
-                    const left = getStriker(leftId);
-                    const center = getStriker(centerId);
-                    const right = getStriker(rightId);
-
-                    return (
-                      <>
-                        <button
-                          onClick={() => { setProjectileType(leftId); projectileTypeRef.current = leftId; }}
-                          className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
-                        >
-                          <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
-                            leftId === 'chancla' ? {
-                              backgroundImage: `url(${left.avatar})`,
-                              backgroundSize: '500% 500%',
-                              backgroundPosition: '0% 0%',
-                              imageRendering: 'pixelated',
-                              backgroundRepeat: 'no-repeat'
-                            } : {}
-                          }>
-                            {leftId !== 'chancla' && <img src={left.avatar} alt={left.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
-                          </div>
-                          <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{left.name}</span>
-                        </button>
-
-                        <button
-                          onClick={() => { /* current */ }}
-                          className="flex flex-col items-center transition-all scale-[1.15]"
-                        >
-                          <div className="h-20 w-20 flex items-center justify-center overflow-hidden -mt-2" style={
-                            centerId === 'chancla' ? {
-                              backgroundImage: `url(${center.avatar})`,
-                              backgroundSize: '500% 500%',
-                              backgroundPosition: '0% 0%',
-                              imageRendering: 'pixelated',
-                              backgroundRepeat: 'no-repeat'
-                            } : {}
-                          }>
-                            {centerId !== 'chancla' && <img src={center.avatar} alt={center.name} className="max-h-20 max-w-20 object-contain drop-shadow-lg" style={{ imageRendering: 'pixelated' }} />}
-                          </div>
-                          <span className="text-[9px] font-black text-orange-100 -mt-1 tracking-wider">{center.name}</span>
-                        </button>
-
-                        <button
-                          onClick={() => { setProjectileType(rightId); projectileTypeRef.current = rightId; }}
-                          className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
-                        >
-                          <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
-                            rightId === 'chancla' ? {
-                              backgroundImage: `url(${right.avatar})`,
-                              backgroundSize: '500% 500%',
-                              backgroundPosition: '0% 0%',
-                              imageRendering: 'pixelated',
-                              backgroundRepeat: 'no-repeat'
-                            } : {}
-                          }>
-                            {rightId !== 'chancla' && <img src={right.avatar} alt={right.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
-                          </div>
-                          <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{right.name}</span>
-                        </button>
-                      </>
-                    );
-                  })()}
-                </div>
-
-                <div className="flex justify-center gap-2 pt-0.5">
-                  <button
-                    onClick={() => {
-                      const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
-                      const idx = order.indexOf(projectileType);
-                      const next = order[(idx - 1 + 3) % 3];
-                      setProjectileType(next);
-                      projectileTypeRef.current = next;
-                    }}
-                    className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
-                  >
-                    ←
-                  </button>
-                  <button
-                    onClick={() => {
-                      const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
-                      const idx = order.indexOf(projectileType);
-                      const next = order[(idx + 1) % 3];
-                      setProjectileType(next);
-                      projectileTypeRef.current = next;
-                    }}
-                    className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
-                  >
-                    →
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={beginGame}
-                className="mt-1 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
-              >
-                START
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
+      {/* Footer - overlaid on top of full bg */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
         <div>Pull back • Release to launch • Limited strikes</div>
       </div>
+
+      {/* READY screen overlay - on top, darker for visibility */}
+      {gameState === 'ready' && (
+        <div className="absolute inset-0 flex items-center justify-center z-30" style={{ background: 'rgba(0, 0, 0, 0.75)' }}>
+          <div className="text-center">
+            <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
+
+            {/* Striker selector only - background is now random per play */}
+            <div className="mb-3">
+              <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE</p>
+              <div className="flex items-end justify-center gap-2 py-1">
+                {(() => {
+                  const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                  const idx = order.indexOf(projectileType);
+                  const leftId = order[(idx - 1 + 3) % 3];
+                  const centerId = projectileType;
+                  const rightId = order[(idx + 1) % 3];
+
+                  const getStriker = (id: 'chancla' | 'sugarskull' | 'luchador') => {
+                    if (id === 'chancla') return { name: 'SANDAL', avatar: '/chancla_spin.png' };
+                    if (id === 'sugarskull') return { name: 'SKULL', avatar: '/sugarskull.png' };
+                    return { name: 'LUCHADOR', avatar: '/luchadorHead.png' };
+                  };
+
+                  const left = getStriker(leftId);
+                  const center = getStriker(centerId);
+                  const right = getStriker(rightId);
+
+                  return (
+                    <>
+                      <button
+                        onClick={() => { setProjectileType(leftId); projectileTypeRef.current = leftId; }}
+                        className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
+                      >
+                        <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
+                          leftId === 'chancla' ? {
+                            backgroundImage: `url(${left.avatar})`,
+                            backgroundSize: '500% 500%',
+                            backgroundPosition: '0% 0%',
+                            imageRendering: 'pixelated',
+                            backgroundRepeat: 'no-repeat'
+                          } : {}
+                        }>
+                          {leftId !== 'chancla' && <img src={left.avatar} alt={left.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
+                        </div>
+                        <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{left.name}</span>
+                      </button>
+
+                      <button
+                        onClick={() => { /* current */ }}
+                        className="flex flex-col items-center transition-all scale-[1.15]"
+                      >
+                        <div className="h-20 w-20 flex items-center justify-center overflow-hidden -mt-2" style={
+                          centerId === 'chancla' ? {
+                            backgroundImage: `url(${center.avatar})`,
+                            backgroundSize: '500% 500%',
+                            backgroundPosition: '0% 0%',
+                            imageRendering: 'pixelated',
+                            backgroundRepeat: 'no-repeat'
+                          } : {}
+                        }>
+                          {centerId !== 'chancla' && <img src={center.avatar} alt={center.name} className="max-h-20 max-w-20 object-contain drop-shadow-lg" style={{ imageRendering: 'pixelated' }} />}
+                        </div>
+                        <span className="text-[9px] font-black text-orange-100 -mt-1 tracking-wider">{center.name}</span>
+                      </button>
+
+                      <button
+                        onClick={() => { setProjectileType(rightId); projectileTypeRef.current = rightId; }}
+                        className="flex flex-col items-center transition-all opacity-40 hover:opacity-70 active:scale-95"
+                      >
+                        <div className="h-14 w-14 flex items-center justify-center overflow-hidden" style={
+                          rightId === 'chancla' ? {
+                            backgroundImage: `url(${right.avatar})`,
+                            backgroundSize: '500% 500%',
+                            backgroundPosition: '0% 0%',
+                            imageRendering: 'pixelated',
+                            backgroundRepeat: 'no-repeat'
+                          } : {}
+                        }>
+                          {rightId !== 'chancla' && <img src={right.avatar} alt={right.name} className="max-h-12 max-w-12 object-contain" style={{ imageRendering: 'pixelated' }} />}
+                        </div>
+                        <span className="text-[7px] font-black text-orange-200 mt-0.5 tracking-wider">{right.name}</span>
+                      </button>
+                    </>
+                  );
+                })()}
+              </div>
+
+              <div className="flex justify-center gap-2 pt-0.5">
+                <button
+                  onClick={() => {
+                    const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                    const idx = order.indexOf(projectileType);
+                    const next = order[(idx - 1 + 3) % 3];
+                    setProjectileType(next);
+                    projectileTypeRef.current = next;
+                  }}
+                  className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => {
+                    const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
+                    const idx = order.indexOf(projectileType);
+                    const next = order[(idx + 1) % 3];
+                    setProjectileType(next);
+                    projectileTypeRef.current = next;
+                  }}
+                  className="text-orange-400 hover:text-orange-200 text-base font-black px-1 leading-none"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={beginGame}
+              className="mt-1 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
+            >
+              START
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
