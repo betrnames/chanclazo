@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy --assets=./dist",
-    "deploy:frontend": "npm run build && netlify deploy --prod --dir=dist",
+    "deploy:frontend": "npm run build && npx netlify-cli deploy --prod --dir=dist",
     "deploy:pages": "npm run build && wrangler pages deploy dist --project-name=chanclazo",
     "deploy:vercel": "npm run build && vercel --prod"
   },
