@@ -901,7 +901,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           <div className="text-orange-400">Level {level}</div>
         </div>
         <div>Score: <span className="font-mono text-yellow-400">{score}</span></div>
-        <div className="text-xs opacity-70">Pull back Release to launch limited strikes</div>
+        <div className="text-xs opacity-70">Pull back •Release to launch •Limited strikes</div>
       </div>
 
       <div className="flex-1 flex items-center justify-center relative bg-black/30">
@@ -922,7 +922,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
               {/* Striker selector only - background is now random per play */}
               <div className="mb-3">
-                <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE STRIKER</p>
+                <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE</p>
                 <div className="flex items-end justify-center gap-2 py-1">
                   {(() => {
                     const order: ('chancla' | 'sugarskull' | 'luchador')[] = ['chancla', 'sugarskull', 'luchador'];
@@ -1035,14 +1035,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
               >
                 START
               </button>
-              <div className="text-orange-200 text-sm mt-4 tracking-[2px] font-bold">PULL BACK • RELEASE TO LAUNCH • LIMITED STRIKES</div>
             </div>
           </div>
         )}
       </div>
 
       <div className="px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
-        <div>Pull back Release to launch limited strikes</div>
+        <div>Pull back •Release to launch •Limited strikes</div>
       </div>
     </div>
   );
