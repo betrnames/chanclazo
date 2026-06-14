@@ -721,6 +721,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.restore();
     }
 
+    // Glow/shadow for all strike elements (chancla/sugarskull/luchador) to make them more noticeable against busy backgrounds
+    ctx.shadowColor = 'rgba(255, 255, 220, 0.7)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
     // Draw slingshot base and rubber  -- REMOVED per request (no more sling device)
     const drag = dragRef.current;
     const birdPos = drag.active 
@@ -753,14 +759,14 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.save();
           ctx.translate(pos.x, pos.y);
           ctx.rotate(angle);
-          const size = 60;
+          const size = 65;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
           ctx.restore();
         } else {
           ctx.save();
           ctx.translate(pos.x, pos.y);
           ctx.rotate(angle);
-          const size = 60;
+          const size = 65;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
           ctx.restore();
         }
@@ -784,16 +790,28 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           ctx.save();
           ctx.translate(readyX, readyY);
           ctx.rotate(Math.sin((now / 1000) * 1.5) * 0.12);
-          const size = 60;
+          const size = 75;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
+          // Bright ring to make the strike element more noticeable
+          ctx.strokeStyle = 'rgba(255, 255, 200, 0.9)';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(0, 0, size/2 + 7, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         } else {
           const readyX = slingshotPos.x + hoverOffset.x;
           const readyY = slingshotPos.y + hoverOffset.y;
           ctx.save();
           ctx.translate(readyX, readyY);
-          const size = 60;
+          const size = 75;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
+          // Bright ring to make the strike element more noticeable
+          ctx.strokeStyle = 'rgba(255, 255, 200, 0.9)';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(0, 0, size/2 + 7, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         }
       }
@@ -813,18 +831,35 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           const sy = Math.floor(frame / cols) * fh;
           ctx.save();
           ctx.translate(birdPos.x, birdPos.y);
-          const size = 60;
+          const size = 70;
           ctx.drawImage(imagesRef.current.chancla!, sx, sy, fw, fh, -size/2, -size/2, size, size);
+          // Bright ring to make the strike element more noticeable (when aiming)
+          ctx.strokeStyle = 'rgba(255, 255, 200, 0.85)';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, size/2 + 6, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         } else {
           ctx.save();
           ctx.translate(birdPos.x, birdPos.y);
-          const size = 60;
+          const size = 70;
           ctx.drawImage(projImg, -size/2, -size/2, size, size);
+          // Bright ring to make the strike element more noticeable (when aiming)
+          ctx.strokeStyle = 'rgba(255, 255, 200, 0.85)';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, size/2 + 6, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         }
       }
     }
+
+    // Reset glow after all strike elements drawn
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
 
     // Curved dotted trajectory preview (line of sight) while the sandal is grabbed
     // Shows the approximate direction of travel + gravity arc flowing towards the enemy stacks

@@ -391,13 +391,13 @@ export default function App() {
               Click to "find" it → modal, then bonus game. No text (easter egg). */}
           <button
             onClick={() => setShowEasterEggModal(true)}
-            className={`absolute top-3 right-20 z-50 flex flex-col items-center pinata-cta cursor-pointer active:opacity-80 transition-all ${pinataBobbing ? 'pinata-bobbing' : ''}`}
+            className={`absolute top-3 right-28 z-50 flex flex-col items-center pinata-cta cursor-pointer active:opacity-80 transition-all ${pinataBobbing ? 'pinata-bobbing' : ''}`}
           >
             <img
               src="/pinata.png"
               alt="Pinata"
-              className="w-10 h-10 object-contain drop-shadow-sm"
-              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' }}
+              className="w-12 h-12 object-contain drop-shadow-md"
+              style={{ filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))' }}
             />
           </button>
 
