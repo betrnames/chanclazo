@@ -696,7 +696,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           width={1280}
           height={600}
           className="border border-orange-900/50 shadow-2xl cursor-crosshair"
-          style={{ width: '1280px', height: '600px', maxWidth: '100%', maxHeight: 'calc(100vh - 120px)' }}
+          style={{ width: 'min(100%, 1280px)', height: 'auto' }}
           onClick={handleCanvasClick}
         />
       </div>
