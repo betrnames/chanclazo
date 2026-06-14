@@ -31,6 +31,45 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const [gameState, setGameState] = useState<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
   const [projectileType, setProjectileType] = useState<'chancla' | 'sugarskull' | 'luchador'>('chancla');
   const [showOrientationPrompt, setShowOrientationPrompt] = useState(false);
+  const [currentBgUrl, setCurrentBgUrl] = useState('/slingshot_bg.jpg');
+
+  // Virtual internal resolution (design coords for physics, draw, slingshotPos etc)
+  const VIEW_W = 1280;
+  const VIEW_H = 600;
+
+  // Compute a centered, aspect-ratio preserving rect that fits inside the current viewport.
+  // The root div keeps full-screen bg cover; the canvas renders the game content at correct proportions (no stretch).
+  const computeGameRect = () => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const aspect = VIEW_W / VIEW_H;
+    let dispW = vw;
+    let dispH = Math.round(dispW / aspect);
+    if (dispH > vh) {
+      dispH = vh;
+      dispW = Math.round(dispH * aspect);
+    }
+    const left = Math.round((vw - dispW) / 2);
+    const top = Math.round((vh - dispH) / 2);
+    return { left, top, width: dispW, height: dispH };
+  };
+
+  const [gameRect, setGameRect] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return computeGameRect();
+    }
+    return { left: 0, top: 0, width: 1280, height: 600 };
+  });
+
+  const getBgUrl = (theme: 'original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla') => {
+    if (theme === 'original') return '/slingshot_bg.jpg';
+    if (theme === 'casa') return '/bg_casa.jpg';
+    if (theme === 'mercado') return '/bg_mercado.jpg';
+    if (theme === 'plaza') return '/bg_plaza.jpg';
+    if (theme === 'arena') return '/bg_arena.jpg';
+    if (theme === 'lasalla') return '/bg_lasalla.jpg';
+    return '/slingshot_bg.jpg';
+  };
 
   // Matter.js refs
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -496,8 +535,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     // Clear
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background is set on the root div as full-screen cover (no container for bg).
-    // Only draw game elements here (they will appear over the bg).
+    // Background is provided by the fixed root div (full viewport cover via CSS).
+    // Only draw game elements (ground, targets, strikers, UI) here; they composite over the bg.
 
     // Advance chancla spin animation (~8 fps for visible spin on the 5x5 sheet)
     const now = performance.now();
@@ -797,6 +836,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const themes: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
     const randomTheme = themes[Math.floor(Math.random() * themes.length)];
     bgThemeRef.current = randomTheme;
+    setCurrentBgUrl(getBgUrl(randomTheme));
     startLevel(1);
   };
 
@@ -824,6 +864,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const themes: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
     const randomTheme = themes[Math.floor(Math.random() * themes.length)];
     bgThemeRef.current = randomTheme;
+    setCurrentBgUrl(getBgUrl(randomTheme));
 
     // Start render loop immediately so background + floating sandal are visible on ready screen
     rafRef.current = requestAnimationFrame(renderLoop);
@@ -875,20 +916,59 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     };
   }, []);
 
-
+  // Resize/orient listener: keep the fitted game rect (for centered non-distorted canvas) in sync.
+  // Root bg style always covers 100% of viewport; game canvas is sized to fit inside with correct 1280x600 aspect.
+  useEffect(() => {
+    const applyRect = (r: { left: number; top: number; width: number; height: number }) => {
+      const c = canvasRef.current;
+      if (c) {
+        c.style.left = `${r.left}px`;
+        c.style.top = `${r.top}px`;
+        c.style.width = `${r.width}px`;
+        c.style.height = `${r.height}px`;
+      }
+    };
+    const update = () => {
+      const r = computeGameRect();
+      setGameRect(r);
+      applyRect(r);
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
+  }, []);
 
   return (
-    <div className="fixed inset-0 bg-[#1a140f] z-50 relative">
-      {/* Canvas is now absolute inset-0 full screen, no container limiting it.
-          Background is drawn full screen inside the canvas using cover.
-          Header and footer are overlaid on top (semi-transparent so bg shows through).
-          Mobile-first: full viewport on any device, content stretches to fill. */}
+    <div 
+      className="fixed inset-0 z-50"
+      style={{
+        backgroundColor: '#1a140f',
+        backgroundImage: `url(${currentBgUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Canvas is centered with aspect preserved (no stretch of game coords). 
+          The parent root div provides full-screen background cover (no nested bg container).
+          Header/footer/ready overlays are full-viewport absolute so they frame the centered game area.
+          Mobile-first + landscape prompt ensures good target size and proportions. */}
       <canvas
         ref={canvasRef}
         width={1280}
         height={600}
-        className="absolute inset-0 z-0 cursor-crosshair"
-        style={{ width: '100%', height: '100%' }}
+        className="z-0 cursor-crosshair"
+        style={{
+          position: 'absolute',
+          left: gameRect.left,
+          top: gameRect.top,
+          width: gameRect.width,
+          height: gameRect.height
+        }}
         onClick={handleCanvasClick}
       />
 
@@ -908,10 +988,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         <div className="text-xs opacity-70">Pull back • Release to launch • Limited strikes</div>
       </div>
 
-      {/* Footer overlaid */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
-        <div>Pull back • Release to launch • Limited strikes</div>
-      </div>
+      {/* Footer bar (subtle, instruction lives in header) */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 px-4 py-1 bg-black/60" />
+
 
       {/* READY overlay - covers the main area but not the header/footer */}
       {gameState === 'ready' && (

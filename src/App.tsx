@@ -13,6 +13,7 @@ import { createTouchState } from './game/controls';
 import type { TouchInputState } from './game/controls';
 import MobileTouchControls from './components/MobileTouchControls';
 import { submitScore, fetchLeaderboard, pingPresence, leavePresence } from './api';
+import Slingshot from './Slingshot';
 import type { LeaderboardEntry } from './api';
 import LorePage from './LorePage';
 
@@ -545,6 +546,15 @@ export default function App() {
                   {texts.ui.play}
                 </Button>
 
+                {/* Slingshot bonus mode - Angry Birds style with chanclazo twist */}
+                <Button
+                  size="lg"
+                  className="w-full text-xl font-black py-6 bg-gradient-to-b from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-2xl shadow-[0_6px_0_#4c1d95] active:shadow-[0_2px_0_#4c1d95] active:translate-y-1 transition-all border-b-4 border-purple-900"
+                  onClick={() => setPhase('slingshot')}
+                >
+                  🩴 Chancla Strike (Bonus)
+                </Button>
+
                 {/* Live player count - more prominent (no icon) */}
                 {playerCount > 0 && (
                   <div className="text-center py-1">
@@ -1041,6 +1051,14 @@ export default function App() {
           </Card>
         </div>
       )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          CHANCLA STRIKE (Slingshot Bonus Mode)
+      ════════════════════════════════════════════════════════════════ */}
+      {phase === 'slingshot' && (
+        <Slingshot onBack={() => setPhase('start')} />
+      )}
+
       {/* ════════════════════════════════════════════════════════════════
           LEADERBOARD MODAL
       ════════════════════════════════════════════════════════════════ */}
