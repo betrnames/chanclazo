@@ -138,77 +138,9 @@ This fully automates publishing on every commit/push using "Grok build" (the Act
 
 If you run into any error in the Actions logs (e.g. permission issues), paste the error here and I'll fix the workflow.
 
-### Setting up the custom domain `chanclazo.com` on your Netlify site
-After the site is deployed via the automation:
-
-1. In the Netlify dashboard for your site, go to **Domain management** (left menu under "Site configuration" or search for "Domains").
-2. Under "Custom domains", click "Add custom domain".
-3. Enter `chanclazo.com` (and optionally `www.chanclazo.com`).
-4. Follow the on-screen instructions for DNS records. Netlify will tell you exactly what to add (usually a CNAME record pointing to a Netlify hostname like `your-site.netlify.app`).
-
-**If you get the error "it has a conflicting custom domain in another account":**
-- This is very common after using Bolt.new (Bolt uses Netlify under the hood, so it "claims" the domain in a separate Netlify account/team).
-- **Step A (if possible):** Log back into bolt.new, open your old project, go to the hosting/deploy settings, and remove `chanclazo.com` from any custom domains.
-- **Step B (most reliable):** Submit a support ticket from **your current Netlify account** (the one with the working site):
-  - In Netlify dashboard, click the help "?" icon (bottom right).
-  - Choose "Contact support" or go directly to https://www.netlify.com/support/
-  - Create a ticket with:
-    - Subject: "Release conflicting custom domain `chanclazo.com` from another account (Bolt.new)"
-    - Description: 
-      "I was using Bolt.new for hosting which associated `chanclazo.com` with another Netlify account. I have now removed the DNS from Bolt and want to use the domain with my primary Netlify site. Please release the domain so I can add it here. 
-
-      Domain ownership proof:
-      - DNS managed in Cloudflare (account email: [your CF email])
-      - Zone for chanclazo.com shows I control it.
-
-      My current site: [link to your Netlify site]
-      Requested domain: chanclazo.com
-
-      I have removed all references from Bolt."
-    - Attach: Screenshot of your Cloudflare DNS dashboard showing the chanclazo.com zone (with any existing records).
-  - Netlify support usually resolves this within 1-2 business days (sometimes faster).
-- Once released, retry adding the custom domain in your main site.
-- After adding, update your Cloudflare DNS with the exact records Netlify provides. Use "Proxied" (orange cloud) if possible.
-- Netlify auto-provisions a free SSL certificate.
-- Propagation can take 5-60 minutes. Test with `https://chanclazo.com`
-- Your GitHub Actions will continue to deploy updates automatically to the custom domain.
-
-If support takes time, switch to **Cloudflare Pages** (see section above) — no "conflicting account" issues because it's all in your Cloudflare account/DNS. You can keep using the same GitHub repo and automation (I can help adapt the workflow to `wrangler pages deploy` if needed). The proxy setup in `netlify.toml` would be replaced by equivalent in CF (or use a subdomain for the API Worker).
-
-Once the domain is active on Netlify:
-- The frontend SPA will be served from `https://chanclazo.com`
-- API calls (via the proxies in `netlify.toml`) will also resolve under the same domain (pointing to your Cloudflare Worker).
-- Update `src/api.ts` `WORKER_URL` only if you switch to a custom subdomain for the Worker (e.g. `api.chanclazo.com`).
-
-Let me know the exact error message or screenshot (if comfortable) if you get stuck on the support ticket or DNS step!
-
 For the Cloudflare Worker part (the backend), you can still run `npm run deploy` manually, or I can add it to the same workflow if you give me a Cloudflare API token secret name.
 
 Your netlify.toml and the build are already correct for SPA + your current setup.
-
-### Quick alternative: Cloudflare Pages (avoids Netlify account conflicts entirely)
-Since your DNS and backend are already on Cloudflare, this is often the cleanest for `chanclazo.com`:
-
-1. Cloudflare dashboard → Pages → "Create a project" → "Connect to Git" → select "betrnames/chanclazo".
-2. Build settings:
-   - Framework preset: Vite
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-3. Save & Deploy (first build will happen).
-4. In the new Pages project → **Custom domains** → "Add domain" → `chanclazo.com`.
-5. CF will guide you (and since DNS is in CF, it often auto-adds the necessary record and verifies quickly).
-6. Set as primary domain.
-7. For API: 
-   - Keep using the current worker.dev URL (CORS is `*` so cross-origin calls from chanclazo.com work).
-   - Or add a custom domain to your Worker (Workers & Pages → your worker → Triggers → Custom domains → add e.g. `api.chanclazo.com`), then update `VITE_WORKER_URL` in your Netlify/CF env or code to `https://api.chanclazo.com`.
-8. For automation: Add GitHub secret `CLOUDFLARE_API_TOKEN` (create in CF → Profile → API Tokens, with Pages:Edit permissions).
-   - I've added `.github/workflows/deploy-pages.yml` that will auto-deploy on push using wrangler (similar to the Netlify one). It uses the secret.
-
-Once set, `git push` (via push.bat) will build and deploy the frontend to Pages on `chanclazo.com`. The proxy setup isn't needed here — just point DNS to Pages.
-
-This should get you on the custom domain without the conflicting account error. If you choose this, we can remove or ignore the Netlify-specific files.
-
-Let me know which path you take (sticking with Netlify + support, or switching to Pages) and paste any errors! I'll refine the workflows/docs immediately.
 
 ## Background
 Pivoted from Clawatron concept (April 2026) to chanclazo theme for cultural flavor + Vibejam 2026 submission (May).
