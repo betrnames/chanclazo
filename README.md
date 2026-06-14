@@ -186,6 +186,30 @@ For the Cloudflare Worker part (the backend), you can still run `npm run deploy`
 
 Your netlify.toml and the build are already correct for SPA + your current setup.
 
+### Quick alternative: Cloudflare Pages (avoids Netlify account conflicts entirely)
+Since your DNS and backend are already on Cloudflare, this is often the cleanest for `chanclazo.com`:
+
+1. Cloudflare dashboard → Pages → "Create a project" → "Connect to Git" → select "betrnames/chanclazo".
+2. Build settings:
+   - Framework preset: Vite
+   - Build command: `npm run build`
+   - Build output directory: `dist`
+3. Save & Deploy (first build will happen).
+4. In the new Pages project → **Custom domains** → "Add domain" → `chanclazo.com`.
+5. CF will guide you (and since DNS is in CF, it often auto-adds the necessary record and verifies quickly).
+6. Set as primary domain.
+7. For API: 
+   - Keep using the current worker.dev URL (CORS is `*` so cross-origin calls from chanclazo.com work).
+   - Or add a custom domain to your Worker (Workers & Pages → your worker → Triggers → Custom domains → add e.g. `api.chanclazo.com`), then update `VITE_WORKER_URL` in your Netlify/CF env or code to `https://api.chanclazo.com`.
+8. For automation: Add GitHub secret `CLOUDFLARE_API_TOKEN` (create in CF → Profile → API Tokens, with Pages:Edit permissions).
+   - I've added `.github/workflows/deploy-pages.yml` that will auto-deploy on push using wrangler (similar to the Netlify one). It uses the secret.
+
+Once set, `git push` (via push.bat) will build and deploy the frontend to Pages on `chanclazo.com`. The proxy setup isn't needed here — just point DNS to Pages.
+
+This should get you on the custom domain without the conflicting account error. If you choose this, we can remove or ignore the Netlify-specific files.
+
+Let me know which path you take (sticking with Netlify + support, or switching to Pages) and paste any errors! I'll refine the workflows/docs immediately.
+
 ## Background
 Pivoted from Clawatron concept (April 2026) to chanclazo theme for cultural flavor + Vibejam 2026 submission (May).
 
