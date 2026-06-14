@@ -30,6 +30,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const [level, setLevel] = useState(1);
   const [gameState, setGameState] = useState<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
   const [projectileType, setProjectileType] = useState<'chancla' | 'sugarskull' | 'luchador'>('chancla');
+  const [showOrientationPrompt, setShowOrientationPrompt] = useState(false);
 
   // Matter.js refs
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -483,7 +484,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const allBodies: any[] = (world as any).bodies || [];
     for (let i = allBodies.length - 1; i >= 0; i--) {
       const b = allBodies[i];
-      if (b && b.label === 'chancla') {
+      if (b && (b.label === 'chancla' || b.label === 'projectile')) {
         const v = b.velocity || { x: 0, y: 0 };
         const spd = Math.hypot(v.x, v.y);
         if ((spd < 0.05 && b.position.y > 520) || b.position.y > 650 || b.position.x < -50 || b.position.x > 1330) {
@@ -873,6 +874,26 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     };
   }, []);
 
+  // Mobile orientation prompt for landscape
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (isMobile) {
+        const isPortrait = window.innerHeight > window.innerWidth;
+        setShowOrientationPrompt(isPortrait);
+      } else {
+        setShowOrientationPrompt(false);
+      }
+    };
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
+
 
 
   return (
@@ -1033,6 +1054,15 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
               START
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Mobile landscape prompt */}
+      {showOrientationPrompt && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 text-white p-6 text-center">
+          <div className="text-7xl mb-6">📱 ↻</div>
+          <div className="text-3xl font-bold mb-4">Rotate your device</div>
+          <div className="text-xl max-w-xs">Please turn your phone sideways (landscape mode) for the best gameplay experience.</div>
         </div>
       )}
     </div>
