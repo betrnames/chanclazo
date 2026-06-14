@@ -155,15 +155,15 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   };
 
   const addCrate = (world: Matter.World, x: number, y: number, w = 48, h = 28, type: 'wood' | 'stone' | 'ice' = 'wood') => {
-    let options = { restitution: 0.25, friction: 0.65, density: 0.0012 };
+    let options = { restitution: 0.1, friction: 0.7, density: 0.0015 }; // lower bounce so stacks settle cleanly on ground
     if (type === 'stone') {
-      options = { restitution: 0.08, friction: 0.9, density: 0.003 };
+      options = { restitution: 0.05, friction: 0.9, density: 0.004 };
     } else if (type === 'ice') {
-      options = { restitution: 0.5, friction: 0.15, density: 0.0006 };
+      options = { restitution: 0.2, friction: 0.2, density: 0.0008 };
     }
     const body = Matter.Bodies.rectangle(x, y, w, h, options);
     Matter.World.add(world, body);
-    const health = type === 'stone' ? 85 : type === 'ice' ? 28 : 42;
+    const health = type === 'stone' ? 90 : type === 'ice' ? 30 : 45;
     blocksRef.current.push({ body, type, health });
   };
 
@@ -174,7 +174,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     blocksRef.current = [];
     enemiesRef.current = [];
 
-    const baseY = 530;
+    const baseY = 546; // resting on top of ground (ground top edge ~560, crate half h=14)
     const baseX = 920;
 
     if (levelNum === 1) {
@@ -238,15 +238,19 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   // Simple collision handling for destruction
   const handleCollisions = (event: Matter.IEventCollision<Matter.Engine>) => {
     const pairs = event.pairs;
+    const groundBody = groundRef.current;
     for (let i = 0; i < pairs.length; i++) {
       const pair = pairs[i];
       const bodyA = pair.bodyA;
       const bodyB = pair.bodyB;
 
+      // Ignore collisions with the ground itself (prevents the stacks from being destroyed by their own initial settling/fall)
+      const involvesGround = (bodyA === groundBody || bodyB === groundBody);
+
       // Damage blocks (reverse iterate for safe splice while removing)
       for (let j = blocksRef.current.length - 1; j >= 0; j--) {
         const block = blocksRef.current[j];
-        if (block.body === bodyA || block.body === bodyB) {
+        if (!involvesGround && (block.body === bodyA || block.body === bodyB)) {
           const force = Math.abs(pair.collision.depth * 80);
           block.health -= force;
           if (block.health <= 0) {
@@ -264,7 +268,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       // Damage enemies (reverse iterate for safe splice)
       for (let j = enemiesRef.current.length - 1; j >= 0; j--) {
         const enemy = enemiesRef.current[j];
-        if (enemy.body === bodyA || enemy.body === bodyB) {
+        if (!involvesGround && (enemy.body === bodyA || enemy.body === bodyB)) {
           const force = Math.abs(pair.collision.depth * 60);
           enemy.health -= force;
           if (enemy.health <= 0) {
@@ -728,7 +732,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       </div>
 
       <div className="px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
-        <div>Launch the spinning chancla to knock down the crates and defeat the sugarskulls!</div>
+        <div>Drag back the spinning chancla • Release to launch • Knock down the crates &amp; sugarskulls!</div>
       </div>
     </div>
   );
