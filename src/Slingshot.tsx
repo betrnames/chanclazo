@@ -118,6 +118,19 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
     if (shouldBuildStack) {
       buildLevel(world, levelNum);
+
+      if (levelNum === 1) {
+        // Extra manual settle steps for the pure skull triangle so it is perfectly at rest
+        // and does not visibly fall/shift on the very first render frames
+        for (let s = 0; s < 5; s++) {
+          Matter.Engine.update(engine, 1000 / 60);
+        }
+        // re-zero velocities after the settle passes
+        enemiesRef.current.forEach(e => {
+          Matter.Body.setVelocity(e.body, { x: 0, y: 0 });
+          Matter.Body.setAngularVelocity(e.body, 0);
+        });
+      }
     } else {
       blocksRef.current = [];
       enemiesRef.current = [];
@@ -187,68 +200,66 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const baseX = 920;
 
     if (levelNum === 1) {
-      // BIGGER wobbly mixed stack of wooden crates + sugarskulls (integrated, not just on top)
-      // Looks precarious and ready to be destroyed
-      const baseY = 546;
-      const baseX = 820;
+      // Pure triangle stack of ONLY sugarskulls (no crates at all)
+      // Stable hexagonal/triangle packing so it holds together on game start
+      // Bigger stack, ready to be knocked down by the chancla
+      const baseY = 542; // exact resting: ground top 560 - r
+      const baseX = 920;
+      const r = 18;
+      const spacingX = r * 2;     // 36
+      const spacingY = r * 1.732; // ~31.2 for proper triangle packing (skulls sit in grooves)
 
-      // Bottom wide wobbly base (6 crates)
-      addCrate(world, baseX + 5, baseY + 6, 40, 23, 'wood');
-      addCrate(world, baseX + 50, baseY - 2, 46, 27, 'wood');
-      addCrate(world, baseX + 100, baseY + 5, 44, 25, 'wood');
-      addCrate(world, baseX + 150, baseY + 1, 48, 28, 'wood');
-      addCrate(world, baseX + 200, baseY - 4, 42, 24, 'wood');
-      addCrate(world, baseX + 245, baseY + 7, 40, 22, 'wood');
+      // Bottom row: 4 skulls
+      for (let i = 0; i < 4; i++) {
+        const x = baseX - 54 + i * spacingX;
+        const skull = Matter.Bodies.circle(x, baseY, r, {
+          restitution: 0.05,   // very low bounce for stability
+          friction: 0.95,
+          density: 0.001,
+          label: 'sugarskull'
+        });
+        Matter.World.add(world, skull);
+        enemiesRef.current.push({ body: skull, health: 25 });
+      }
 
-      // Layer 2 - crates + embedded sugarskull
-      const y2 = baseY - 27;
-      addCrate(world, baseX + 25, y2 + 3, 44, 25, 'wood');
-      const skullA = Matter.Bodies.circle(baseX + 80, y2 + 4, 15, {
-        restitution: 0.38, friction: 0.32, density: 0.0007, label: 'sugarskull'
+      // Row 2: 3 skulls (offset by r)
+      const y2 = baseY - spacingY;
+      for (let i = 0; i < 3; i++) {
+        const x = baseX - 36 + i * spacingX;
+        const skull = Matter.Bodies.circle(x, y2, r, {
+          restitution: 0.05,
+          friction: 0.95,
+          density: 0.001,
+          label: 'sugarskull'
+        });
+        Matter.World.add(world, skull);
+        enemiesRef.current.push({ body: skull, health: 22 });
+      }
+
+      // Row 3: 2 skulls
+      const y3 = y2 - spacingY;
+      for (let i = 0; i < 2; i++) {
+        const x = baseX - 18 + i * spacingX;
+        const skull = Matter.Bodies.circle(x, y3, r, {
+          restitution: 0.05,
+          friction: 0.95,
+          density: 0.001,
+          label: 'sugarskull'
+        });
+        Matter.World.add(world, skull);
+        enemiesRef.current.push({ body: skull, health: 20 });
+      }
+
+      // Top: 1 skull
+      const y4 = y3 - spacingY;
+      const skullTop = Matter.Bodies.circle(baseX, y4, r, {
+        restitution: 0.05,
+        friction: 0.95,
+        density: 0.001,
+        label: 'sugarskull'
       });
-      Matter.World.add(world, skullA);
-      enemiesRef.current.push({ body: skullA, health: 20 });
-      addCrate(world, baseX + 130, y2 - 1, 46, 26, 'wood');
-      const skullB = Matter.Bodies.circle(baseX + 185, y2 + 2, 16, {
-        restitution: 0.35, friction: 0.35, density: 0.0008, label: 'sugarskull'
-      });
-      Matter.World.add(world, skullB);
-      enemiesRef.current.push({ body: skullB, health: 19 });
-      addCrate(world, baseX + 235, y2 + 5, 38, 22, 'wood');
-
-      // Layer 3 - more mix
-      const y3 = y2 - 26;
-      addCrate(world, baseX + 45, y3, 42, 24, 'wood');
-      addCrate(world, baseX + 95, y3 + 4, 48, 27, 'wood');
-      const skullC = Matter.Bodies.circle(baseX + 155, y3 - 3, 17, {
-        restitution: 0.4, friction: 0.3, density: 0.0006, label: 'sugarskull'
-      });
-      Matter.World.add(world, skullC);
-      enemiesRef.current.push({ body: skullC, health: 21 });
-      addCrate(world, baseX + 205, y3 + 2, 40, 23, 'wood');
-
-      // Layer 4
-      const y4 = y3 - 25;
-      addCrate(world, baseX + 70, y4 - 2, 44, 25, 'wood');
-      const skullD = Matter.Bodies.circle(baseX + 125, y4 + 1, 15, {
-        restitution: 0.36, friction: 0.34, density: 0.0007, label: 'sugarskull'
-      });
-      Matter.World.add(world, skullD);
-      enemiesRef.current.push({ body: skullD, health: 18 });
-      addCrate(world, baseX + 175, y4 + 3, 42, 24, 'wood');
-
-      // Top cap with big skull
-      const y5 = y4 - 24;
-      addCrate(world, baseX + 100, y5, 38, 22, 'wood');
-      const topSkull = Matter.Bodies.circle(baseX + 108, y5 - 30, 18, {
-        restitution: 0.35, friction: 0.32, density: 0.0006, label: 'sugarskull'
-      });
-      Matter.World.add(world, topSkull);
-      enemiesRef.current.push({ body: topSkull, health: 24 });
-
-      // Extra side wobbly crates for messy unstable look
-      addCrate(world, baseX - 20, baseY - 7, 36, 21, 'wood');
-      addCrate(world, baseX + 280, baseY + 8, 38, 22, 'wood');
+      Matter.World.add(world, skullTop);
+      enemiesRef.current.push({ body: skullTop, health: 28 });
     } else if (levelNum === 2) {
       // Wider pyramid-ish with 2 skulls
       for (let i = 0; i < 4; i++) {
@@ -302,14 +313,6 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       Matter.Body.setVelocity(e.body, { x: 0, y: 0 });
       Matter.Body.setAngularVelocity(e.body, 0);
     });
-
-    // Wobbly visual: give some crates a slight initial tilt (makes the mixed stack look unstable and ready to topple)
-    if (levelNum === 1) {
-      blocksRef.current.forEach((block, index) => {
-        const wobble = Math.sin(index * 1.3) * 0.11 + ((index % 3) - 1) * 0.05;
-        Matter.Body.setAngle(block.body, wobble);
-      });
-    }
   };
 
 
