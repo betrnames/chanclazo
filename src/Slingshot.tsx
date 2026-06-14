@@ -26,7 +26,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const [, setShotsLeft] = useState(4);
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
-  const [, setGameState] = useState<'aiming' | 'launched' | 'won' | 'lost'>('aiming');
+  const [gameState, setGameState] = useState<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
 
   // Matter.js refs
   const engineRef = useRef<Matter.Engine | null>(null);
@@ -41,7 +41,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const shotsLeftRef = useRef(4);
   const levelRef = useRef(1);
   const scoreRef = useRef(0);
-  const gameStateRef = useRef<'aiming' | 'launched' | 'won' | 'lost'>('aiming');
+  const gameStateRef = useRef<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
   const rafRef = useRef<number | null>(null);
   const spinFrameRef = useRef(0);
   const lastTimeRef = useRef(performance.now());
@@ -92,7 +92,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   }, []);
 
   // Initialize Matter.js world and level
-  const initPhysics = (levelNum: number = 1) => {
+  const initPhysics = (levelNum: number = 1, shouldBuildStack = true) => {
     const engine = Matter.Engine.create();
     const world = engine.world;
     engineRef.current = engine;
@@ -116,8 +116,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const rightWall = Matter.Bodies.rectangle(1260, 300, 40, 600, { isStatic: true });
     Matter.World.add(world, [leftWall, rightWall]);
 
-    // Build a simple starting structure (pyramid + enemies)
-    buildLevel(world, levelNum);
+    if (shouldBuildStack) {
+      buildLevel(world, levelNum);
+    } else {
+      blocksRef.current = [];
+      enemiesRef.current = [];
+    }
 
     // Reset shots
     shotsLeftRef.current = levelNum <= 2 ? 4 : 3;
@@ -150,8 +154,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       handleCollisions(event);
     });
 
-    setGameState('aiming');
-    gameStateRef.current = 'aiming';
+    if (shouldBuildStack) {
+      setGameState('aiming');
+      gameStateRef.current = 'aiming';
+    } else {
+      setGameState('ready');
+      gameStateRef.current = 'ready';
+    }
   };
 
   const addCrate = (world: Matter.World, x: number, y: number, w = 48, h = 28, type: 'wood' | 'stone' | 'ice' = 'wood') => {
@@ -178,16 +187,68 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const baseX = 920;
 
     if (levelNum === 1) {
-      // Basic stack: 3 crates wide base, sugarskull on top
-      addCrate(world, baseX, baseY, 48, 28, 'wood');
-      addCrate(world, baseX + 52, baseY, 48, 28, 'wood');
-      addCrate(world, baseX + 26, baseY - 32, 48, 28, 'stone');
-      // sugarskull on top
-      const skull = Matter.Bodies.circle(baseX + 26, baseY - 68, 19, {
+      // BIGGER wobbly mixed stack of wooden crates + sugarskulls (integrated, not just on top)
+      // Looks precarious and ready to be destroyed
+      const baseY = 546;
+      const baseX = 820;
+
+      // Bottom wide wobbly base (6 crates)
+      addCrate(world, baseX + 5, baseY + 6, 40, 23, 'wood');
+      addCrate(world, baseX + 50, baseY - 2, 46, 27, 'wood');
+      addCrate(world, baseX + 100, baseY + 5, 44, 25, 'wood');
+      addCrate(world, baseX + 150, baseY + 1, 48, 28, 'wood');
+      addCrate(world, baseX + 200, baseY - 4, 42, 24, 'wood');
+      addCrate(world, baseX + 245, baseY + 7, 40, 22, 'wood');
+
+      // Layer 2 - crates + embedded sugarskull
+      const y2 = baseY - 27;
+      addCrate(world, baseX + 25, y2 + 3, 44, 25, 'wood');
+      const skullA = Matter.Bodies.circle(baseX + 80, y2 + 4, 15, {
+        restitution: 0.38, friction: 0.32, density: 0.0007, label: 'sugarskull'
+      });
+      Matter.World.add(world, skullA);
+      enemiesRef.current.push({ body: skullA, health: 20 });
+      addCrate(world, baseX + 130, y2 - 1, 46, 26, 'wood');
+      const skullB = Matter.Bodies.circle(baseX + 185, y2 + 2, 16, {
         restitution: 0.35, friction: 0.35, density: 0.0008, label: 'sugarskull'
       });
-      Matter.World.add(world, skull);
-      enemiesRef.current.push({ body: skull, health: 22 });
+      Matter.World.add(world, skullB);
+      enemiesRef.current.push({ body: skullB, health: 19 });
+      addCrate(world, baseX + 235, y2 + 5, 38, 22, 'wood');
+
+      // Layer 3 - more mix
+      const y3 = y2 - 26;
+      addCrate(world, baseX + 45, y3, 42, 24, 'wood');
+      addCrate(world, baseX + 95, y3 + 4, 48, 27, 'wood');
+      const skullC = Matter.Bodies.circle(baseX + 155, y3 - 3, 17, {
+        restitution: 0.4, friction: 0.3, density: 0.0006, label: 'sugarskull'
+      });
+      Matter.World.add(world, skullC);
+      enemiesRef.current.push({ body: skullC, health: 21 });
+      addCrate(world, baseX + 205, y3 + 2, 40, 23, 'wood');
+
+      // Layer 4
+      const y4 = y3 - 25;
+      addCrate(world, baseX + 70, y4 - 2, 44, 25, 'wood');
+      const skullD = Matter.Bodies.circle(baseX + 125, y4 + 1, 15, {
+        restitution: 0.36, friction: 0.34, density: 0.0007, label: 'sugarskull'
+      });
+      Matter.World.add(world, skullD);
+      enemiesRef.current.push({ body: skullD, health: 18 });
+      addCrate(world, baseX + 175, y4 + 3, 42, 24, 'wood');
+
+      // Top cap with big skull
+      const y5 = y4 - 24;
+      addCrate(world, baseX + 100, y5, 38, 22, 'wood');
+      const topSkull = Matter.Bodies.circle(baseX + 108, y5 - 30, 18, {
+        restitution: 0.35, friction: 0.32, density: 0.0006, label: 'sugarskull'
+      });
+      Matter.World.add(world, topSkull);
+      enemiesRef.current.push({ body: topSkull, health: 24 });
+
+      // Extra side wobbly crates for messy unstable look
+      addCrate(world, baseX - 20, baseY - 7, 36, 21, 'wood');
+      addCrate(world, baseX + 280, baseY + 8, 38, 22, 'wood');
     } else if (levelNum === 2) {
       // Wider pyramid-ish with 2 skulls
       for (let i = 0; i < 4; i++) {
@@ -241,6 +302,14 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       Matter.Body.setVelocity(e.body, { x: 0, y: 0 });
       Matter.Body.setAngularVelocity(e.body, 0);
     });
+
+    // Wobbly visual: give some crates a slight initial tilt (makes the mixed stack look unstable and ready to topple)
+    if (levelNum === 1) {
+      blocksRef.current.forEach((block, index) => {
+        const wobble = Math.sin(index * 1.3) * 0.11 + ((index % 3) - 1) * 0.05;
+        Matter.Body.setAngle(block.body, wobble);
+      });
+    }
   };
 
 
@@ -478,7 +547,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
     // Animated hover for the floating ready sandal (no slingshot device)
     let hoverOffset = { x: 0, y: 0 };
-    if (!dragRef.current.active && gameStateRef.current === 'aiming') {
+    if (!dragRef.current.active && (gameStateRef.current === 'aiming' || gameStateRef.current === 'ready')) {
       const t = (now / 1000) * 1.8;
       hoverOffset.y = Math.sin(t) * 10;           // vertical bob
       hoverOffset.x = Math.sin(t * 0.6) * 4;      // gentle side-to-side
@@ -592,7 +661,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
     // Ready floating sandal (starts here with animated hover bob + spin, no sling posts/rubber)
     // Bigger size, always visible when not dragging
-    if (!drag.active && chanclaImg && gameStateRef.current === 'aiming') {
+    if (!drag.active && chanclaImg && (gameStateRef.current === 'aiming' || gameStateRef.current === 'ready')) {
       const fw = chanclaImg.width / cols;
       const fh = chanclaImg.height / rows;
       const sx = (frame % cols) * fw;
@@ -716,6 +785,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     rafRef.current = requestAnimationFrame(renderLoop);
   };
 
+  // Start from the READY screen (called by the big button on page load)
+  const beginGame = () => {
+    startLevel(1);
+  };
+
   // Canvas click for win/lose states
   const handleCanvasClick = () => {
     if (gameStateRef.current === 'won') {
@@ -725,7 +799,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     }
   };
 
-  // Init on mount
+  // Init on mount - setup stage but show READY button first (no stack until clicked)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -733,8 +807,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     canvas.width = 1280;
     canvas.height = 600;
 
-    // Start first level
-    startLevel(1);
+    // Setup engine/ground/walls + render loop, but do NOT build the enemy stack yet
+    initPhysics(1, false);
+
+    // Start render loop immediately so background + floating sandal are visible on ready screen
+    rafRef.current = requestAnimationFrame(renderLoop);
 
     return () => {
       // Cleanup
@@ -789,6 +866,22 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           style={{ width: 'min(100%, 1280px)', height: 'auto' }}
           onClick={handleCanvasClick}
         />
+
+        {/* READY screen overlay on initial page load - big start button, stage + floating sandal already visible behind */}
+        {gameState === 'ready' && (
+          <div className="absolute inset-0 flex items-center justify-center z-20" style={{ background: 'rgba(26, 20, 15, 0.55)' }}>
+            <div className="text-center">
+              <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
+              <button
+                onClick={beginGame}
+                className="mt-2 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
+              >
+                START
+              </button>
+              <div className="text-orange-200 text-sm mt-4 tracking-[2px] font-bold">GRAB THE SANDAL • DRAG TO AIM • RELEASE TO DESTROY THE STACK</div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="px-4 py-2 bg-black/70 text-[10px] text-orange-300 flex gap-2 justify-center">
