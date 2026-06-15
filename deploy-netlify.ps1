@@ -1,15 +1,18 @@
 # deploy-netlify.ps1
 # Easy local deployment helper for chanclazo.com on Netlify
-# Usage:
-#   1. Get the Site ID of the site that has chanclazo.com attached (Netlify dashboard > Site settings > General > Site ID)
-#   2. Set the env var or pass it:
-#      $env:NETLIFY_SITE_ID = "your-site-id-here"
-#      .\deploy-netlify.ps1
+# 
+# Prerequisites for easiest use:
+#   $env:NETLIFY_SITE_ID = "site-id-of-the-site-with-chanclazo.com-domain"
+#   $env:NETLIFY_AUTH_TOKEN = "your-netlify-personal-access-token"   # (optional but recommended)
 #
-# Or run with param: .\deploy-netlify.ps1 -SiteId "your-site-id-here"
+# Then run: .\deploy-netlify.ps1
 #
-# This will build and deploy the latest game + assets to the site.
-# After this, chanclazo.com will show the project build (assuming the domain is attached to this site).
+# Or pass SiteId: .\deploy-netlify.ps1 -SiteId "the-id"
+#
+# Get Site ID: Netlify dashboard > your site (the one with custom domain) > Site settings > General > "Site information" > Site ID
+# Get token: Netlify account settings > Applications > Personal access tokens (create with "Deploy" scope)
+#
+# This will build + deploy the game to the site so chanclazo.com shows it.
 
 param(
     [string]$SiteId = $env:NETLIFY_SITE_ID
@@ -42,10 +45,15 @@ if ($LASTEXITCODE -ne 0) {
 
 # Deploy
 Write-Host "`n[2/3] Deploying to Netlify (production)..." -ForegroundColor Green
-npx netlify-cli deploy --prod --dir=dist --site $SiteId
+$deployArgs = "--prod --dir=dist --site $SiteId"
+if ($env:NETLIFY_AUTH_TOKEN) {
+    $deployArgs += " --auth $env:NETLIFY_AUTH_TOKEN"
+    Write-Host "Using NETLIFY_AUTH_TOKEN from environment" -ForegroundColor Yellow
+}
+npx netlify-cli deploy $deployArgs.Split(' ')
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Deploy failed. Make sure you are logged in (npx netlify-cli login) or the site ID and token are correct." -ForegroundColor Red
+    Write-Host "Deploy failed. Set `$env:NETLIFY_AUTH_TOKEN and `$env:NETLIFY_SITE_ID, or run 'npx netlify-cli login' first. Check the exact error above." -ForegroundColor Red
     exit 1
 }
 
