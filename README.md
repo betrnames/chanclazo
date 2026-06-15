@@ -29,10 +29,26 @@ npm run dev
 
 Local API calls use Vite proxy (see vite.config.ts).
 
-## Deployment
-- **Frontend + full site**: `git push` (or run `push.bat`). GitHub Action builds and deploys to Netlify using `netlify-cli`.
-  - Secrets needed on the repo: `NETLIFY_AUTH_TOKEN`, `NETLIFY_SITE_ID`
-- **Worker only** (when worker.ts or wrangler.toml changes): `npm run deploy:worker`
+## Deployment (for the custom domain site)
+**Important for new Netlify site / "new build"**:
+- The GitHub Action deploys using `netlify-cli` to the site specified by the `NETLIFY_SITE_ID` secret.
+- If you created a *new* Netlify site and connected the repo + domain there:
+  1. Get the new Site ID: Netlify dashboard > your site (the one showing chanclazo.com in domains) > Site settings > General > "Site information" > copy "Site ID".
+  2. In GitHub repo > Settings > Secrets and variables > Actions: set `NETLIFY_SITE_ID` to that value (update it every time you use a new Netlify site).
+  3. `NETLIFY_AUTH_TOKEN` is your Netlify personal access token (create in Netlify account settings if needed, scope "Deploy").
+- Then `git push` (push.bat) or trigger the Action manually from the Actions tab.
+- The Action will fail if SITE_ID is wrong/old or token invalid — check the log of the failed run for the exact error.
+
+Simple alternative (recommended if Action is confusing):
+- Since you connected the GitHub repo in the Netlify site UI, Netlify can auto-deploy on push.
+- In Netlify site: Site settings > Build & deploy > Continuous deployment > Build settings:
+  - Build command: `npm run build`
+  - Publish directory: `dist`
+- Just push code, Netlify builds and deploys automatically (the custom Action is optional extra).
+
+See NETLIFY_CUSTOM_DOMAIN.md for full details, the deploy-netlify.ps1 local helper, and troubleshooting.
+
+- **Worker only**: `npm run deploy:worker` (or wrangler deploy) when changing the API.
 
 See **NETLIFY_CUSTOM_DOMAIN.md** for the final custom domain (chanclazo.com) + Netlify DNS setup, proxy rules, CORS tightening, and verification steps.
 
