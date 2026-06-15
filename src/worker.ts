@@ -7,24 +7,40 @@ export interface Env {
   ASSETS: Fetcher;
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+// Allowlist for custom domain + local dev (since now on chanclazo.com Netlify DNS + proxy)
+const ALLOWED_ORIGINS = [
+  'https://chanclazo.com',
+  'https://www.chanclazo.com',
+  'http://localhost:5173',
+  'http://localhost:4173',
+];
 
-function json(data: unknown, status = 200): Response {
+function getCorsHeaders(origin: string | null): HeadersInit {
+  const allowOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin',
+  };
+}
+
+function json(data: unknown, status = 200, origin: string | null = null): Response {
+  const cors = getCorsHeaders(origin);
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    headers: { 'Content-Type': 'application/json', ...cors },
   });
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const origin = request.headers.get('Origin');
+
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: CORS_HEADERS });
+      const cors = getCorsHeaders(origin);
+      return new Response(null, { headers: cors });
     }
 
     const url = new URL(request.url);
@@ -40,12 +56,12 @@ export default {
           handle: string; score: number; level: number;
         };
         if (!handle || typeof score !== 'number') {
-          return json({ error: 'missing handle or score' }, 400);
+          return json({ error: 'missing handle or score' }, 400, origin);
         }
         await env.DB.prepare(
           'INSERT INTO scores (handle, score, level) VALUES (?, ?, ?)'
         ).bind(handle, Math.floor(score), level || 1).run();
-        return json({ ok: true });
+        return json({ ok: true }, 200, origin);
       }
 
       // ── GET /leaderboard ────────────────────────────────────────────────
@@ -53,7 +69,7 @@ export default {
         const { results } = await env.DB.prepare(
           'SELECT handle, MAX(score) as score, level, created_at FROM scores GROUP BY handle ORDER BY score DESC LIMIT 50'
         ).all();
-        return json(results || []);
+        return json(results || [], 200, origin);
       }
 
       // ── POST /ghost ─────────────────────────────────────────────────────
@@ -62,7 +78,7 @@ export default {
           handle: string; level: number; snapshots: unknown[]; score: number;
         };
         if (!handle || !snapshots) {
-          return json({ error: 'missing data' }, 400);
+          return json({ error: 'missing data' }, 400, origin);
         }
         // Keep only top 3 ghosts per level
         const existing = await env.DB.prepare(
@@ -71,14 +87,14 @@ export default {
         if ((existing.results?.length || 0) >= 3) {
           const lowest = existing.results![existing.results!.length - 1] as { id: number; score: number };
           if (score <= lowest.score) {
-            return json({ ok: true, kept: false });
+            return json({ ok: true, kept: false }, 200, origin);
           }
           await env.DB.prepare('DELETE FROM ghosts WHERE id = ?').bind(lowest.id).run();
         }
         await env.DB.prepare(
           'INSERT INTO ghosts (handle, level, score, snapshots) VALUES (?, ?, ?, ?)'
         ).bind(handle, level || 1, Math.floor(score), JSON.stringify(snapshots)).run();
-        return json({ ok: true, kept: true });
+        return json({ ok: true, kept: true }, 200, origin);
       }
 
       // ── GET /ghost?level=N ────────────────────────────────────────────
@@ -87,13 +103,13 @@ export default {
         const { results } = await env.DB.prepare(
           'SELECT handle, score, snapshots FROM ghosts WHERE level = ? ORDER BY score DESC LIMIT 3'
         ).bind(level).all();
-        return json(results || []);
+        return json(results || [], 200, origin);
       }
 
       // ── POST /presence/ping ─────────────────────────────────────────────
       if (path === '/presence/ping' && request.method === 'POST') {
         const { sessionId } = await request.json() as { sessionId: string };
-        if (!sessionId) return json({ count: 0 });
+        if (!sessionId) return json({ count: 0 }, 200, origin);
         const now = Date.now();
         await env.DB.prepare(
           'INSERT OR REPLACE INTO presence (session_id, last_seen) VALUES (?, ?)'
@@ -105,7 +121,7 @@ export default {
         const countResult = await env.DB.prepare(
           'SELECT COUNT(*) as count FROM presence'
         ).first() as { count: number } | null;
-        return json({ count: countResult?.count || 0 });
+        return json({ count: countResult?.count || 0 }, 200, origin);
       }
 
       // ── POST /presence/leave ────────────────────────────────────────────
@@ -116,7 +132,7 @@ export default {
             'DELETE FROM presence WHERE session_id = ?'
           ).bind(sessionId).run();
         }
-        return json({ ok: true });
+        return json({ ok: true }, 200, origin);
       }
 
       // ── Fallback: pass through to static assets ──────────────────────────
@@ -124,7 +140,7 @@ export default {
 
     } catch (err) {
       console.error('Worker error:', err);
-      return json({ error: 'internal error' }, 500);
+      return json({ error: 'internal error' }, 500, origin);
     }
   },
 };

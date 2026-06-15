@@ -35,6 +35,13 @@
   status = 200
   force = true
 
+# Redirect www to apex (recommended for custom domain on Netlify DNS)
+[[redirects]]
+  from = "https://www.chanclazo.com/*"
+  to = "https://chanclazo.com/:splat"
+  status = 301
+  force = true
+
 # SPA fallback for client-side routing (must be last)
 [[redirects]]
   from = "/*"
