@@ -53,6 +53,7 @@ This is the most common issue when first setting up custom domain + Netlify DNS.
 **How to fix (automated path)**:
 1. In Netlify dashboard, find the site that lists `chanclazo.com` under Domain management → Custom domains. This is the "owner" site.
 2. Copy its **Site ID** (Site settings → General → Site information → "Site ID" or "API ID").
+   Current ID for this site/build: c4ffe657-ecdd-4cf0-b1cb-5ae9c3ed9c35
 3. Go to your GitHub repo → Settings → Secrets and variables → Actions.
 4. Edit `NETLIFY_SITE_ID` and paste the exact Site ID from step 1.
 5. Save.
@@ -64,7 +65,7 @@ This is the most common issue when first setting up custom domain + Netlify DNS.
 - Run in PowerShell (it will prompt for the ID if not set):
   ```powershell
   cd "C:\Users\gabem\Projects\chanclazo"
-  .\deploy-netlify.ps1 -SiteId "paste-the-site-id-here-from-step-1"
+  .\deploy-netlify.ps1 -SiteId "c4ffe657-ecdd-4cf0-b1cb-5ae9c3ed9c35"  (or set env var)
   ```
 - Or set the env var first: `$env:NETLIFY_SITE_ID = "the-id"`
 - After success, hard refresh https://chanclazo.com.

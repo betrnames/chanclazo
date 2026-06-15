@@ -34,6 +34,7 @@ Local API calls use Vite proxy (see vite.config.ts).
 - The GitHub Action deploys using `netlify-cli` to the site specified by the `NETLIFY_SITE_ID` secret.
 - If you created a *new* Netlify site and connected the repo + domain there:
   1. Get the new Site ID: Netlify dashboard > your site (the one showing chanclazo.com in domains) > Site settings > General > "Site information" > copy "Site ID".
+     Current ID (for this new build/site): c4ffe657-ecdd-4cf0-b1cb-5ae9c3ed9c35
   2. In GitHub repo > Settings > Secrets and variables > Actions: set `NETLIFY_SITE_ID` to that value (update it every time you use a new Netlify site).
   3. `NETLIFY_AUTH_TOKEN` is your Netlify personal access token (create in Netlify account settings if needed, scope "Deploy").
 - Then `git push` (push.bat) or trigger the Action manually from the Actions tab.

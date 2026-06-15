@@ -27,6 +27,7 @@ jobs:
       - name: Deploy to Netlify
         # IMPORTANT: 
         # - NETLIFY_SITE_ID secret must be the "Site ID" of the Netlify site that has chanclazo.com as custom domain (get it from Netlify UI > your site > Site settings > General > Site ID)
+        #   Current: c4ffe657-ecdd-4cf0-b1cb-5ae9c3ed9c35
         # - NETLIFY_AUTH_TOKEN must be a valid token from Netlify (user settings > Applications > Personal access tokens, with "Deploy" permission)
         # If this step fails, check the logs for the exact error (auth, site id, build, etc.)
         run: npx netlify-cli deploy --prod --dir=dist --auth ${{ secrets.NETLIFY_AUTH_TOKEN }} --site ${{ secrets.NETLIFY_SITE_ID }}

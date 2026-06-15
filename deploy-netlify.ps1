@@ -10,12 +10,13 @@
 # Or pass SiteId: .\deploy-netlify.ps1 -SiteId "the-id"
 #
 # Get Site ID: Netlify dashboard > your site (the one with custom domain) > Site settings > General > "Site information" > Site ID
+# Current site ID for chanclazo.com new build: c4ffe657-ecdd-4cf0-b1cb-5ae9c3ed9c35 (use this for the secret or this script)
 # Get token: Netlify account settings > Applications > Personal access tokens (create with "Deploy" scope)
 #
 # This will build + deploy the game to the site so chanclazo.com shows it.
 
 param(
-    [string]$SiteId = $env:NETLIFY_SITE_ID
+    [string]$SiteId = $(if ($env:NETLIFY_SITE_ID) { $env:NETLIFY_SITE_ID } else { "c4ffe657-ecdd-4cf0-b1cb-5ae9c3ed9c35" })
 )
 
 $ErrorActionPreference = "Stop"
