@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
+import { startMusic, stopMusic, setMuted as setMusicMuted, setMusicIntensity, initAudio } from './game/sound';
 
 // ─── Procedural Audio for Slingshot ───────────────────────────────────────────
 let slingCtx: AudioContext | null = null;
@@ -95,6 +96,27 @@ function playApplause() {
   sOsc(1047, 'sine', t + 0.7, 0.6, 0.2, 1320);
 }
 
+function setSlingshotMuted(muted: boolean) {
+  if (slingGain) slingGain.gain.value = muted ? 0 : 0.6;
+}
+
+function playPowerUpBoom() {
+  if (!slingCtx) return;
+  const t = slingCtx.currentTime;
+  // Deep boom
+  sOsc(80, 'sine', t, 0.4, 0.7, 25);
+  sOsc(160, 'sine', t, 0.2, 0.5, 40);
+  // Massive shatter
+  sNoise(t, 0.3, 0.6, 8000);
+  sNoise(t + 0.05, 0.25, 0.4, 12000);
+  // Rising whine
+  sOsc(400, 'sawtooth', t, 0.15, 0.3, 1600);
+  // Scatter crackles
+  for (let i = 0; i < 5; i++) {
+    sNoise(t + 0.1 + i * 0.06, 0.04, 0.2, 6000 + Math.random() * 4000);
+  }
+}
+
 // Simple Angry Birds style slingshot mini-game
 // Using Chanclazo characters as "birds" (projectiles)
 // Structures protect sugar skull enemies
@@ -115,6 +137,7 @@ interface Target {
   type: 'pinata' | 'sugarskull';
   health: number;
   visualSize?: number;
+  isPowerUp?: boolean;
 }
 
 interface Particle {
@@ -139,6 +162,10 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const [projectileType, setProjectileType] = useState<'chancla' | 'sugarskull' | 'luchador'>('chancla');
   const [showOrientationPrompt, setShowOrientationPrompt] = useState(false);
   const [currentBgUrl, setCurrentBgUrl] = useState('/slingshot_bg.jpg');
+  const [musicMuted, setLocalMusicMuted] = useState(false);
+
+  const winDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const winTriggeredRef = useRef(false);
 
   // Virtual internal resolution (design coords for physics, draw, slingshotPos etc)
   const VIEW_W = 1280;
@@ -209,6 +236,14 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const imagesRef = useRef<Record<string, HTMLImageElement | null>>({});
 
   // Load character sprites for projectiles
+  useEffect(() => {
+    // Start background music for bonus game
+    initAudio();
+    setMusicIntensity(3);
+    startMusic();
+    return () => { stopMusic(); };
+  }, []);
+
   useEffect(() => {
     const loadImage = (src: string) => {
       return new Promise<HTMLImageElement | null>((resolve) => {
@@ -397,6 +432,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       Matter.Body.setVelocity(e.body, { x: 0, y: 0 });
       Matter.Body.setAngularVelocity(e.body, 0);
     });
+
+    // Randomly assign one piñata as the power-up (explosive)
+    if (enemiesRef.current.length > 0) {
+      const idx = Math.floor(Math.random() * enemiesRef.current.length);
+      enemiesRef.current[idx].isPowerUp = true;
+    }
   };
 
 
@@ -450,6 +491,36 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
             const deadPos = enemy.body.position;
             spawnExplosion(deadPos.x, deadPos.y, 14);
             playPinataPop();
+
+            // Power-up piñata: massive chain explosion
+            if (enemy.isPowerUp) {
+              playPowerUpBoom();
+              spawnExplosion(deadPos.x, deadPos.y, 45); // massive burst
+              const bigRadius = 500;  // covers most of the grid
+              const bigDmg = 300;     // one-shots nearly everything
+              for (let k = enemiesRef.current.length - 1; k >= 0; k--) {
+                const other = enemiesRef.current[k];
+                if (other.body === enemy.body) continue;
+                const dvec = Matter.Vector.sub(other.body.position, deadPos);
+                const dist = Matter.Vector.magnitude(dvec);
+                if (dist > 0 && dist < bigRadius) {
+                  if (other.body.isStatic) Matter.Body.setStatic(other.body, false);
+                  const falloff = 1 - dist / bigRadius;
+                  other.health -= bigDmg * falloff;
+                  const dir = Matter.Vector.normalise(dvec);
+                  const f = 6.0 * falloff;
+                  Matter.Body.applyForce(other.body, other.body.position, Matter.Vector.mult(dir, f));
+                  spawnExplosion(other.body.position.x, other.body.position.y, 10);
+                  if (other.health <= 0) {
+                    spawnExplosion(other.body.position.x, other.body.position.y, 16);
+                    playPinataPop();
+                    Matter.World.remove(worldRef.current!, other.body);
+                    enemiesRef.current.splice(k, 1);
+                    setScore(s => { const ns = s + 150; scoreRef.current = ns; return ns; });
+                  }
+                }
+              }
+            }
             // Explode and destroy around it (chain reaction for nearby pinatas)
             if (enemy.type === 'pinata') {
               const expRadius = 55;  // smaller: only affects immediate neighbors in the grid
@@ -616,6 +687,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   };
 
   const checkWinLose = () => {
+    // Skip if already resolved by the continuous render-loop check
+    if (gameStateRef.current === 'won' || gameStateRef.current === 'lost') return;
+
     const livingEnemies = enemiesRef.current.length;
 
     if (livingEnemies === 0) {
@@ -683,6 +757,24 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
         if ((spd < 0.05 && b.position.y > 560) || b.position.y > 700 || b.position.x < -50 || b.position.x > 1330) {
           Matter.World.remove(world, b);
         }
+      }
+    }
+
+    // Continuous win check: detect all piñatas popped, then delay popup so explosions settle
+    if (gameStateRef.current !== 'won' && gameStateRef.current !== 'lost' && gameStateRef.current !== 'ready') {
+      if (enemiesRef.current.length === 0 && !winTriggeredRef.current) {
+        winTriggeredRef.current = true;
+        winDelayRef.current = setTimeout(() => {
+          if (gameStateRef.current === 'won') return; // already resolved
+          setGameState('won');
+          gameStateRef.current = 'won';
+          playApplause();
+          setScore(s => {
+            const ns = s + 400;
+            scoreRef.current = ns;
+            return ns;
+          });
+        }, 1200); // 1.2s delay to watch the carnage
       }
     }
 
@@ -754,6 +846,36 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       ctx.save();
       ctx.translate(pos.x, pos.y);
       ctx.rotate(angle);
+
+      // Power-up piñata: vibrating glow ring
+      if (target.isPowerUp) {
+        const glowTime = now / 100;
+        const vibX = Math.sin(glowTime * 3.7) * 3;
+        const vibY = Math.cos(glowTime * 4.3) * 3;
+        const pulseR = (target.visualSize || 50) * 0.65 + Math.sin(glowTime) * 8;
+        const glowAlpha = 0.5 + Math.sin(glowTime * 2) * 0.3;
+
+        ctx.save();
+        ctx.translate(vibX, vibY);
+        // Outer glow
+        ctx.shadowColor = `rgba(255, 50, 0, ${glowAlpha})`;
+        ctx.shadowBlur = 25 + Math.sin(glowTime * 1.5) * 12;
+        ctx.strokeStyle = `rgba(255, 180, 0, ${glowAlpha})`;
+        ctx.lineWidth = 3 + Math.sin(glowTime * 2.5) * 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
+        ctx.stroke();
+        // Inner hot ring
+        ctx.shadowColor = `rgba(255, 255, 100, ${glowAlpha * 0.6})`;
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = `rgba(255, 255, 200, ${glowAlpha * 0.5})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, pulseR * 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
 
       let img: HTMLImageElement | null = null;
       let sz = 50;
@@ -1064,6 +1186,10 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       rafRef.current = null;
     }
 
+    // Reset win detection
+    winTriggeredRef.current = false;
+    if (winDelayRef.current) { clearTimeout(winDelayRef.current); winDelayRef.current = null; }
+
     if (engineRef.current && worldRef.current) {
       // Clear previous world
       Matter.World.clear(worldRef.current, false);
@@ -1245,8 +1371,26 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           <div className="font-bold tracking-widest">CHANCLA STRIKE</div>
           <div className="text-orange-400">Level {level}</div>
         </div>
-        <div>Score: <span className="font-mono text-yellow-400">{score}</span></div>
-        <div className="text-xs opacity-70">Pull back • Release to launch • Limited strikes</div>
+        <div className="flex items-center gap-4">
+          <div>Score: <span className="font-mono text-yellow-400">{score}</span></div>
+          <button
+            onClick={() => {
+              const next = !musicMuted;
+              setLocalMusicMuted(next);
+              setMusicMuted(next);
+              if (next) {
+                stopMusic();
+              } else {
+                initAudio();
+                setMusicIntensity(3);
+                startMusic();
+              }
+            }}
+            className="px-2 py-1 rounded text-xs font-bold opacity-80 hover:opacity-100 transition-opacity"
+          >
+            {musicMuted ? '🔇 Music Off' : '🔊 Music On'}
+          </button>
+        </div>
       </div>
 
       {/* Footer bar (subtle, instruction lives in header) */}
@@ -1256,17 +1400,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       {/* READY panel - centered transparent square (75% dark) instead of full overlay */}
       {gameState === 'ready' && (
         <div className="absolute left-0 right-0 z-30" style={{ top: '44px', bottom: '36px' }}>
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full px-12 sm:px-16 py-6">
             <div 
               className="rounded-2xl flex items-center justify-center"
               style={{
-                width: 'min(340px, 78vw)',
-                minHeight: 'min(340px, 65vh)',
+                width: 'min(300px, 72vw)',
                 background: 'rgba(0, 0, 0, 0.75)'
               }}
             >
-              <div className="text-center p-3">
-                <div className="text-[48px] sm:text-[72px] font-black text-white tracking-[4px] sm:tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
+              <div className="text-center px-6 sm:px-8 py-6">
+                <div className="text-[36px] sm:text-[56px] font-black text-white tracking-[3px] sm:tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
 
               {/* Striker selector only - background is now random per play */}
               <div className="mb-3">
@@ -1379,7 +1522,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
               <button
                 onClick={beginGame}
-                className="mt-1 px-12 sm:px-20 py-5 sm:py-7 text-2xl sm:text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
+                className="mt-2 mb-1 px-6 sm:px-14 py-1.5 sm:py-5 text-base sm:text-2xl font-black tracking-[2px] sm:tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-lg sm:rounded-xl shadow-[0_3px_0_#7c2d12] sm:shadow-[0_5px_0_#7c2d12] active:shadow-[0_1px_0_#7c2d12] active:translate-y-[2px] border-[2px] sm:border-[3px] border-orange-900 transition-all"
               >
                 START
               </button>
