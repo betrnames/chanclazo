@@ -96,10 +96,6 @@ function playApplause() {
   sOsc(1047, 'sine', t + 0.7, 0.6, 0.2, 1320);
 }
 
-function setSlingshotMuted(muted: boolean) {
-  if (slingGain) slingGain.gain.value = muted ? 0 : 0.6;
-}
-
 function playPowerUpBoom() {
   if (!slingCtx) return;
   const t = slingCtx.currentTime;
