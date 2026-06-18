@@ -1,6 +1,100 @@
 import { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
 
+// ─── Procedural Audio for Slingshot ───────────────────────────────────────────
+let slingCtx: AudioContext | null = null;
+let slingGain: GainNode | null = null;
+
+function initSlingshotAudio() {
+  if (slingCtx) {
+    if (slingCtx.state === 'suspended') slingCtx.resume();
+    return;
+  }
+  try {
+    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    slingCtx = new AC();
+    slingGain = slingCtx.createGain();
+    slingGain.gain.value = 0.6;
+    slingGain.connect(slingCtx.destination);
+    if (slingCtx.state === 'suspended') slingCtx.resume();
+  } catch { slingCtx = null; }
+}
+
+function sOsc(freq: number, type: OscillatorType, t: number, dur: number, vol: number, freqEnd?: number) {
+  if (!slingCtx || !slingGain) return;
+  const o = slingCtx.createOscillator();
+  const g = slingCtx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if (freqEnd !== undefined) o.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(slingGain!);
+  o.start(t); o.stop(t + dur + 0.01);
+}
+
+function sNoise(t: number, dur: number, vol: number, lp = 3000) {
+  if (!slingCtx || !slingGain) return;
+  const len = Math.ceil(slingCtx.sampleRate * dur);
+  const buf = slingCtx.createBuffer(1, len, slingCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = slingCtx.createBufferSource();
+  src.buffer = buf;
+  const f = slingCtx.createBiquadFilter();
+  f.type = 'lowpass'; f.frequency.value = lp;
+  const g = slingCtx.createGain();
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(f); f.connect(g); g.connect(slingGain!);
+  src.start(t); src.stop(t + dur + 0.01);
+}
+
+function playSlingshotWhoosh() {
+  if (!slingCtx) return;
+  const t = slingCtx.currentTime;
+  sNoise(t, 0.25, 0.35, 2500);
+  sOsc(500, 'sine', t, 0.2, 0.18, 150);
+  sOsc(300, 'sine', t + 0.05, 0.15, 0.12, 80);
+}
+
+function playPinataPop() {
+  if (!slingCtx) return;
+  const t = slingCtx.currentTime;
+  // Sharp crack + hollow burst
+  sOsc(800, 'square', t, 0.04, 0.4, 200);
+  sOsc(400, 'sine', t, 0.08, 0.3, 100);
+  sNoise(t, 0.12, 0.5, 6000);
+  // Confetti scatter shimmer
+  sOsc(1200, 'sine', t + 0.05, 0.1, 0.15, 2400);
+  sNoise(t + 0.03, 0.08, 0.2, 10000);
+}
+
+function playPinataHit() {
+  if (!slingCtx) return;
+  const t = slingCtx.currentTime;
+  // Lighter thud for non-lethal hit
+  sOsc(300, 'sine', t, 0.06, 0.2, 100);
+  sNoise(t, 0.05, 0.15, 4000);
+}
+
+function playApplause() {
+  if (!slingCtx) return;
+  const t = slingCtx.currentTime;
+  // Layered noise bursts to simulate crowd clapping
+  for (let i = 0; i < 12; i++) {
+    const offset = i * 0.12 + Math.random() * 0.06;
+    sNoise(t + offset, 0.06 + Math.random() * 0.04, 0.15 + Math.random() * 0.1, 4000 + Math.random() * 4000);
+  }
+  // Sustained crowd roar
+  sNoise(t, 1.8, 0.2, 3000);
+  sNoise(t + 0.3, 1.2, 0.15, 5000);
+  // Victory fanfare notes
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((freq, i) => sOsc(freq, 'sine', t + 0.2 + i * 0.12, 0.25, 0.25));
+  sOsc(1047, 'sine', t + 0.7, 0.6, 0.2, 1320);
+}
+
 // Simple Angry Birds style slingshot mini-game
 // Using Chanclazo characters as "birds" (projectiles)
 // Structures protect sugar skull enemies
@@ -350,10 +444,12 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           if (enemy.type === 'pinata' && force > 8) {
             const p = enemy.body.position;
             spawnExplosion(p.x + (Math.random() - 0.5) * 15, p.y + (Math.random() - 0.5) * 15, 3 + (force > 25 ? 2 : 0));
+            playPinataHit();
           }
           if (enemy.health <= 0) {
             const deadPos = enemy.body.position;
             spawnExplosion(deadPos.x, deadPos.y, 14);
+            playPinataPop();
             // Explode and destroy around it (chain reaction for nearby pinatas)
             if (enemy.type === 'pinata') {
               const expRadius = 55;  // smaller: only affects immediate neighbors in the grid
@@ -375,6 +471,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
                   if (other.health <= 0) {
                     const otherPos = other.body.position;
                     spawnExplosion(otherPos.x, otherPos.y, 8);
+                    playPinataPop();
                     Matter.World.remove(worldRef.current!, other.body);
                     enemiesRef.current.splice(k, 1);
                     setScore(s => {
@@ -501,6 +598,10 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
     Matter.World.add(world, birdBody);
 
+    // Whoosh sound on launch
+    initSlingshotAudio();
+    playSlingshotWhoosh();
+
     shotsLeftRef.current--;
     setShotsLeft(shotsLeftRef.current);
 
@@ -520,6 +621,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     if (livingEnemies === 0) {
       setGameState('won');
       gameStateRef.current = 'won';
+      playApplause();
       setScore(s => {
         const ns = s + 400;
         scoreRef.current = ns;
@@ -945,23 +1047,10 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     ctx.fillText(`Chanclas left: ${shotsLeftRef.current}`, 40, 90);
 
     if (gameStateRef.current === 'won') {
-      ctx.fillStyle = '#4ade80';
-      ctx.font = 'bold 32px system-ui';
-      ctx.fillText('STRUCTURE DESTROYED!', 380, 280);
-      ctx.font = '18px system-ui';
-      ctx.fillText('Click anywhere to continue', 420, 320);
+      // Win overlay handled by React
     }
     if (gameStateRef.current === 'lost') {
-      // Dark box for visibility over any background
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-      ctx.fillRect(280, 235, 720, 110);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 32px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText('OUT OF STRIKES!', 640, 275);
-      ctx.font = '18px system-ui';
-      ctx.fillText('Click to retry level', 640, 310);
-      ctx.textAlign = 'left';
+      // Lost overlay handled by React
     }
 
     rafRef.current = requestAnimationFrame(renderLoop);
@@ -1001,6 +1090,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
   // Start from the READY screen (called by the big button on page load)
   const beginGame = () => {
+    initSlingshotAudio();
     projectileTypeRef.current = projectileType;
     // Random background each play (no user choice)
     const themes: ('original'|'casa'|'mercado'|'plaza'|'arena'|'lasalla')[] = ['original','casa','mercado','plaza','arena','lasalla'];
@@ -1170,13 +1260,13 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
             <div 
               className="rounded-2xl flex items-center justify-center"
               style={{
-                width: 'min(420px, 85vw)',
-                height: 'min(420px, 85vw)',
+                width: 'min(340px, 78vw)',
+                minHeight: 'min(340px, 65vh)',
                 background: 'rgba(0, 0, 0, 0.75)'
               }}
             >
-              <div className="text-center p-4">
-                <div className="text-[72px] font-black text-white tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
+              <div className="text-center p-3">
+                <div className="text-[48px] sm:text-[72px] font-black text-white tracking-[4px] sm:tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
 
               {/* Striker selector only - background is now random per play */}
               <div className="mb-3">
@@ -1289,7 +1379,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
               <button
                 onClick={beginGame}
-                className="mt-1 px-20 py-7 text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
+                className="mt-1 px-12 sm:px-20 py-5 sm:py-7 text-2xl sm:text-4xl font-black tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-3xl shadow-[0_10px_0_#7c2d12] active:shadow-[0_3px_0_#7c2d12] active:translate-y-[4px] border-[5px] border-orange-900 transition-all"
               >
                 START
               </button>
@@ -1305,6 +1395,74 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
           <div className="text-7xl mb-6">📱 ↻</div>
           <div className="text-3xl font-bold mb-4">Rotate your device</div>
           <div className="text-xl max-w-xs">Please turn your phone sideways (landscape mode) for the best gameplay experience.</div>
+        </div>
+      )}
+
+      {/* WIN POPUP — All piñatas popped */}
+      {gameState === 'won' && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center" onClick={handleCanvasClick}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          {/* Confetti emojis */}
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute pointer-events-none select-none"
+              style={{
+                top: '-8%',
+                left: `${5 + (i / 20) * 90}%`,
+                fontSize: `${18 + Math.random() * 16}px`,
+                animation: `confettiFall ${2 + Math.random() * 2}s ease-in ${Math.random() * 1.5}s forwards`,
+                opacity: 0,
+              }}
+            >
+              {['🎉', '🎊', '🪅', '⭐', '🌟', '🎈', '🩴'][i % 7]}
+            </div>
+          ))}
+          <div className="relative z-10 bg-gradient-to-b from-amber-50 to-orange-50 border-4 border-yellow-400 shadow-2xl rounded-2xl p-6 sm:p-8 max-w-[320px] sm:max-w-[380px] text-center">
+            <div className="text-5xl sm:text-6xl mb-2" style={{ animation: 'heroFloat 1.2s ease-in-out infinite' }}>🏆</div>
+            <div className="text-2xl sm:text-3xl font-black text-orange-800 tracking-tight mb-1">
+              ALL PIÑATAS POPPED!
+            </div>
+            <div className="text-sm text-orange-600 font-bold mb-3">
+              Level {level} cleared! 🎊
+            </div>
+            <div className="bg-orange-100 rounded-xl border-2 border-orange-200 p-3 mb-4">
+              <div className="text-[10px] text-orange-500 uppercase tracking-widest">Score</div>
+              <div className="text-3xl font-black text-orange-700">{score.toLocaleString()}</div>
+            </div>
+            <button
+              onClick={handleCanvasClick}
+              className="w-full px-6 py-4 text-xl font-black tracking-wide bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white rounded-xl shadow-[0_6px_0_#7c2d12] active:shadow-[0_2px_0_#7c2d12] active:translate-y-1 transition-all border-b-4 border-orange-800"
+            >
+              NEXT LEVEL →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* LOSE POPUP — Out of strikes */}
+      {gameState === 'lost' && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center" onClick={handleCanvasClick}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative z-10 bg-red-950 border-4 border-red-500 shadow-2xl rounded-2xl p-6 sm:p-8 max-w-[320px] sm:max-w-[380px] text-center">
+            <div className="text-5xl mb-2">🩴</div>
+            <div className="text-2xl sm:text-3xl font-black text-red-400 tracking-tight mb-1">
+              OUT OF STRIKES!
+            </div>
+            <div className="text-sm text-orange-300 font-bold mb-3">
+              {enemiesRef.current.length} piñata{enemiesRef.current.length !== 1 ? 's' : ''} remaining
+            </div>
+            <div className="bg-red-900/50 rounded-xl border-2 border-red-700 p-3 mb-4">
+              <div className="text-[10px] text-red-400 uppercase tracking-widest">Score</div>
+              <div className="text-3xl font-black text-yellow-400">{score.toLocaleString()}</div>
+            </div>
+            <button
+              onClick={handleCanvasClick}
+              className="w-full px-6 py-4 text-xl font-black tracking-wide bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-[0_6px_0_#9a3412] active:shadow-[0_2px_0_#9a3412] active:translate-y-1 transition-all border-b-4 border-orange-800"
+            >
+              RETRY LEVEL
+            </button>
+          </div>
         </div>
       )}
     </div>
