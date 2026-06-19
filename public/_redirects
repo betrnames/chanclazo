@@ -1,0 +1,5 @@
+# Redirect www to apex
+https://www.chanclazo.com/* https://chanclazo.com/:splat 301
+
+# SPA fallback (must be last)
+/* /index.html 200
