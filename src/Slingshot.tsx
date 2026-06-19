@@ -162,6 +162,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
   const winDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const winTriggeredRef = useRef(false);
+  const framesWithNoEnemies = useRef(0);
 
   // Virtual internal resolution (design coords for physics, draw, slingshotPos etc)
   const VIEW_W = 1280;
@@ -683,21 +684,16 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   };
 
   const checkWinLose = () => {
-    // Skip if already resolved by the continuous render-loop check
+    // Win is handled exclusively by the render loop frame counter — never set 'won' here
     if (gameStateRef.current === 'won' || gameStateRef.current === 'lost') return;
 
     const livingEnemies = enemiesRef.current.length;
 
     if (livingEnemies === 0) {
-      setGameState('won');
-      gameStateRef.current = 'won';
-      playApplause();
-      setScore(s => {
-        const ns = s + 400;
-        scoreRef.current = ns;
-        return ns;
-      });
+      // Don't set won here — let the render loop frame counter handle it
+      return;
     } else if (shotsLeftRef.current <= 0) {
+      // Only set lost if enemies are still alive
       setGameState('lost');
       gameStateRef.current = 'lost';
     } else {
@@ -756,12 +752,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       }
     }
 
-    // Continuous win check: detect all piñatas popped, then delay popup so explosions settle
-    if (gameStateRef.current !== 'won' && gameStateRef.current !== 'lost' && gameStateRef.current !== 'ready') {
-      if (enemiesRef.current.length === 0 && !winTriggeredRef.current) {
-        winTriggeredRef.current = true;
-        winDelayRef.current = setTimeout(() => {
-          if (gameStateRef.current === 'won') return; // already resolved
+    // Continuous win check: count frames with zero enemies, trigger win after ~30 frames (0.5s)
+    if (gameStateRef.current !== 'won' && gameStateRef.current !== 'ready') {
+      if (enemiesRef.current.length === 0) {
+        framesWithNoEnemies.current++;
+        if (framesWithNoEnemies.current >= 30) {
           setGameState('won');
           gameStateRef.current = 'won';
           playApplause();
@@ -770,7 +765,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
             scoreRef.current = ns;
             return ns;
           });
-        }, 1200); // 1.2s delay to watch the carnage
+        }
+      } else {
+        framesWithNoEnemies.current = 0;
       }
     }
 
@@ -1184,6 +1181,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
     // Reset win detection
     winTriggeredRef.current = false;
+    framesWithNoEnemies.current = 0;
     if (winDelayRef.current) { clearTimeout(winDelayRef.current); winDelayRef.current = null; }
 
     if (engineRef.current && worldRef.current) {
@@ -1396,19 +1394,17 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       {/* READY panel - centered transparent square (75% dark) instead of full overlay */}
       {gameState === 'ready' && (
         <div className="absolute left-0 right-0 z-30" style={{ top: '44px', bottom: '36px' }}>
-          <div className="flex items-center justify-center h-full px-12 sm:px-16 py-6">
+          <div className="flex items-center justify-center h-full px-4 sm:px-16 py-2">
             <div 
               className="rounded-2xl flex items-center justify-center"
               style={{
-                width: 'min(300px, 72vw)',
+                width: 'min(520px, 90vw)',
                 background: 'rgba(0, 0, 0, 0.75)'
               }}
             >
-              <div className="text-center px-6 sm:px-8 py-6">
-                <div className="text-[36px] sm:text-[56px] font-black text-white tracking-[3px] sm:tracking-[6px] drop-shadow-[0_4px_0_#000] mb-1">READY?</div>
-
-              {/* Striker selector only - background is now random per play */}
-              <div className="mb-3">
+              <div className="flex flex-row items-center gap-3 sm:gap-6 px-4 sm:px-8 py-3 sm:py-6 w-full">
+                {/* Left: Striker selector */}
+                <div className="flex-1 min-w-0">
                 <p className="font-black text-orange-200 text-[10px] tracking-wide text-center mb-1">CHOOSE</p>
                 <div className="flex items-end justify-center gap-2 py-1">
                   {(() => {
@@ -1514,14 +1510,18 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
                     →
                   </button>
                 </div>
-              </div>
+                </div>
 
+                {/* Right: READY + START */}
+                <div className="flex flex-col items-center justify-center">
+                  <div className="text-[28px] sm:text-[48px] font-black text-white tracking-[3px] sm:tracking-[6px] drop-shadow-[0_3px_0_#000] mb-2">READY?</div>
               <button
                 onClick={beginGame}
-                className="mt-2 mb-1 px-6 sm:px-14 py-1.5 sm:py-5 text-base sm:text-2xl font-black tracking-[2px] sm:tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-lg sm:rounded-xl shadow-[0_3px_0_#7c2d12] sm:shadow-[0_5px_0_#7c2d12] active:shadow-[0_1px_0_#7c2d12] active:translate-y-[2px] border-[2px] sm:border-[3px] border-orange-900 transition-all"
+                className="px-6 sm:px-14 py-1.5 sm:py-4 text-sm sm:text-2xl font-black tracking-[2px] sm:tracking-[3px] bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 active:from-orange-800 text-white rounded-lg sm:rounded-xl shadow-[0_3px_0_#7c2d12] sm:shadow-[0_5px_0_#7c2d12] active:shadow-[0_1px_0_#7c2d12] active:translate-y-[2px] border-[2px] sm:border-[3px] border-orange-900 transition-all"
               >
                 START
               </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1557,24 +1557,32 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
               {['🎉', '🎊', '🪅', '⭐', '🌟', '🎈', '🩴'][i % 7]}
             </div>
           ))}
-          <div className="relative z-10 bg-gradient-to-b from-amber-50 to-orange-50 border-4 border-yellow-400 shadow-2xl rounded-2xl p-6 sm:p-8 max-w-[320px] sm:max-w-[380px] text-center">
-            <div className="text-5xl sm:text-6xl mb-2" style={{ animation: 'heroFloat 1.2s ease-in-out infinite' }}>🏆</div>
-            <div className="text-2xl sm:text-3xl font-black text-orange-800 tracking-tight mb-1">
-              ALL PIÑATAS POPPED!
+          <div className="relative z-10 bg-gradient-to-b from-amber-50 to-orange-50 border-4 border-yellow-400 shadow-2xl rounded-2xl px-4 py-3 sm:p-8 max-w-[90vw] sm:max-w-[420px] text-center">
+            <div className="flex flex-row items-center gap-3 sm:gap-0 sm:flex-col">
+              {/* Left/Top: Trophy + Title */}
+              <div className="flex flex-col items-center sm:mb-2">
+                <div className="text-3xl sm:text-6xl" style={{ animation: 'heroFloat 1.2s ease-in-out infinite' }}>🏆</div>
+                <div className="text-base sm:text-3xl font-black text-orange-800 tracking-tight leading-tight">
+                  ALL PIÑATAS POPPED!
+                </div>
+                <div className="text-[10px] sm:text-sm text-orange-600 font-bold">
+                  Level {level} cleared! 🎊
+                </div>
+              </div>
+              {/* Right/Bottom: Score + Button */}
+              <div className="flex flex-col items-center gap-2 min-w-[120px]">
+                <div className="bg-orange-100 rounded-lg sm:rounded-xl border-2 border-orange-200 px-4 py-1.5 sm:p-3">
+                  <div className="text-[8px] sm:text-[10px] text-orange-500 uppercase tracking-widest">Score</div>
+                  <div className="text-xl sm:text-3xl font-black text-orange-700">{score.toLocaleString()}</div>
+                </div>
+                <button
+                  onClick={handleCanvasClick}
+                  className="w-full px-4 py-2 sm:px-6 sm:py-4 text-sm sm:text-xl font-black tracking-wide bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white rounded-lg sm:rounded-xl shadow-[0_4px_0_#7c2d12] sm:shadow-[0_6px_0_#7c2d12] active:shadow-[0_2px_0_#7c2d12] active:translate-y-1 transition-all border-b-2 sm:border-b-4 border-orange-800"
+                >
+                  NEXT LEVEL →
+                </button>
+              </div>
             </div>
-            <div className="text-sm text-orange-600 font-bold mb-3">
-              Level {level} cleared! 🎊
-            </div>
-            <div className="bg-orange-100 rounded-xl border-2 border-orange-200 p-3 mb-4">
-              <div className="text-[10px] text-orange-500 uppercase tracking-widest">Score</div>
-              <div className="text-3xl font-black text-orange-700">{score.toLocaleString()}</div>
-            </div>
-            <button
-              onClick={handleCanvasClick}
-              className="w-full px-6 py-4 text-xl font-black tracking-wide bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white rounded-xl shadow-[0_6px_0_#7c2d12] active:shadow-[0_2px_0_#7c2d12] active:translate-y-1 transition-all border-b-4 border-orange-800"
-            >
-              NEXT LEVEL →
-            </button>
           </div>
         </div>
       )}
@@ -1583,24 +1591,32 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       {gameState === 'lost' && (
         <div className="absolute inset-0 z-40 flex items-center justify-center" onClick={handleCanvasClick}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-          <div className="relative z-10 bg-red-950 border-4 border-red-500 shadow-2xl rounded-2xl p-6 sm:p-8 max-w-[320px] sm:max-w-[380px] text-center">
-            <div className="text-5xl mb-2">🩴</div>
-            <div className="text-2xl sm:text-3xl font-black text-red-400 tracking-tight mb-1">
-              OUT OF STRIKES!
+          <div className="relative z-10 bg-red-950 border-4 border-red-500 shadow-2xl rounded-2xl px-4 py-3 sm:p-8 max-w-[90vw] sm:max-w-[420px] text-center">
+            <div className="flex flex-row items-center gap-3 sm:gap-0 sm:flex-col">
+              {/* Left/Top: Icon + Title */}
+              <div className="flex flex-col items-center sm:mb-2">
+                <div className="text-3xl sm:text-5xl">🩴</div>
+                <div className="text-base sm:text-3xl font-black text-red-400 tracking-tight leading-tight">
+                  OUT OF STRIKES!
+                </div>
+                <div className="text-[10px] sm:text-sm text-orange-300 font-bold">
+                  {enemiesRef.current.length} piñata{enemiesRef.current.length !== 1 ? 's' : ''} remaining
+                </div>
+              </div>
+              {/* Right/Bottom: Score + Button */}
+              <div className="flex flex-col items-center gap-2 min-w-[120px]">
+                <div className="bg-red-900/50 rounded-lg sm:rounded-xl border-2 border-red-700 px-4 py-1.5 sm:p-3">
+                  <div className="text-[8px] sm:text-[10px] text-red-400 uppercase tracking-widest">Score</div>
+                  <div className="text-xl sm:text-3xl font-black text-yellow-400">{score.toLocaleString()}</div>
+                </div>
+                <button
+                  onClick={handleCanvasClick}
+                  className="w-full px-4 py-2 sm:px-6 sm:py-4 text-sm sm:text-xl font-black tracking-wide bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg sm:rounded-xl shadow-[0_4px_0_#9a3412] sm:shadow-[0_6px_0_#9a3412] active:shadow-[0_2px_0_#9a3412] active:translate-y-1 transition-all border-b-2 sm:border-b-4 border-orange-800"
+                >
+                  RETRY LEVEL
+                </button>
+              </div>
             </div>
-            <div className="text-sm text-orange-300 font-bold mb-3">
-              {enemiesRef.current.length} piñata{enemiesRef.current.length !== 1 ? 's' : ''} remaining
-            </div>
-            <div className="bg-red-900/50 rounded-xl border-2 border-red-700 p-3 mb-4">
-              <div className="text-[10px] text-red-400 uppercase tracking-widest">Score</div>
-              <div className="text-3xl font-black text-yellow-400">{score.toLocaleString()}</div>
-            </div>
-            <button
-              onClick={handleCanvasClick}
-              className="w-full px-6 py-4 text-xl font-black tracking-wide bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl shadow-[0_6px_0_#9a3412] active:shadow-[0_2px_0_#9a3412] active:translate-y-1 transition-all border-b-4 border-orange-800"
-            >
-              RETRY LEVEL
-            </button>
           </div>
         </div>
       )}

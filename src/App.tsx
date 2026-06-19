@@ -640,9 +640,6 @@ export default function App() {
                     <span>•</span>
                     <a href="mailto:contact@chanclazo.com" className="hover:text-orange-700">Contact</a>
                   </div>
-                  <div>
-                    Made with ❤️ + bolt.new
-                  </div>
                 </div>
 
               </CardContent>
