@@ -843,7 +843,7 @@ export default function App() {
 
           <LangToggle />
 
-          <Card className="relative z-10 w-full max-w-md mx-4 border-4 border-yellow-400 shadow-2xl bg-amber-50/97">
+          <Card className="relative z-10 w-full max-w-md mx-4 border-4 border-yellow-400 shadow-2xl bg-amber-50" style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FFE8CC 50%, #FFD9A8 100%)' }}>
             <CardHeader className="text-center pb-3">
               <div className="text-6xl text-center mb-1 select-none" aria-hidden>🎉</div>
               <CardTitle className={`text-4xl font-black tracking-tight leading-none ${LEVEL_ACCENT_CLASSES[Math.min(levelCompleteData.level - 1, 4)]}`}>
