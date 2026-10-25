@@ -1,23 +1,27 @@
 // Chanclazo 3D: Strike Mode (demo). Throw chanclas, break everything, dodge the mad abuela.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { loadChars, makeChar, type Char, type CharKind } from './chars';
 import { initAudio, playWhoosh, playHit, playStrike, playMomHit, playCombo, playGameOver, playDodge, setMuted, isMuted } from '../game/sound';
 
 const $ = (id: string) => document.getElementById(id)!;
 const ROAD = 5.2, SPAWN_Z = -75, BEST_KEY = 'chanclazo-strike-best';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
 (document.body as HTMLElement).insertBefore(renderer.domElement, document.body.firstChild);
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xf4b27a, 55, 120);
+scene.fog = new THREE.FogExp2(0x2a1846, 0.016);
 const loader = new THREE.TextureLoader();
 const tex = (u: string) => { const t = loader.load(u); t.colorSpace = THREE.SRGBColorSpace; return t; };
-scene.background = tex('/cruise/bg_mercado.webp');
+scene.background = new THREE.Color(0x140a24);
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 300);
 const CAM = new THREE.Vector3(0, 4.6, 9);
-scene.add(new THREE.HemisphereLight(0xfff1dc, 0x8a4b2a, 1.7));
-const sun = new THREE.DirectionalLight(0xffffff, 1.5); sun.position.set(6, 14, 6); scene.add(sun);
+scene.add(new THREE.HemisphereLight(0x8f7fe0, 0x3a2010, 1.5));
+const moon = new THREE.DirectionalLight(0x9db4ff, 0.9); moon.position.set(-6, 14, 4); scene.add(moon);
+const warm = new THREE.PointLight(0xff9a3c, 30, 16, 1.6); warm.position.set(0, 4, 2); scene.add(warm); // candle glow around the player
 function fitCam() {
   camera.aspect = innerWidth / innerHeight;
   camera.fov = camera.aspect < 0.8 ? 78 : 60; // portrait phones see the whole street
@@ -29,28 +33,128 @@ fitCam();
 function streetTex() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 512;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#c98b5a'; g.fillRect(0, 0, 256, 512);
+  g.fillStyle = '#1c1420'; g.fillRect(0, 0, 256, 512);
   for (let y = 0; y < 512; y += 32) for (let x = (y / 32) % 2 ? 16 : 0; x < 256; x += 32) {
-    g.fillStyle = `hsl(${20 + Math.random() * 8},45%,${46 + Math.random() * 10}%)`; g.fillRect(x + 1, y + 1, 30, 30);
+    g.fillStyle = `hsl(${260 + Math.random() * 30},12%,${20 + Math.random() * 9}%)`; g.fillRect(x + 1, y + 1, 30, 30);
   }
-  g.fillStyle = '#7a3d1d'; g.fillRect(0, 0, 10, 512); g.fillRect(246, 0, 10, 512);
+  for (let i = 0; i < 70; i++) { g.fillStyle = `hsl(${28 + Math.random() * 12},100%,${50 + Math.random() * 10}%)`; g.beginPath(); g.ellipse(Math.random() * 256, Math.random() * 512, 4, 2.5, Math.random() * 3, 0, 7); g.fill(); } // cempasúchil petals
+  g.fillStyle = '#3b2412'; g.fillRect(0, 0, 10, 512); g.fillRect(246, 0, 10, 512);
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 18); t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 const roadTex = streetTex();
 const road = new THREE.Mesh(new THREE.PlaneGeometry(ROAD * 2 + 1, 200), new THREE.MeshLambertMaterial({ map: roadTex }));
 road.rotation.x = -Math.PI / 2; road.position.z = -85; scene.add(road);
-const walk = new THREE.Mesh(new THREE.PlaneGeometry(70, 200), new THREE.MeshLambertMaterial({ color: 0xe8c39e }));
+const walk = new THREE.Mesh(new THREE.PlaneGeometry(70, 200), new THREE.MeshLambertMaterial({ color: 0x2a1c14 }));
 walk.rotation.x = -Math.PI / 2; walk.position.set(0, -0.02, -85); scene.add(walk);
 const COLORS = [0xff6b6b, 0xffd166, 0x06d6a0, 0x4cc9f0, 0xf72585, 0xff9f1c, 0x9b5de5];
-const houses: THREE.Mesh[] = [];
 const box = new THREE.BoxGeometry(1, 1, 1);
-for (let i = 0; i < 24; i++) {
-  const s = i % 2 ? 1 : -1, h = 3 + Math.random() * 4;
-  const m = new THREE.Mesh(box, new THREE.MeshLambertMaterial({ color: COLORS[i % 7] }));
-  m.scale.set(5, h, 9); m.position.set(s * (ROAD + 7 + Math.random() * 1.5), h / 2, -Math.floor(i / 2) * 10);
-  scene.add(m); houses.push(m);
+// ── Cemetery dressing: tombstones, ofrendas, candles, lamps, petals, smoke (all pooled + recycled) ──
+const scenery: THREE.Object3D[] = [];
+function bake(g: THREE.Group) {
+  g.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(g.matrixWorld).invert();
+  const byMat = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  g.traverse(o => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    let geo = m.geometry.clone(); geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+    geo = geo.index ? geo.toNonIndexed() : geo; for (const k of Object.keys(geo.attributes)) if (k !== 'position' && k !== 'normal') geo.deleteAttribute(k);
+    const mat = m.material as THREE.Material; if (!byMat.has(mat)) byMat.set(mat, []); byMat.get(mat)!.push(geo);
+  });
+  const out = new THREE.Group(); out.position.copy(g.position); out.rotation.copy(g.rotation); out.scale.copy(g.scale);
+  for (const [mat, geos] of byMat) out.add(new THREE.Mesh(mergeGeometries(geos), mat));
+  out.userData = g.userData; return out;
 }
+const stoneMat = new THREE.MeshLambertMaterial({ color: 0x6b6478 });
+const stoneDark = new THREE.MeshLambertMaterial({ color: 0x4a4458 });
+const flameMat = new THREE.MeshBasicMaterial({ color: 0xffb347, fog: false });
+const waxMat = new THREE.MeshLambertMaterial({ color: 0xf5ecd7, emissive: 0x332211 });
+const marigoldMat = new THREE.MeshLambertMaterial({ color: 0xff8c00, emissive: 0x552200 });
+const candleGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.3, 6), flameGeo = new THREE.SphereGeometry(0.06, 6, 4), mariGeo = new THREE.IcosahedronGeometry(0.16, 0);
+function candles(g: THREE.Object3D, n: number, w: number, y: number, z = 0) {
+  for (let k = 0; k < n; k++) {
+    const c = new THREE.Mesh(candleGeo, waxMat); c.position.set((Math.random() - 0.5) * w, y + 0.15, z + (Math.random() - 0.5) * 0.4); g.add(c);
+    const f = new THREE.Mesh(flameGeo, flameMat); f.scale.y = 1.8; f.position.set(c.position.x, y + 0.38, c.position.z); g.add(f);
+  }
+}
+function tomb() {
+  const g = new THREE.Group();
+  const h = 1.1 + Math.random() * 0.8, w = 0.8 + Math.random() * 0.4;
+  const slab = new THREE.Mesh(box, Math.random() < 0.5 ? stoneMat : stoneDark); slab.scale.set(w, h, 0.25); slab.position.y = h / 2; g.add(slab);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, w / 2, 0.25, 12, 1, false, 0, Math.PI), slab.material); top.rotation.set(Math.PI / 2, 0, Math.PI / 2); top.position.y = h; g.add(top);
+  if (Math.random() < 0.5) { const cr = new THREE.Mesh(box, stoneMat); cr.scale.set(0.12, 0.6, 0.12); cr.position.y = h + 0.5; g.add(cr); const cb = cr.clone(); cb.scale.set(0.4, 0.12, 0.12); cb.position.y = h + 0.6; g.add(cb); }
+  for (let k = 0; k < 4; k++) { const m = new THREE.Mesh(mariGeo, marigoldMat); m.position.set((Math.random() - 0.5) * w, 0.12, 0.35 + Math.random() * 0.3); g.add(m); }
+  candles(g, 2, w, 0, 0.45);
+  g.rotation.y = (Math.random() - 0.5) * 0.3; g.rotation.z = (Math.random() - 0.5) * 0.12;
+  return g;
+}
+function ofrenda() {
+  const g = new THREE.Group();
+  const cloth = [0x7b2cbf, 0xf72585, 0xff8c00];
+  for (let k = 0; k < 3; k++) { const st = new THREE.Mesh(box, new THREE.MeshLambertMaterial({ color: cloth[k] })); st.scale.set(2.4 - k * 0.6, 0.45, 1.2 - k * 0.25); st.position.set(0, 0.22 + k * 0.45, -k * 0.2); g.add(st); candles(g, 4 - k, 2.2 - k * 0.6, 0.45 + k * 0.45, 0.4 - k * 0.2); }
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.12, 6, 18, Math.PI), marigoldMat); arch.position.set(0, 1.3, -0.4); g.add(arch);
+  for (let k = 0; k < 10; k++) { const m = new THREE.Mesh(mariGeo, marigoldMat); m.position.set((Math.random() - 0.5) * 2.4, 0.1, 0.8 + Math.random() * 0.4); g.add(m); }
+  return g;
+}
+const lampLights: THREE.PointLight[] = [];
+function lamp(withLight: boolean) {
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(box, new THREE.MeshLambertMaterial({ color: 0x1a1a1a })); pole.scale.set(0.15, 4.6, 0.15); pole.position.y = 2.3; g.add(pole);
+  const glow = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffc46b, fog: false })); glow.position.y = 4.7; g.add(glow);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xff9a3c, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  halo.scale.setScalar(3.2); halo.position.y = 4.7; g.add(halo);
+  if (withLight) { const l = new THREE.PointLight(0xffa64d, 26, 14, 1.4); l.position.y = 4.3; g.add(l); lampLights.push(l); }
+  return g;
+}
+function radial(inner: string, outer: string) {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d')!;
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, inner); gr.addColorStop(1, outer); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+const glowTex = radial('rgba(255,255,255,1)', 'rgba(255,255,255,0)');
+const smokeTex = radial('rgba(255,255,255,0.5)', 'rgba(255,255,255,0)');
+// side rows: tombstones + ofrendas + lamps (only 4 real lights in total, for phones)
+for (let i = 0; i < 30; i++) {
+  const side = i % 2 ? 1 : -1, z = -Math.floor(i / 2) * 7;
+  const o = i % 10 === 4 || i % 10 === 9 ? ofrenda() : tomb();
+  const back = tomb(); back.position.set(side * 2.7, 0, -3.5); back.scale.setScalar(1.2); o.add(back); // second row rides along
+  if (side > 0) back.position.x = 2.7; else back.position.x = -2.7;
+  const b = bake(o); b.position.set(side * (ROAD + 1.8 + Math.random() * 1.2), 0, z); scene.add(b); scenery.push(b);
+}
+for (let i = 0; i < 8; i++) { const l = lamp(i < 4); l.userData.span = 104; l.position.set((i % 2 ? 1 : -1) * (ROAD + 0.7), 0, -i * 13); scene.add(l); scenery.push(l); }
+// papel picado overhead (dimly lit, reads against the night)
+for (let i = 0; i < 5; i++) {
+  const g = new THREE.Group();
+  for (let k = 0; k < 16; k++) { const f = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.8), new THREE.MeshBasicMaterial({ color: COLORS[(k + i) % 7], side: THREE.DoubleSide, transparent: true, opacity: 0.85 })); const x = -ROAD - 0.5 + k * 0.72; f.position.set(x, 7.8 - Math.cos(x / ROAD) * 0.5, 0); g.add(f); }
+  g.userData.span = 5 * 22; const b = bakeColored(g); b.position.z = -i * 22; scene.add(b); scenery.push(b);
+}
+function bakeColored(g: THREE.Group) { // papel picado: one mesh with vertex colors
+  g.updateMatrixWorld(true); const geos: THREE.BufferGeometry[] = [];
+  g.children.forEach(o => { const m = o as THREE.Mesh; const geo = m.geometry.clone().toNonIndexed(); geo.applyMatrix4(m.matrix); geo.deleteAttribute('uv'); geo.deleteAttribute('normal');
+    const c = (m.material as THREE.MeshBasicMaterial).color, n = geo.attributes.position.count, col = new Float32Array(n * 3); for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geos.push(geo); });
+  const out = new THREE.Mesh(mergeGeometries(geos), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.85 }));
+  out.userData = g.userData; return out;
+}
+// drifting marigold petals (one Points draw call)
+const PET = 260, petGeo = new THREE.BufferGeometry(), petPos = new Float32Array(PET * 3);
+for (let i = 0; i < PET; i++) { petPos[i * 3] = (Math.random() - 0.5) * 26; petPos[i * 3 + 1] = Math.random() * 8; petPos[i * 3 + 2] = -Math.random() * 90 + 8; }
+petGeo.setAttribute('position', new THREE.BufferAttribute(petPos, 3));
+const petals = new THREE.Points(petGeo, new THREE.PointsMaterial({ color: 0xff9a1f, size: 0.18, map: glowTex, transparent: true, depthWrite: false }));
+scene.add(petals);
+// low smoke / fog banks (few big additive sprites)
+const smokes: THREE.Sprite[] = [];
+for (let i = 0; i < 14; i++) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0x9a86c8, transparent: true, opacity: 0.22, depthWrite: false }));
+  sp.scale.set(10 + Math.random() * 6, 3 + Math.random() * 2, 1); sp.position.set((Math.random() - 0.5) * 22, 0.8 + Math.random(), -Math.random() * 90 + 5); sp.userData.v = (Math.random() - 0.5) * 0.6;
+  scene.add(sp); smokes.push(sp);
+}
+// moon
+const moonDisc = new THREE.Mesh(new THREE.CircleGeometry(5, 24), new THREE.MeshBasicMaterial({ color: 0xf3e9c6, fog: false }));
+moonDisc.position.set(-28, 30, -130); scene.add(moonDisc);
+const moonHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0x8d7bd6, transparent: true, opacity: 0.6, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
+moonHalo.scale.setScalar(30); moonHalo.position.copy(moonDisc.position); scene.add(moonHalo);
 
 // ── Characters (existing Chanclazo art + a drawn calaca) ─────────────────────
 function sheet(url: string, cols = 5, rows = 5) {
@@ -60,37 +164,25 @@ function sheet(url: string, cols = 5, rows = 5) {
 function frame(s: ReturnType<typeof sheet>, f: number) {
   const i = Math.floor(f) % s.n; s.t.offset.set((i % s.cols) / s.cols, (s.rows - 1 - Math.floor(i / s.cols)) / s.rows);
 }
-const luchaTex = tex('/cruise/luchador.webp');
 const pinataTex = tex('/cruise/pinata.webp');
-const momiTex = tex('/cruise/momi512.webp');
-// Calaca: skeleton in a charro suit, sugar-skull head, drawn on a canvas.
-const calacaCanvas = document.createElement('canvas'); calacaCanvas.width = 256; calacaCanvas.height = 512;
-const calacaTex = new THREE.CanvasTexture(calacaCanvas); calacaTex.colorSpace = THREE.SRGBColorSpace;
-(() => {
-  const g = calacaCanvas.getContext('2d')!;
-  const bone = (x1: number, y1: number, x2: number, y2: number, w = 14) => {
-    g.strokeStyle = '#1b1020'; g.lineWidth = w + 8; g.lineCap = 'round'; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
-    g.strokeStyle = '#fbf6ea'; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
-  };
-  // charro jacket
-  g.fillStyle = '#1b1020'; g.beginPath(); g.moveTo(78, 200); g.lineTo(178, 200); g.lineTo(190, 330); g.lineTo(66, 330); g.closePath(); g.fill();
-  g.strokeStyle = '#ffd166'; g.lineWidth = 5; for (let y = 220; y < 320; y += 22) { g.beginPath(); g.arc(128, y, 4, 0, 7); g.stroke(); }
-  g.fillStyle = '#f72585'; g.beginPath(); g.moveTo(108, 200); g.lineTo(148, 200); g.lineTo(128, 226); g.fill(); // bow tie
-  bone(80, 210, 40, 300); bone(40, 300, 30, 250); // arm waving
-  bone(176, 210, 214, 300); bone(214, 300, 226, 360);
-  bone(100, 330, 92, 420); bone(92, 420, 86, 490); bone(156, 330, 164, 420); bone(164, 420, 172, 490);
-  g.fillStyle = '#1b1020'; g.fillRect(60, 486, 46, 18); g.fillRect(152, 486, 46, 18);
-  const head = new Image();
-  head.onload = () => { g.drawImage(head, 48, 30, 160, 160); calacaTex.needsUpdate = true; };
-  head.src = '/cruise/sugarskull256.webp';
-})();
 // Player: the Chanclazo kid, seen from behind, with the existing throw sheet
 const throwSheet = sheet('/cruise/boy-strike_back-v3.webp');
-const kid = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), new THREE.MeshBasicMaterial({ map: throwSheet.t, transparent: true, alphaTest: 0.3 }));
+const kid = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), new THREE.MeshBasicMaterial({ map: throwSheet.t, transparent: true, alphaTest: 0.3, fog: false, toneMapped: false }));
 const player = new THREE.Group(); player.add(kid); kid.position.y = 1.2; scene.add(player);
-// Mad abuela, ahead on the street
-const abuela = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 7.5), new THREE.MeshBasicMaterial({ map: momiTex, transparent: true, alphaTest: 0.3, fog: false }));
-abuela.position.set(0, 3.8, -34); scene.add(abuela);
+// Mad abuela (rigged 3D), waiting at the end of the cemetery street
+const abuela = new THREE.Group(); abuela.position.set(0, 0, -30); scene.add(abuela);
+const abuelaLight = new THREE.PointLight(0xff7a3c, 40, 14, 1.3); abuelaLight.position.set(0, 5, 3); abuela.add(abuelaLight); // candlelit so she reads in the dark
+let abuelaC: Char | null = null;
+const mixers: Char[] = [];
+const CH_SCALE: Record<CharKind, number> = { abuela: 2.7, luchador: 2.3, calaca: 2.3 };
+function addChar(kind: CharKind, parent: THREE.Object3D, anim: string) {
+  const c = makeChar(kind); c.root.scale.setScalar(CH_SCALE[kind]); parent.add(c.root); c.play(anim, { speed: 0.9 + Math.random() * 0.3 });
+  c.mixer.update(Math.random() * 2); mixers.push(c); return c;
+}
+function dropChar(c?: Char) { if (!c) return; c.dispose(); const i = mixers.indexOf(c); if (i >= 0) mixers.splice(i, 1); }
+function tint(o: THREE.Object3D, hex: number) {
+  o.traverse(x => { const m = (x as THREE.Mesh).material as THREE.MeshLambertMaterial | THREE.MeshLambertMaterial[]; (Array.isArray(m) ? m : [m]).forEach(mm => mm?.emissive?.setHex(hex)); });
+}
 
 // ── Particles ────────────────────────────────────────────────────────────────
 interface P { m: THREE.Mesh; v: THREE.Vector3; spin: THREE.Vector3; life: number; max: number }
@@ -108,7 +200,7 @@ function burst(pos: THREE.Vector3, colors: number[], n = 16, power = 7, flat = f
 
 // ── Targets ──────────────────────────────────────────────────────────────────
 type Kind = 'luchador' | 'calaca' | 'pinata' | 'pot' | 'crate' | 'picado';
-interface T { kind: Kind; obj: THREE.Object3D; hp: number; pts: number; r: number; h: number; vx: number; t: number; dead?: boolean; flash: number }
+interface T { ch?: Char; dying?: number; kind: Kind; obj: THREE.Object3D; hp: number; pts: number; r: number; h: number; vx: number; t: number; dead?: boolean; flash: number }
 const targets: T[] = [];
 const SC = 1.4;
 const potMat = new THREE.MeshLambertMaterial({ color: 0xc2410c }), potBand = new THREE.MeshLambertMaterial({ color: 0x4cc9f0 });
@@ -127,8 +219,9 @@ function billboard(map: THREE.Texture, w: number, h: number) {
 }
 function spawn(kind: Kind, x: number, z = SPAWN_Z) {
   const g = new THREE.Group();
-  if (kind === 'luchador') g.add(billboard(luchaTex, 3.8, 3.8));
-  else if (kind === 'calaca') g.add(billboard(calacaTex, 1.8, 3.6));
+  let ch: Char | undefined;
+  if (kind === 'luchador') ch = addChar('luchador', g, Math.random() < 0.5 ? 'Punch_Cross' : 'Dance_Loop');
+  else if (kind === 'calaca') ch = addChar('calaca', g, 'Walk_Loop');
   else if (kind === 'pinata') { const b = billboard(pinataTex, 2.3, 3.4); b.position.y = 2.8; g.add(b); }
   else if (kind === 'pot') {
     const p = new THREE.Mesh(new THREE.SphereGeometry(0.6, 12, 10), potMat); p.scale.y = 1.1; p.position.y = 0.66;
@@ -144,7 +237,7 @@ function spawn(kind: Kind, x: number, z = SPAWN_Z) {
   }
   g.position.set(x, 0, z); if (kind !== 'picado') g.scale.setScalar(SC); scene.add(g);
   const s = SPEC[kind];
-  targets.push({ kind, obj: g, hp: s.hp, pts: s.pts, r: s.r, h: s.h, vx: kind === 'calaca' ? (Math.random() < 0.5 ? -2 : 2) : 0, t: Math.random() * 6, flash: 0 });
+  targets.push({ ch, kind, obj: g, hp: s.hp, pts: s.pts, r: s.r, h: s.h, vx: kind === 'calaca' ? (Math.random() < 0.5 ? -2 : 2) : 0, t: Math.random() * 6, flash: 0 });
 }
 
 // ── Projectiles ──────────────────────────────────────────────────────────────
@@ -158,7 +251,7 @@ function chanclaMesh() {
 
 // ── State ────────────────────────────────────────────────────────────────────
 const st = { running: false, t: 0, speed: 10, px: 0, steer: 0, score: 0, combo: 0, streak: 0, lives: 3, hurt: 0,
-  cool: 0, throwAnim: -1, spawnIn: 0, abuelaIn: 4, stun: 0, shake: 0, best: parseInt(localStorage.getItem(BEST_KEY) ?? '0', 10) || 0 };
+  cool: 0, throwAnim: -1, spawnIn: 0, abuelaIn: 2.5, stun: 0, shake: 0, best: parseInt(localStorage.getItem(BEST_KEY) ?? '0', 10) || 0 };
 const input = { l: false, r: false };
 $('best').textContent = `Best ${st.best.toLocaleString()}`;
 const mult = () => 1 + Math.floor(st.combo / 3);
@@ -172,9 +265,9 @@ function flash(msg: string, color = '#ffd700') {
 }
 function reset() {
   initAudio();
-  for (const t of targets) scene.remove(t.obj); targets.length = 0;
+  for (const t of targets) { scene.remove(t.obj); dropChar(t.ch); } targets.length = 0;
   for (const s of shots) scene.remove(s.m); shots.length = 0;
-  Object.assign(st, { running: true, t: 0, speed: 10, px: 0, steer: 0, score: 0, combo: 0, streak: 0, lives: 3, hurt: 0, cool: 0, throwAnim: -1, spawnIn: 0, abuelaIn: 4, stun: 0, shake: 0 });
+  Object.assign(st, { running: true, t: 0, speed: 10, px: 0, steer: 0, score: 0, combo: 0, streak: 0, lives: 3, hurt: 0, cool: 0, throwAnim: -1, spawnIn: 0, abuelaIn: 2.5, stun: 0, shake: 0 });
   $('start').classList.add('hidden'); $('over').classList.add('hidden'); hud();
 }
 function gameOver() {
@@ -199,15 +292,17 @@ function throwAt(cx: number, cy: number) {
   if (aim.z > -2) aim.z = -2;
   const from = new THREE.Vector3(st.px + 0.6, 2.6, -0.5);
   const dist = from.distanceTo(aim), T = THREE.MathUtils.clamp(dist / 55, 0.12, 0.9);
-  if (!hit || hit.object !== abuela) aim.z += st.speed * T; // lead moving targets
+  if (!hit || !abuela.getObjectById(hit.object.id)) aim.z += st.speed * T; // lead moving targets
   const { m, s } = chanclaMesh(); m.position.copy(from);
   const v = aim.sub(from).divideScalar(T); v.y += 0.5 * 14 * T; // arc
   shots.push({ m, v, s, f: 0, enemy: false, life: 0 });
   st.cool = 0.22; st.throwAnim = 0; playWhoosh(1.2);
 }
 function abuelaThrow() {
+  if (!st.running) return;
+  abuelaC?.play('Spell_Simple_Shoot', { once: true, fade: 0.1, speed: 1.6 }); setTimeout(() => st.stun <= 0 && abuelaC?.play('Idle_Loop', { fade: 0.25 }), 700);
   const { m, s } = chanclaMesh(); m.position.set(abuela.position.x, 4.5, abuela.position.z + 1);
-  const T = Math.max(1.1, 1.8 - st.t / 90);
+  const T = Math.max(0.85, 1.5 - st.t / 70);
   const tx = THREE.MathUtils.clamp(st.px + st.steer * 1.5 + (Math.random() - 0.5) * 3, -ROAD + 0.5, ROAD - 0.5);
   const v = new THREE.Vector3((tx - m.position.x) / T, (2 - 4.5 + 0.5 * 9.8 * T * T) / T, (0 - m.position.z) / T);
   m.scale.setScalar(1.3); shots.push({ m, v, s, f: 0, enemy: true, life: 0 });
@@ -217,7 +312,7 @@ function hitTarget(t: T, at: THREE.Vector3) {
   t.hp--; t.flash = 0.15; st.shake = Math.max(st.shake, 0.25);
   const spec = SPEC[t.kind];
   burst(at, spec.colors, 6, 4);
-  if (t.hp > 0) { playHit(); t.obj.position.z -= 1.5; return; }
+  if (t.hp > 0) { playHit(); t.obj.position.z -= 1.5; t.ch?.play('Hit_Chest', { once: true, fade: 0.05 }); setTimeout(() => t.ch && !t.dead && t.ch.play('Punch_Cross'), 600); return; }
   t.dead = true; st.combo++; st.streak++;
   const gain = t.pts * mult(); st.score += gain;
   st.shake = t.kind === 'pinata' ? 0.6 : 0.4;
@@ -227,7 +322,7 @@ function hitTarget(t: T, at: THREE.Vector3) {
   playStrike(); if (st.combo % 3 === 0) playCombo(st.combo);
   const label = t.kind === 'luchador' ? '¡KNOCKOUT!' : t.kind === 'calaca' ? '¡CALACA DOWN!' : t.kind === 'pinata' ? '¡PIÑATA!' : 'SMASH!';
   flash(`${label} +${gain}${st.streak >= 3 ? `  ${st.streak} STREAK` : ''}`);
-  scene.remove(t.obj);
+  if (t.ch) { t.ch.play('Death01', { once: true, fade: 0.08 }); t.dying = 1.3; tint(t.obj, 0x000000); } else scene.remove(t.obj);
 }
 
 // ── Loop ─────────────────────────────────────────────────────────────────────
@@ -247,7 +342,9 @@ function loop() {
   }
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life > parts[i].max) { scene.remove(parts[i].m); parts.splice(i, 1); }
   scene.traverse(o => { if (o.userData.bb) o.quaternion.copy(camera.quaternion); });
-  kid.quaternion.copy(camera.quaternion); abuela.quaternion.copy(camera.quaternion);
+  kid.quaternion.copy(camera.quaternion);
+  for (const c of mixers) c.mixer.update(dt);
+  warm.intensity = 26 + Math.sin(now / 90) * 3;
   for (const s of shots) s.m.quaternion.copy(camera.quaternion);
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
@@ -266,17 +363,19 @@ function step(dt: number) {
   (kid.material as THREE.MeshBasicMaterial).opacity = st.hurt > 0 && Math.floor(st.t * 20) % 2 ? 0.3 : 1;
 
   roadTex.offset.y += move / (200 / 18);
-  for (const h of houses) { h.position.z += move; if (h.position.z > 15) h.position.z -= 12 * 10; }
+  for (const o of scenery) { o.position.z += move; if (o.position.z > 14) o.position.z -= o.userData.span ?? 105; if (o.userData.span === 110) o.visible = o.position.z < 1; }
+  for (let i = 0; i < PET; i++) { petPos[i * 3 + 2] += move + dt * 1.5; petPos[i * 3 + 1] -= dt * 0.6; petPos[i * 3] += Math.sin(st.t + i) * dt * 0.5;
+    if (petPos[i * 3 + 2] > 10 || petPos[i * 3 + 1] < 0) { petPos[i * 3 + 2] = -80 - Math.random() * 10; petPos[i * 3 + 1] = 3 + Math.random() * 6; } }
+  petGeo.attributes.position.needsUpdate = true;
+  for (const sp of smokes) { sp.position.z += move; sp.position.x += sp.userData.v * dt; if (sp.position.z > 10) sp.position.z -= 95; }
 
   // Abuela: tracks the player, throws, gets stunned when hit
-  const ab = abuela.material as THREE.MeshBasicMaterial;
-  if (st.stun > 0) { abuela.rotation.z = Math.sin(st.t * 30) * 0.2; ab.color.setHex(0xffaaaa); }
+  if (st.stun > 0) { tint(abuela, Math.floor(st.t * 10) % 2 ? 0x550000 : 0); }
   else {
-    ab.color.setHex(0xffffff);
-    abuela.position.x += (st.px - abuela.position.x) * dt * 0.7;
-    abuela.position.y = 3.8 + Math.abs(Math.sin(st.t * 5)) * 0.35;
+    tint(abuela, 0);
+    abuela.position.x += (st.px - abuela.position.x) * dt * 0.9;
     st.abuelaIn -= dt;
-    if (st.abuelaIn <= 0) { abuelaThrow(); st.abuelaIn = Math.max(1.5, 3.4 - st.t / 40) * (0.7 + Math.random() * 0.6); }
+    if (st.abuelaIn <= 0) { abuelaThrow(); st.abuelaIn = Math.max(0.8, 2.4 - st.t / 30) * (0.7 + Math.random() * 0.6); if (st.t > 25 && Math.random() < 0.35) setTimeout(abuelaThrow, 280); } // double throws later
   }
 
   // Spawning
@@ -291,16 +390,16 @@ function step(dt: number) {
     st.spawnIn = Math.max(6, 13 - st.t * 0.08);
   }
   for (const t of targets) {
+    if (t.dying !== undefined) { t.dying -= dt; t.obj.position.z += move; if (t.dying <= 0) { scene.remove(t.obj); dropChar(t.ch); t.dying = undefined; } continue; }
     if (t.dead) continue;
     t.t += dt; t.obj.position.z += move;
-    if (t.kind === 'calaca') { t.obj.position.x += t.vx * dt; if (Math.abs(t.obj.position.x) > ROAD - 1) t.vx *= -1; t.obj.children[0].position.y = 1.8 + Math.abs(Math.sin(t.t * 7)) * 0.4; }
-    if (t.kind === 'luchador') t.obj.children[0].position.y = 1.9 + Math.abs(Math.sin(t.t * 4)) * 0.25;
+    if (t.kind === 'calaca') { t.obj.position.x += t.vx * dt; if (Math.abs(t.obj.position.x) > ROAD - 1) t.vx *= -1; t.obj.rotation.y = t.vx > 0 ? 0.9 : -0.9; }
     if (t.kind === 'pinata') t.obj.rotation.z = Math.sin(t.t * 3) * 0.12;
     t.flash -= dt;
-    t.obj.traverse(o => { const m = (o as THREE.Mesh).material as THREE.MeshBasicMaterial; if (m?.color && o.userData.bb) m.color.setHex(t.flash > 0 ? 0xff7777 : 0xffffff); });
-    if (t.obj.position.z > 6) { t.dead = true; scene.remove(t.obj); if (t.kind !== 'picado') { st.streak = 0; } }
+    if (t.ch) tint(t.obj, t.flash > 0 ? 0x880000 : 0); else t.obj.traverse(o => { const m = (o as THREE.Mesh).material as THREE.MeshBasicMaterial; if (m?.color && o.userData.bb) m.color.setHex(t.flash > 0 ? 0xff7777 : 0xffffff); });
+    if (t.obj.position.z > 6) { t.dead = true; scene.remove(t.obj); dropChar(t.ch); if (t.kind !== 'picado') { st.streak = 0; } }
   }
-  for (let i = targets.length - 1; i >= 0; i--) if (targets[i].dead) targets.splice(i, 1);
+  for (let i = targets.length - 1; i >= 0; i--) if (targets[i].dead && targets[i].dying === undefined) targets.splice(i, 1);
 
   // Projectiles
   for (const s of shots) {
@@ -323,9 +422,9 @@ function step(dt: number) {
       const hy = (t.kind === 'picado' ? 0.7 : t.kind === 'pinata' ? 1.6 : t.h / 2 + 0.3) * k;
       if (Math.abs(p.z - o.z) < 1.4 && Math.abs(p.x - o.x) < t.r * k && Math.abs(p.y - cy) < hy) { hitTarget(t, p.clone()); s.life = 99; break; }
     }
-    if (s.life < 99 && st.stun <= 0 && Math.abs(p.z - abuela.position.z) < 1.5 && Math.abs(p.x - abuela.position.x) < 2 && Math.abs(p.y - abuela.position.y) < 3) {
-      s.life = 99; st.stun = 2.2; st.combo++; const gain = 250 * mult(); st.score += gain; st.shake = 0.5;
-      playStrike(); burst(abuela.position.clone(), [0xf72585, 0x06d6a0, 0xffd166], 18, 7); flash(`¡ABUELA STUNNED! +${gain}`, '#7CFC00');
+    if (s.life < 99 && st.stun <= 0 && Math.abs(p.z - abuela.position.z) < 1.5 && Math.abs(p.x - abuela.position.x) < 1.6 && p.y > 0.3 && p.y < 4.8) {
+      s.life = 99; st.stun = 1.6; abuelaC?.play('Hit_Head', { once: true, fade: 0.05 }); setTimeout(() => abuelaC?.play('Idle_Loop', { fade: 0.3 }), 1500); st.combo++; const gain = 250 * mult(); st.score += gain; st.shake = 0.5;
+      playStrike(); burst(abuela.position.clone().setY(3.5), [0xf72585, 0x06d6a0, 0xffd166], 18, 7); flash(`¡ABUELA STUNNED! +${gain}`, '#7CFC00');
     }
     if (s.life < 99 && (p.y < 0 || p.z < SPAWN_Z || s.life > 2)) { s.life = 99; st.combo = 0; st.streak = 0; } // miss breaks the combo
   }
@@ -356,8 +455,11 @@ function hold(id: string, on: () => void, off: () => void) {
 hold('tL', () => (input.l = true), () => (input.l = false));
 hold('tR', () => (input.r = true), () => (input.r = false));
 if (matchMedia('(pointer: coarse)').matches) $('touch').classList.remove('hidden');
-$('go').addEventListener('click', reset); $('again').addEventListener('click', reset);
+const goBtn = $('go') as HTMLButtonElement; goBtn.disabled = true; goBtn.textContent = 'Loading…';
+loadChars().then(() => { abuelaC = addChar('abuela', abuela, 'Idle_Loop'); goBtn.disabled = false; goBtn.textContent = 'PLAY!'; })
+  .catch(() => { goBtn.textContent = 'Could not load, refresh'; });
+goBtn.addEventListener('click', reset); $('again').addEventListener('click', reset);
 $('over').querySelector('a')!.setAttribute('href', '/');
 addEventListener('resize', () => { fitCam(); renderer.setSize(innerWidth, innerHeight); });
-(window as any).__strike = { st, targets, throwAt, camera };
+(window as any).__strike = { st, targets, throwAt, camera, renderer };
 loop();
