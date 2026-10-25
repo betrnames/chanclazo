@@ -21,6 +21,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         cruise: path.resolve(__dirname, 'cruise.html'),
+        strike: path.resolve(__dirname, 'strike.html'),
       },
     },
   },

@@ -8,7 +8,11 @@
       "destination": "/cruise.html"
     },
     {
-      "source": "/((?!cruise).*)",
+      "source": "/strike",
+      "destination": "/strike.html"
+    },
+    {
+      "source": "/((?!cruise|strike).*)",
       "destination": "/index.html"
     }
   ]
