@@ -16,6 +16,14 @@ export default defineConfig({
       '/presence': 'https://chanclazo-worker.betrnames.workers.dev',
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        cruise: path.resolve(__dirname, 'cruise.html'),
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
