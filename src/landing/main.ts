@@ -2,7 +2,6 @@ import { BRAND, TAGLINE } from '../brand';
 const GAMES = [
   { name: 'Chancla Strike', href: '/fling', img: '/play/abuela_sprite.webp', desc: 'Slingshot chanclas at villain forts across 9 levels: cemetery, night market and catacombs.' },
   { name: 'Chanclazo Match', href: '/match', img: '/play/t_skull.webp', desc: 'Swipe to match 3 or more sugar skulls. Make chanclas, bombs and piñatas.' },
-  { name: 'Chanclazo Strike', href: '/strike', img: '/play/luchador_sprite.webp', desc: 'Ride the Day of the Dead street at night and throw chanclas at luchadores and calacas.' },
 ];
 document.title = BRAND;
 document.getElementById('tagline')!.textContent = TAGLINE;

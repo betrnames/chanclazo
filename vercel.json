@@ -4,10 +4,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/strike",
-      "destination": "/strike.html"
-    },
-    {
       "source": "/fling",
       "destination": "/fling.html"
     },
@@ -32,16 +28,6 @@
       "permanent": false
     },
     {
-      "source": "/cruise",
-      "destination": "/strike",
-      "permanent": false
-    },
-    {
-      "source": "/cruise.html",
-      "destination": "/strike",
-      "permanent": false
-    },
-    {
       "source": "/survival",
       "destination": "/",
       "permanent": false
@@ -50,11 +36,31 @@
       "source": "/survival.html",
       "destination": "/",
       "permanent": false
+    },
+    {
+      "source": "/strike",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/strike.html",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/cruise",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/cruise.html",
+      "destination": "/",
+      "permanent": false
     }
   ],
   "headers": [
     {
-      "source": "/(fling|match|strike|lore)?(.html)?",
+      "source": "/(fling|match|lore)?(.html)?",
       "headers": [
         {
           "key": "Cache-Control",

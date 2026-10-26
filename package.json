@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.2.1",
   "type": "module",
-  "description": "Chanclazo: Day of the Dead browser games (Chancla Strike, Chanclazo Match, Chanclazo Strike).",
+  "description": "Chanclazo: Day of the Dead browser games (Chancla Strike and Chanclazo Match).",
   "author": "betrnames",
   "homepage": "https://chanclazo.com",
   "repository": {
@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@types/three": "^0.183.1",
     "autoprefixer": "^10.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -41,7 +40,6 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^3.4.19",
-    "three": "^0.183.2",
     "vaul": "^1.1.2",
     "zod": "^4.3.6"
   },

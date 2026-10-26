@@ -12,7 +12,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         lore: path.resolve(__dirname, 'lore.html'),
-        strike: path.resolve(__dirname, 'strike.html'),
         fling: path.resolve(__dirname, 'fling.html'),
         match: path.resolve(__dirname, 'match.html'),
         main: path.resolve(__dirname, 'index.html'),
