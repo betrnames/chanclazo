@@ -35,7 +35,7 @@ export default function LorePage() {
     document.head.appendChild(script);
 
     return () => {
-      document.title = 'Chanclazo 3D Survival — Dodge the Chancla!';
+      document.title = 'Chanclazo';
       document.getElementById('lore-jsonld')?.remove();
     };
   }, []);
@@ -71,8 +71,8 @@ export default function LorePage() {
           <a href="/" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.2em', textDecoration: 'none' }}>
             chanclazo.com
           </a>
-          <a href="/" aria-label="Play Chanclazo 3D Survival game" style={{ fontSize: '11px', fontWeight: 700, color: '#F97316', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-            Play the Game
+          <a href="/" aria-label="Play Chanclazo games" style={{ fontSize: '11px', fontWeight: 700, color: '#F97316', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+            Play the games
           </a>
         </div>
       </nav>
@@ -138,12 +138,12 @@ export default function LorePage() {
             "When words fail, the chanclazo speaks."
           </p>
           <cite style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', fontStyle: 'normal' }}>
-            Chanclazo 3D Survival · v0.2.0
+            Chanclazo · chanclazo.com
           </cite>
         </blockquote>
 
         {/* CTA — Go Back */}
-        <a href="/" aria-label="Go back to Chanclazo game" style={{ display: 'inline-block', fontSize: '12px', fontWeight: 900, color: '#c2410c', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8, cursor: 'pointer' }}
+        <a href="/" aria-label="Back to Chanclazo games" style={{ display: 'inline-block', fontSize: '12px', fontWeight: 900, color: '#c2410c', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8, cursor: 'pointer' }}
           onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={e => (e.currentTarget.style.opacity = '0.8')}
         >

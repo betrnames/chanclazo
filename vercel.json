@@ -16,8 +16,8 @@
       "destination": "/match.html"
     },
     {
-      "source": "/((?!cruise|strike|fling|match|demos|assets|play|cruise/).+)",
-      "destination": "/survival.html"
+      "source": "/lore",
+      "destination": "/lore.html"
     }
   ],
   "redirects": [
@@ -40,11 +40,21 @@
       "source": "/cruise.html",
       "destination": "/strike",
       "permanent": false
+    },
+    {
+      "source": "/survival",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/survival.html",
+      "destination": "/",
+      "permanent": false
     }
   ],
   "headers": [
     {
-      "source": "/(fling|match|strike|games|survival)?(.html)?",
+      "source": "/(fling|match|strike|lore)?(.html)?",
       "headers": [
         {
           "key": "Cache-Control",

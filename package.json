@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.2.1",
   "type": "module",
-  "description": "Chancla Strike — a 3D browser survival game. Dodge the chanclas (flip-flops) in escalating waves of mom rage. Latino culture love letter with Three.js, React, and Cloudflare.",
+  "description": "Chanclazo: Day of the Dead browser games (Chancla Strike, Chanclazo Match, Chanclazo Strike).",
   "author": "betrnames",
   "homepage": "https://chanclazo.com",
   "repository": {
@@ -15,10 +15,6 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler deploy --assets=./dist",
-    "deploy:worker": "npx wrangler deploy",
-    "deploy:frontend": "npm run build && npx netlify-cli deploy --prod --dir=dist",
-    "deploy:pages": "npm run build && wrangler pages deploy dist --project-name=chanclazo",
     "deploy:vercel": "npm run build && vercel --prod"
   },
   "dependencies": {

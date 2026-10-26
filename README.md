@@ -1,50 +1,21 @@
-# Chanclazo — Chancla Strike
+# Chanclazo
 
-**3D browser survival game.** Dodge the chanclas in escalating waves of mom rage — a Latino culture love letter built with Three.js, React, and Cloudflare.
+Day of the Dead browser games starring the original hand-drawn Chanclazo crew.
 
-**Live:** [chanclazo.com](https://chanclazo.com)
+| Route | Game |
+| --- | --- |
+| `/` | Landing page: "When words fail, the Chanclazo speaks." |
+| `/fling` | **Chancla Strike**: slingshot chanclas at villain forts (9 levels, 3 areas) |
+| `/match` | **Chanclazo Match**: match-3 with sugar skulls, chanclas, bombs and piñatas |
+| `/strike` | **Chanclazo Strike**: ride the cemetery street, throw chanclas and dodge the abuela |
+| `/lore` | What is a chanclazo? (definition page) |
 
-![Chanclazo logo](public/logo_chancla.png)
+## Develop
 
-![Hero art](public/hero3.jpg)
-
-## Features
-
-- **Main 3D game (Three.js)** — multiple characters, Mexican / Día de los Muertos-inspired backgrounds, score + ghost replays  
-- **Bonus 2D slingshot (Matter.js)** — piñata targets, particle hits, strikers (chancla, sugar skull, luchador head)  
-- **Leaderboard, ghosts, live presence** — Cloudflare Worker + D1  
-- **Mobile-first** full-screen play  
-
-## Stack
-
-| Layer | Tech |
-|-------|------|
-| Frontend | React 19, TypeScript, Vite, Three.js, Tailwind |
-| Bonus physics | Matter.js |
-| Backend | Cloudflare Workers + D1 |
-| Hosting | Netlify (frontend + domain) + Cloudflare Worker API |
-
-## Quick start
-
-```powershell
+```bash
 npm install
-npm run dev
-npm run typecheck
-npm run build
+npm run dev      # http://localhost:5173
+npm run build    # outputs dist/
 ```
 
-Local API uses the Vite proxy (`vite.config.ts`).
-
-## Deploy notes
-
-- Netlify: build `npm run build`, publish `dist`  
-- Worker: `npm run deploy:worker` when API changes  
-- See `NETLIFY_CUSTOM_DOMAIN.md` for chanclazo.com DNS / proxy  
-
-## Contact
-
-contact@chanclazo.com
-
-## License
-
-All rights reserved. Free to play; scores are public.
+Built with Vite, TypeScript, Three.js (Strike), Matter.js (Chancla Strike) and React (lore page). Deployed on Vercel (`vercel.json`).
