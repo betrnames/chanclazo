@@ -13,7 +13,9 @@ const ctx = cv.getContext('2d')!;
 let scale = 1, ox = 0, oy = 0, dpr = 1;
 function fit() {
   dpr = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
-  scale = Math.min(innerWidth / W, innerHeight / H); ox = (innerWidth - W * scale) / 2; oy = innerHeight - H * scale;
+  // Frame the fort: world x 0..800, from 520 units above the ground to just below it.
+  const VIEW_H = 560; scale = Math.min(innerWidth / W, innerHeight / VIEW_H);
+  ox = (innerWidth - W * scale) / 2; oy = innerHeight - (GROUND + 40) * scale;
 }
 fit(); addEventListener('resize', fit);
 
@@ -102,10 +104,11 @@ Events.on(engine, 'collisionStart', (e) => {
 });
 
 // ── Input: drag back anywhere to aim ─────────────────────────────────────────
+function isPortraitPhone() { return matchMedia('(orientation: portrait) and (max-width: 900px)').matches; }
 const toWorld = (cx: number, cy: number) => ({ x: (cx - ox) / scale, y: (cy - oy) / scale });
 let dragStart = { x: 0, y: 0 };
 cv.addEventListener('pointerdown', (e) => {
-  wakeAudio(); if (!playing || ended || shot || shotsLeft <= 0) return;
+  wakeAudio(); if (isPortraitPhone() || !playing || ended || shot || shotsLeft <= 0) return;
   aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; cv.setPointerCapture(e.pointerId);
 });
 cv.addEventListener('pointermove', (e) => {
@@ -167,7 +170,8 @@ function trajectory() {
 let last = performance.now(), t = 0;
 function frame(now: number) {
   const dt = Math.min(0.033, (now - last) / 1000); last = now; t += dt;
-  if (playing) { Engine.update(engine, dt * 1000); checkFlow(); }
+  const portrait = isPortraitPhone();
+  if (playing && !portrait) { Engine.update(engine, dt * 1000); checkFlow(); }
   abuelaKick = Math.max(0, abuelaKick - dt * 3); shake = Math.max(0, shake - dt * 30);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#140a24'; ctx.fillRect(0, 0, innerWidth, innerHeight);
@@ -236,7 +240,9 @@ function frame(now: number) {
 wireMute();
 const go = $('go') as HTMLButtonElement; go.disabled = true; go.textContent = 'Loading…';
 Promise.all(Object.entries(names).map(async ([k, v]) => (IMG[k] = await loadImg(v)))).then(() => { go.disabled = false; go.textContent = 'PLAY!'; });
-go.onclick = () => { wakeAudio(); $('start').classList.add('hidden'); level = 0; score = 0; build(0); playing = true; };
+go.onclick = () => {
+  try { const el = document.documentElement as any; const p = el.requestFullscreen?.(); const lock = () => (screen.orientation as any)?.lock?.('landscape')?.catch?.(() => {}); if (p?.then) p.then(lock, () => {}); else lock(); } catch { /* iOS: not supported */ }
+  wakeAudio(); $('start').classList.add('hidden'); level = 0; score = 0; build(0); playing = true; };
 build(0);
 requestAnimationFrame(frame);
 (window as any).__fling = { engine, world, meta, get state() { return { level, score, shotsLeft, ended, villains: villainsLeft() }; } };
