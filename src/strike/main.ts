@@ -2,7 +2,7 @@
 // throw chanclas to break everything, and dodge the mad abuela's chanclas.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { loadChars, makeChar, toon, type Char, type CharKind } from './chars';
+import { loadChars, makeChar, toon, setSpriteCamera, type Char, type CharKind } from './sprites';
 import { initAudio, playWhoosh, playHit, playStrike, playMomHit, playCombo, playGameOver, playDodge, setMuted, isMuted } from '../game/sound';
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -243,7 +243,7 @@ function burst(pos: THREE.Vector3, colors: number[], n = 16, power = 7, flat = f
 
 // ── Characters ───────────────────────────────────────────────────────────────
 const mixers: Char[] = [];
-const CH_SCALE: Record<CharKind, number> = { abuela: 1.9, luchador: 1.55, calaca: 1.5, kid: 1.25 };
+const CH_SCALE: Record<CharKind, number> = { abuela: 1, luchador: 1, calaca: 1, kid: 1, pinata: 1 };
 function addChar(kind: CharKind, parent: THREE.Object3D, anim: string) {
   const c = makeChar(kind); c.root.scale.setScalar(CH_SCALE[kind]); parent.add(c.root); c.play(anim, { speed: 0.9 + Math.random() * 0.3 });
   c.update(Math.random() * 2); mixers.push(c); return c;
@@ -263,12 +263,11 @@ const abuelaLight = new THREE.PointLight(0xff7a3c, 40, 14, 1.3); abuelaLight.pos
 type Kind = 'luchador' | 'calaca' | 'pinata' | 'pot' | 'crate' | 'picado';
 interface T { kind: Kind; obj: THREE.Object3D; ch?: Char; s: number; x: number; hp: number; pts: number; r: number; h: number; cy: number; vx: number; t: number; flash: number; dead?: boolean; dying?: number }
 const targets: T[] = [];
-const pinataTex = tex('/cruise/pinata.webp');
 const potMat = toon(0xc2410c), potBand = toon(0x4cc9f0), crateMat = toon(0x8b5a2b);
 const SPEC: Record<Kind, { hp: number; pts: number; r: number; h: number; cy: number; colors: number[] }> = {
-  luchador: { hp: 2, pts: 150, r: 1.0, h: 1.7, cy: 1.5, colors: [0xd62828, 0xffd166, 0x8b1e1e] },
-  calaca: { hp: 1, pts: 100, r: 0.9, h: 1.6, cy: 1.5, colors: [0xfbf6ea, 0x1b1020, 0xf72585] },
-  pinata: { hp: 3, pts: 300, r: 1.2, h: 1.6, cy: 3.4, colors: [0xf72585, 0xffd166, 0x06d6a0, 0x4cc9f0, 0x9b5de5] },
+  luchador: { hp: 2, pts: 150, r: 1.0, h: 1.4, cy: 1.2, colors: [0xd62828, 0xffd166, 0x8b1e1e] },
+  calaca: { hp: 1, pts: 100, r: 0.9, h: 1.4, cy: 1.2, colors: [0xfbf6ea, 0x1b1020, 0xf72585] },
+  pinata: { hp: 3, pts: 300, r: 1.2, h: 1.3, cy: 3.4, colors: [0xf72585, 0xffd166, 0x06d6a0, 0x4cc9f0, 0x9b5de5] },
   pot: { hp: 1, pts: 40, r: 0.9, h: 1.0, cy: 0.9, colors: [0xc2410c, 0x4cc9f0, 0xe8a87c] },
   crate: { hp: 1, pts: 40, r: 1.0, h: 1.0, cy: 0.9, colors: [0x8b5a2b, 0xa0703c] },
   picado: { hp: 1, pts: 60, r: 3.4, h: 0.7, cy: 4.6, colors: COLORS },
@@ -278,8 +277,8 @@ function spawn(kind: Kind, s: number, x: number) {
   if (kind === 'luchador') ch = addChar('luchador', g, Math.random() < 0.5 ? 'Punch_Cross' : 'Dance_Loop');
   else if (kind === 'calaca') ch = addChar('calaca', g, 'Walk_Loop');
   else if (kind === 'pinata') {
-    const b = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 3.4), new THREE.MeshBasicMaterial({ map: pinataTex, transparent: true, alphaTest: 0.3 })); b.position.y = 3.4; b.userData.bb = true; g.add(b);
-    const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3, 4), toon(0xd9c49a)); rope.position.y = 6.3; g.add(rope);
+    ch = addChar('pinata', g, 'Idle_Loop'); ch.root.position.y = 2.4;
+    const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3, 4), toon(0xd9c49a)); rope.position.y = 5.9; g.add(rope);
   } else if (kind === 'pot') {
     const pb = new THREE.Mesh(new THREE.SphereGeometry(0.6, 12, 10), potMat); pb.position.y = 0.66; g.add(pb);
     const n = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.35, 0.4, 12), potMat); n.position.y = 1.35; g.add(n);
@@ -539,4 +538,5 @@ $('over').querySelector('a')!.setAttribute('href', '/');
 addEventListener('resize', () => { fitCam(); renderer.setSize(innerWidth, innerHeight); });
 layoutProps(0); drawMini(0);
 (window as any).__strike = { st, targets, throwAt, camera, renderer, frame };
+setSpriteCamera(camera);
 loop();
