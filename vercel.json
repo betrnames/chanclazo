@@ -4,10 +4,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/cruise",
-      "destination": "/cruise.html"
-    },
-    {
       "source": "/strike",
       "destination": "/strike.html"
     },
@@ -26,6 +22,18 @@
     {
       "source": "/((?!cruise|strike|fling|match|demos).*)",
       "destination": "/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/cruise",
+      "destination": "/strike",
+      "permanent": false
+    },
+    {
+      "source": "/cruise.html",
+      "destination": "/strike",
+      "permanent": false
     }
   ]
 }
