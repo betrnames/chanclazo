@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
+import { createStableEngine, createFixedStepper, createArmGate, spawnResting, STEP_MS } from './physics/stableWorld';
 import { startMusic, stopMusic, setMuted as setMusicMuted, setMusicIntensity, initAudio } from './game/sound';
 
 // ─── Procedural Audio for Slingshot ───────────────────────────────────────────
@@ -216,6 +217,9 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
   const shotsLeftRef = useRef(4);
   const levelRef = useRef(1);
   const scoreRef = useRef(0);
+  const armGate = useRef(createArmGate());
+  const stepper = useRef(createFixedStepper());
+  const lastFrameRef = useRef(0);
   const gameStateRef = useRef<'aiming' | 'launched' | 'won' | 'lost' | 'ready'>('ready');
   const rafRef = useRef<number | null>(null);
   const spinFrameRef = useRef(0);
@@ -289,7 +293,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
   // Initialize Matter.js world and level
   const initPhysics = (levelNum: number = 1, shouldBuildStack = true) => {
-    const engine = Matter.Engine.create();
+    const engine = createStableEngine();
+    if (import.meta.env.DEV) (window as any).__chzEngine = engine; // test hook (dev only)
+    armGate.current.disarm();
+    stepper.current.reset();
+    lastFrameRef.current = 0;
     const world = engine.world;
     engineRef.current = engine;
     worldRef.current = world;
@@ -327,7 +335,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
       // Extra manual settle steps for the floating pinata grid so it is perfectly at rest
       // and does not visibly fall/shift on the very first render frames
       for (let s = 0; s < 5; s++) {
-        Matter.Engine.update(engine, 1000 / 60);
+        Matter.Engine.update(engine, STEP_MS);
       }
       // re-zero velocities after the settle passes
       enemiesRef.current.forEach(e => {
@@ -421,14 +429,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     }
 
     // Zero any initial velocities so the stacks rest completely still on spawn (no pre-launch wobble or drop)
-    blocksRef.current.forEach(b => {
-      Matter.Body.setVelocity(b.body, { x: 0, y: 0 });
-      Matter.Body.setAngularVelocity(b.body, 0);
-    });
-    enemiesRef.current.forEach(e => {
-      Matter.Body.setVelocity(e.body, { x: 0, y: 0 });
-      Matter.Body.setAngularVelocity(e.body, 0);
-    });
+    blocksRef.current.forEach(b => spawnResting(b.body));
+    enemiesRef.current.forEach(e => spawnResting(e.body));
 
     // Randomly assign one piñata as the power-up (explosive)
     if (enemiesRef.current.length > 0) {
@@ -441,6 +443,8 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
 
   // Simple collision handling for destruction
   const handleCollisions = (event: Matter.IEventCollision<Matter.Engine>) => {
+    // No damage or un-pinning until the first launch (stops settle contacts from breaking things)
+    if (!armGate.current.armed) return;
     const pairs = event.pairs;
     const groundBody = groundRef.current;
     for (let i = 0; i < pairs.length; i++) {
@@ -665,6 +669,7 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     Matter.Body.setVelocity(birdBody, { x: vx, y: vy });
 
     Matter.World.add(world, birdBody);
+    armGate.current.arm();
 
     // Whoosh sound on launch
     initSlingshotAudio();
@@ -736,8 +741,11 @@ const Slingshot = ({ onBack }: SlingshotProps) => {
     const engine = engineRef.current;
     const world = worldRef.current;
 
-    // Update physics (single source of truth; no Runner used)
-    Matter.Engine.update(engine, 1000 / 60);
+    // Update physics on a fixed 60 Hz clock (independent of screen refresh rate; no Runner used)
+    const nowMs = performance.now();
+    const frameMs = lastFrameRef.current ? nowMs - lastFrameRef.current : STEP_MS;
+    lastFrameRef.current = nowMs;
+    stepper.current.step(engine, frameMs);
 
     // Prune stopped or out of bounds projectiles to keep world clean
     const allBodies: any[] = (world as any).bodies || [];
