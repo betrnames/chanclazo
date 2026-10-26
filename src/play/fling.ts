@@ -174,7 +174,7 @@ const toWorld = (cx: number, cy: number) => ({ x: (cx - ox) / scale, y: (cy - oy
 let dragStart = { x: 0, y: 0 };
 cv.addEventListener('pointerdown', (e) => {
   wakeAudio(); if (isPortraitPhone() || !playing || ended || shot || shotsLeft <= 0) return;
-  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; A.unlock(); A.stretchStart(); A.stretch(0); cv.setPointerCapture(e.pointerId);
+  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; A.stretchStart(); A.stretch(0); cv.setPointerCapture(e.pointerId);
 });
 cv.addEventListener('pointermove', (e) => {
   if (!aiming) return; const p = toWorld(e.clientX, e.clientY);
@@ -349,6 +349,7 @@ function maybeCountdown() {
 setInterval(maybeCountdown, 500);
 Promise.all(Object.entries(names).map(([k, v]) => loadImg(v).then((im) => { IMG[k] = im; }).catch(() => report(`image failed: ${v}`))));
 document.getElementById('a2hsX')?.addEventListener('click', () => { a2hsOff = true; try { localStorage.setItem('chanclazo_a2hs_off', '1'); } catch { /* ignore */ } updateA2hs(); });
+if (/[?&]debug=1/.test(location.search)) setInterval(() => { const a = (window as any).__flingAudio; report(`audio ${a.state} · session ${a.session} · gain ${a.gain === null ? '-' : a.gain.toFixed(2)} · muted ${a.muted} · sounds ${a.played}`); }, 2000);
 safe('wireMute', () => A.wireMute($('mute') as HTMLButtonElement));
 build(0);
 onLayout(); scheduleLayout();
