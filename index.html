@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<meta name="theme-color" content="#140a24" />
+<meta name="theme-color" content="#12051f" />
 <meta name="apple-mobile-web-app-title" content="Chanclazo" />
 <title>Chanclazo</title>
 <meta name="description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike and Chanclazo Match." />
@@ -18,34 +18,107 @@
 <meta name="twitter:title" content="Chanclazo" />
 <meta name="twitter:description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike and Chanclazo Match." />
 <meta name="twitter:image" content="%VITE_SITE_URL%/og.png" />
+
 <link rel="icon" href="/cruise/logo_chancla.webp" />
+<link rel="apple-touch-icon" href="/play/icon-180.png" />
 <style>
-*{box-sizing:border-box}
-html,body{margin:0;background:#140a24;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-body{min-height:100svh;background:linear-gradient(rgba(14,5,30,.72),rgba(20,10,36,.92)),url(/play/night_bg.webp) center/cover fixed;
- padding:max(20px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));display:flex;flex-direction:column;align-items:center}
-header{text-align:center;margin:6px 0 18px}
-header img{width:110px;filter:drop-shadow(0 0 18px rgba(255,140,40,.55))}
-h1{margin:4px 0 6px;font-size:clamp(32px,8vw,56px);font-weight:900;color:#ffc46b;letter-spacing:1px;text-shadow:0 3px 0 #7c2d12,0 0 26px rgba(255,140,40,.45)}
-.tagline{margin:6px auto 0;max-width:760px;font-size:clamp(28px,7.5vw,48px);line-height:1.15;font-weight:900;font-style:italic;color:#ffc46b;text-shadow:0 3px 0 #7c2d12,0 0 26px rgba(255,140,40,.45)}
-.picado{height:16px;width:100%;max-width:900px;margin:0 auto 14px;background:repeating-linear-gradient(90deg,#e8590c 0 40px,#c2255c 40px 80px,#7048e8 80px 120px,#0ca678 120px 160px);clip-path:polygon(0 0,100% 0,100% 60%,97.5% 100%,95% 60%,92.5% 100%,90% 60%,87.5% 100%,85% 60%,82.5% 100%,80% 60%,77.5% 100%,75% 60%,72.5% 100%,70% 60%,67.5% 100%,65% 60%,62.5% 100%,60% 60%,57.5% 100%,55% 60%,52.5% 100%,50% 60%,47.5% 100%,45% 60%,42.5% 100%,40% 60%,37.5% 100%,35% 60%,32.5% 100%,30% 60%,27.5% 100%,25% 60%,22.5% 100%,20% 60%,17.5% 100%,15% 60%,12.5% 100%,10% 60%,7.5% 100%,5% 60%,2.5% 100%,0 60%);opacity:.85}
-#games{display:grid;gap:12px;width:100%;max-width:900px;grid-template-columns:1fr}
-@media (min-width:640px){#games{grid-template-columns:1fr 1fr}}
-.card{display:flex;gap:14px;align-items:center;text-decoration:none;color:#fff;background:rgba(26,12,44,.88);border:2px solid #ffc46b;border-radius:18px;padding:12px 14px;box-shadow:0 0 18px rgba(255,140,40,.15);transition:transform .15s}
-.card:active,.card:hover{transform:translateY(-2px);border-color:#ff922b}
-.card img{width:72px;height:72px;object-fit:contain;flex:none}
-.txt b{display:block;font-size:20px;color:#ffc46b}
-.txt span{display:block;font-size:14px;color:#e6dcff;margin-top:3px;line-height:1.35}
-.txt em{display:inline-block;margin-top:8px;font-style:normal;font-weight:900;font-size:14px;background:#e8590c;border-radius:10px;padding:5px 12px}
-footer{margin-top:auto;padding-top:18px;font-size:12px;color:#b9a8d6}
-@media (max-height:500px) and (orientation:landscape){header{margin:0 0 10px}header img{width:56px}.tagline{font-size:28px}.card img{width:56px;height:56px}}
+*{box-sizing:border-box}html,body{margin:0;background:#12051f;color:#fff;font-family:"Arial Rounded MT Bold","Nunito",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:inherit;text-decoration:none}
+.hero{position:relative;min-height:100svh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 16px max(26px,env(safe-area-inset-bottom));isolation:isolate}
+.sky{position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 50% 40%,#ff8a2a 0%,#c2255c 38%,#4a1478 70%,#12051f 100%);z-index:-3}
+.rays{position:absolute;left:50%;top:38%;width:220vmax;height:220vmax;margin:-110vmax 0 0 -110vmax;background:repeating-conic-gradient(rgba(255,230,140,.22) 0 8deg,transparent 8deg 20deg);animation:spin 40s linear infinite;z-index:-2}
+@keyframes spin{to{transform:rotate(360deg)}}
+.street{position:absolute;inset:auto 0 0 0;height:46%;background:url(/lp/fling_shot.webp) 50% 100%/cover;opacity:.55;-webkit-mask:linear-gradient(transparent,#000 40%);z-index:-1}
+.picado{position:absolute;top:0;left:0;right:0;height:56px;display:flex;justify-content:space-around;z-index:2}
+.picado i{width:48px;height:50px;clip-path:polygon(0 0,100% 0,100% 82%,88% 100%,75% 82%,62% 100%,50% 82%,38% 100%,25% 82%,12% 100%,0 82%);animation:sway 3s ease-in-out infinite alternate;transform-origin:top}
+@keyframes sway{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}
+.abuela{position:absolute;left:50%;bottom:23%;width:min(78vw,430px);transform:translateX(-50%);filter:drop-shadow(0 0 0 #fff) drop-shadow(4px 0 0 #fff) drop-shadow(-4px 0 0 #fff) drop-shadow(0 4px 0 #fff) drop-shadow(0 -4px 0 #fff) drop-shadow(0 14px 18px rgba(0,0,0,.55));animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translate(-50%,-10px) scale(1.02)}}
+.chancla{position:absolute;width:min(22vw,120px);left:50%;top:14%;filter:drop-shadow(0 0 18px #ffd84a) drop-shadow(0 0 3px #fff);animation:fly 2.6s cubic-bezier(.4,0,.6,1) infinite}
+@keyframes fly{0%{transform:translate(30vw,10vh) rotate(0) scale(.6);opacity:0}15%{opacity:1}60%{transform:translate(-36vw,-4vh) rotate(-540deg) scale(1.1)}100%{transform:translate(-80vw,6vh) rotate(-900deg) scale(.9);opacity:0}}
+.cal{position:absolute;width:min(18vw,96px);filter:drop-shadow(0 0 10px rgba(155,231,255,.8))}
+.c1{left:4%;bottom:32%;animation:hop 1.6s ease-in-out infinite}.c2{right:4%;bottom:36%;animation:hop 1.9s .4s ease-in-out infinite}
+@keyframes hop{50%{transform:translateY(-16px) rotate(8deg)}}
+canvas#petals{position:absolute;inset:0;pointer-events:none;z-index:1}
+.logo{position:relative;z-index:3;text-align:center;margin-bottom:8px}
+.logo h1{margin:0;font-size:clamp(54px,15vw,120px);line-height:.9;font-weight:900;color:#ffd23f;-webkit-text-stroke:clamp(5px,1.4vw,9px) #2a0a00;paint-order:stroke fill;text-shadow:0 8px 0 #2a0a00;transform:rotate(-3deg);letter-spacing:-1px;animation:pop .7s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes pop{from{transform:rotate(-3deg) scale(.3);opacity:0}}
+.logo p{margin:12px 0 0;font-size:clamp(17px,4.6vw,24px);font-weight:900;font-style:italic;-webkit-text-stroke:1px #000;paint-order:stroke fill;text-shadow:0 3px 0 #000}
+.play{position:relative;z-index:3;display:block;width:min(88vw,420px);margin:16px auto 10px;text-align:center;font-size:clamp(34px,10vw,52px);font-weight:900;letter-spacing:2px;color:#fff;background:linear-gradient(#ffd84a,#ff9f1c 55%,#e8590c);border:5px solid #fff;border-radius:26px;padding:10px 0 14px;-webkit-text-stroke:2px #7c2d12;paint-order:stroke fill;text-shadow:0 4px 0 #7c2d12;box-shadow:0 9px 0 #7c2d12,0 16px 28px rgba(0,0,0,.5);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.05)}}
+.play:active{transform:translateY(6px);box-shadow:0 3px 0 #7c2d12}
+.sub{position:relative;z-index:3;font-size:13px;font-weight:800;opacity:.85}
+section{padding:34px 16px;max-width:980px;margin:0 auto}
+h2.sec{margin:0 0 16px;text-align:center;font-size:clamp(28px,8vw,44px);font-weight:900;color:#ffd23f;-webkit-text-stroke:4px #2a0a00;paint-order:stroke fill;text-shadow:0 5px 0 #2a0a00;text-transform:uppercase}
+.tiles{display:grid;gap:18px;grid-template-columns:1fr}
+@media(min-width:720px){.tiles{grid-template-columns:1fr 1fr}}
+.tile{display:block;border-radius:28px;overflow:hidden;background:linear-gradient(160deg,var(--a),var(--b));border:4px solid #fff;box-shadow:0 10px 0 rgba(0,0,0,.45);position:relative}
+.tile .vid{aspect-ratio:16/10;background:#000 center/cover;position:relative}
+.tile .vid img{width:100%;height:100%;object-fit:cover;display:block}
+.tile .char{position:absolute;right:-6px;bottom:-12px;width:42%;filter:drop-shadow(3px 0 0 #fff) drop-shadow(-3px 0 0 #fff) drop-shadow(0 3px 0 #fff) drop-shadow(0 8px 8px rgba(0,0,0,.5))}
+.tile .info{display:flex;align-items:center;gap:12px;padding:14px 16px 16px}
+.tile .icon{width:64px;height:64px;border-radius:16px;border:3px solid #fff;background:#fff center/cover;flex:none;box-shadow:0 4px 0 rgba(0,0,0,.3)}
+.tile b{display:block;font-size:24px;font-weight:900;-webkit-text-stroke:1px rgba(0,0,0,.4);text-shadow:0 2px 0 rgba(0,0,0,.4)}
+.tile span{display:block;font-size:14px;font-weight:700;opacity:.95;margin-top:2px}
+.tile .go{margin-left:auto;flex:none;background:#7CFC00;color:#123;font-weight:900;font-size:18px;padding:10px 16px;border-radius:14px;border:3px solid #fff;box-shadow:0 5px 0 rgba(0,0,0,.35)}
+.badges{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.badge{display:flex;align-items:center;gap:10px;background:#000;border:2px solid #555;border-radius:12px;padding:8px 16px;min-width:200px}
+.badge small{display:block;font-size:11px;opacity:.75}.badge b{font-size:19px}
+.badge .ic{font-size:26px}
+.steps{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+@media(min-width:720px){.steps{grid-template-columns:repeat(4,1fr)}}
+.step{background:rgba(255,255,255,.08);border:2px solid rgba(255,196,107,.5);border-radius:20px;padding:14px;text-align:center;font-weight:800;font-size:15px}
+.step em{display:block;font-style:normal;font-size:30px}
+footer{text-align:center;padding:26px 16px max(26px,env(safe-area-inset-bottom));font-size:12px;opacity:.7}
 </style></head><body>
-<div class="picado"></div>
-<header>
-  <img src="/cruise/logo_chancla.webp" alt="Chanclazo logo" />
-  <h1 class="tagline" id="tagline">When words fail, the Chanclazo speaks.</h1>
+<header class="hero">
+  <div class="sky"></div><div class="rays"></div><div class="street"></div>
+  <div class="picado" id="picado"></div>
+  <img class="cal c1" src="/play/calaca_sprite.webp" alt="" /><img class="cal c2" src="/play/calaca_sprite.webp" alt="" />
+  <img class="abuela" src="/lp/abuela_head.webp" alt="The abuela, furious, fists raised" />
+  <img class="chancla" src="/play/t_chancla.webp" alt="" />
+  <canvas id="petals"></canvas>
+  <div class="logo"><h1>Chanclazo</h1><p>When words fail, the Chanclazo speaks.</p></div>
+  <a class="play" href="#games">PLAY</a>
+  <div class="sub">Free in your browser · iPhone, Android and desktop</div>
 </header>
-<main id="games"></main>
-<footer id="foot"></footer>
-<script type="module" src="/src/landing/main.ts"></script>
+<section id="games">
+  <h2 class="sec">Pick your game</h2>
+  <div class="tiles">
+    <a class="tile" href="/fling" style="--a:#ff8a2a;--b:#c2255c">
+      <div class="vid"><img src="/lp/fling_loop.webp" alt="Chancla Strike gameplay: the abuela slings a chancla at a villain fort" loading="lazy" /></div>
+      <div class="info"><div class="icon" style="background-image:url(/play/abuela_sprite.webp);background-size:120%;background-position:50% 10%"></div><div><b>Chancla Strike</b><span>Sling chanclas. Topple forts. 9 levels.</span></div><span class="go">PLAY</span></div>
+    </a>
+    <a class="tile" href="/match" style="--a:#7048e8;--b:#0ca678">
+      <div class="vid" style="aspect-ratio:16/10;background:#1a0b30"><img src="/lp/match_loop.webp" alt="Chanclazo Match gameplay: sugar skull tiles matching" loading="lazy" style="object-fit:contain" /></div>
+      <div class="info"><div class="icon" style="background-image:url(/play/t_skull.webp)"></div><div><b>Chanclazo Match</b><span>Swipe, match, blast piñatas.</span></div><span class="go">PLAY</span></div>
+    </a>
+  </div>
+</section>
+<section>
+  <h2 class="sec">How it works</h2>
+  <div class="steps">
+    <div class="step"><em>👆</em>Pull back and let the chancla fly</div>
+    <div class="step"><em>💥</em>Knock out luchadores and calacas</div>
+    <div class="step"><em>🍬</em>Match 3 sugar skulls or more</div>
+    <div class="step"><em>⭐</em>Beat every level</div>
+  </div>
+</section>
+<section>
+  <h2 class="sec">Play anywhere</h2>
+  <div class="badges">
+    <a class="badge" href="/fling"><span class="ic">🌐</span><span><small>No download</small><b>Play in browser</b></span></a>
+    <a class="badge" href="/fling" onclick="return a2hs(event)"><span class="ic">📲</span><span><small>iPhone: Share → Add to Home Screen</small><b>Add to your phone</b></span></a>
+  </div>
+</section>
+<footer>© 2026 chanclazo.com · Hand-drawn by the Chanclazo crew · <a href="/lore">What is a chanclazo?</a></footer>
+<script>
+const C=['#e8590c','#c2255c','#7048e8','#0ca678','#ffd43b','#f72585','#4cc9f0'];
+document.getElementById('picado').innerHTML=Array.from({length:12},(_,i)=>`<i style="background:${C[i%7]};animation-delay:${-i*.3}s"></i>`).join('');
+function a2hs(e){e.preventDefault();alert('On iPhone: tap Share, then Add to Home Screen. On Android: open the browser menu, then Add to Home screen.');return false;}
+const cv=document.getElementById('petals'),g=cv.getContext('2d');let P=[];
+function fit(){cv.width=innerWidth;cv.height=cv.parentElement.offsetHeight;P=Array.from({length:Math.min(60,innerWidth/10|0)},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,v:.6+Math.random()*1.4,r:3+Math.random()*5,a:Math.random()*6,s:(Math.random()-.5)*.06}))}
+fit();addEventListener('resize',fit);
+(function f(){g.clearRect(0,0,cv.width,cv.height);for(const p of P){p.y+=p.v;p.x+=Math.sin(p.a)*.6;p.a+=p.s+.02;if(p.y>cv.height+10){p.y=-10;p.x=Math.random()*cv.width}g.save();g.translate(p.x,p.y);g.rotate(p.a);g.fillStyle='#ff9f1c';g.globalAlpha=.85;g.beginPath();g.ellipse(0,0,p.r,p.r*.55,0,0,7);g.fill();g.restore()}requestAnimationFrame(f)})();
+</script>
 </body></html>
