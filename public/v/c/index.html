@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#0b0614" />
+<title>Chanclazo</title>
+<meta name="description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike and Chanclazo Match." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Chanclazo" />
+<meta property="og:title" content="Chanclazo" />
+<meta property="og:description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike and Chanclazo Match." />
+<meta property="og:url" content="https://chanclazo-downhill-demo.vercel.app/" />
+<meta property="og:image" content="https://chanclazo-downhill-demo.vercel.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Chanclazo: the abuela, furious, as a chancla flies past with calacas scattering and marigold petals bursting; chips for Chancla Strike and Chanclazo Match." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Chanclazo" />
+<meta name="twitter:description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike and Chanclazo Match." />
+<meta name="twitter:image" content="https://chanclazo-downhill-demo.vercel.app/og.png" />
+
+<link rel="icon" href="/cruise/logo_chancla.webp" />
+<link rel="apple-touch-icon" href="/play/icon-180.png" />
+<style>
+*{box-sizing:border-box}html,body{margin:0;background:#0b0614;color:#f3e9d2;font-family:Georgia,"Times New Roman",serif;overflow-x:hidden}
+a{color:inherit}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply;z-index:50}
+.title{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 45%,#3a0f4a,#0b0614 70%)}
+.swirl{position:absolute;inset:-50%;background:conic-gradient(from 0deg,#e8590c,#c2255c,#5f3dc4,#0ca678,#ffd43b,#e8590c);filter:blur(60px);opacity:.35;animation:sw 18s linear infinite}
+@keyframes sw{to{transform:rotate(360deg)}}
+.letters{position:relative;font-family:Impact,"Arial Black",sans-serif;font-size:clamp(52px,16vw,170px);line-height:.95;letter-spacing:1px;text-transform:uppercase;display:flex;flex-wrap:wrap;justify-content:center}
+.letters span{display:inline-block;color:#f3e9d2;text-shadow:3px 3px 0 #c2255c,6px 6px 0 #5f3dc4,9px 9px 0 #0b0614;animation:wob 2.2s ease-in-out infinite;animation-delay:calc(var(--i)*-.18s)}
+@keyframes wob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-10px) rotate(3deg)}}
+.title .chancla{position:relative;width:min(30vw,170px);margin-bottom:10px;animation:spinny 3s cubic-bezier(.6,0,.4,1) infinite;filter:drop-shadow(0 0 20px #ffd43b)}
+@keyframes spinny{0%{transform:rotate(-20deg) scale(1)}50%{transform:rotate(340deg) scale(1.15)}100%{transform:rotate(700deg) scale(1)}}
+.tag{position:relative;margin:22px 0 0;font-size:clamp(18px,5vw,30px);font-style:italic;max-width:18em}
+.scroll{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));font-size:13px;letter-spacing:3px;text-transform:uppercase;opacity:.7;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(6px)}}
+.act{position:relative;padding:12vh 18px;overflow:hidden}
+.act .num{font-family:Impact,"Arial Black",sans-serif;font-size:clamp(90px,30vw,280px);line-height:.8;position:absolute;top:4vh;right:-2vw;opacity:.07}
+.inner{max-width:1100px;margin:0 auto;display:grid;gap:28px;align-items:center}
+@media(min-width:860px){.inner{grid-template-columns:1fr 1fr}.act.r .shots{order:2}}
+.kick{font-size:13px;letter-spacing:4px;text-transform:uppercase;color:var(--c)}
+.act h2{margin:6px 0 14px;font-family:Impact,"Arial Black",sans-serif;font-size:clamp(46px,12vw,96px);line-height:.9;text-transform:uppercase;color:#f3e9d2;text-shadow:4px 4px 0 var(--c)}
+.lines p{margin:0 0 10px;font-size:clamp(20px,5vw,28px);line-height:1.2}
+.lines p b{color:var(--c)}
+.shots{position:relative;min-height:300px}
+.shot{display:block;width:88%;border:6px solid #f3e9d2;border-radius:6px;box-shadow:10px 10px 0 var(--c);background:#000}
+.shot.b{position:absolute;width:52%;right:0;bottom:-30px;transform:rotate(4deg);box-shadow:8px 8px 0 #0b0614}
+.shot.a{transform:rotate(-2deg)}
+.go{display:inline-block;margin-top:18px;padding:14px 30px;background:var(--c);color:#0b0614;font-family:Impact,"Arial Black",sans-serif;font-size:26px;letter-spacing:2px;text-transform:uppercase;text-decoration:none;box-shadow:6px 6px 0 #f3e9d2;transform:rotate(-1.5deg);transition:transform .15s}
+.go:hover{transform:rotate(1deg) scale(1.05)}
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .8s,transform .8s}
+.reveal.on{opacity:1;transform:none}
+.cast{display:flex;justify-content:center;gap:4vw;flex-wrap:wrap;padding:6vh 18px}
+.cast figure{margin:0;text-align:center;width:min(28vw,180px)}
+.cast img{width:100%;height:clamp(110px,26vw,200px);-o-object-fit:contain;object-fit:contain;filter:drop-shadow(0 0 14px rgba(243,233,210,.25))}
+.cast figcaption{font-family:Impact,"Arial Black",sans-serif;text-transform:uppercase;letter-spacing:1px;font-size:clamp(14px,3.6vw,20px)}
+.cast small{display:block;font-family:Georgia,serif;font-style:italic;text-transform:none;font-size:13px;opacity:.75;letter-spacing:0}
+.fin{text-align:center;padding:12vh 18px 6vh}
+.fin h2{font-family:Impact,"Arial Black",sans-serif;font-size:clamp(40px,11vw,90px);margin:0 0 20px;text-transform:uppercase;line-height:.95}
+footer{text-align:center;padding:20px 16px max(24px,env(safe-area-inset-bottom));font-size:12px;opacity:.6}
+</style></head><body>
+<header class="title"><div class="swirl"></div>
+<img class="chancla" src="/play/t_chancla.webp" alt="A spinning chancla" />
+<h1 class="letters" aria-label="Chanclazo"><span style="--i:0">C</span><span style="--i:1">h</span><span style="--i:2">a</span><span style="--i:3">n</span><span style="--i:4">c</span><span style="--i:5">l</span><span style="--i:6">a</span><span style="--i:7">z</span><span style="--i:8">o</span></h1>
+<p class="tag">When words fail, the Chanclazo speaks.</p>
+<div class="scroll">Scroll ↓</div></header>
+
+<section class="act" style="--c:#ff922b"><div class="num">I</div><div class="inner">
+<div class="shots reveal"><img class="shot a" src="/lp/fling_loop.webp" alt="Chancla Strike gameplay" /><img class="shot b" src="/lp/fling_shot2.webp" alt="A chancla mid-flight" loading="lazy" /></div>
+<div class="reveal"><div class="kick">Game one · Physics</div><h2>Chancla Strike</h2>
+<div class="lines"><p>You were told <b>not</b> to make her ask twice.</p><p>Pull back. Aim. <b>Let it fly.</b></p><p>Forts crumble. Luchadores drop. Calacas regret everything.</p></div>
+<a class="go" href="/fling">Throw it →</a></div></div></section>
+
+<section class="act r" style="--c:#38d9a9"><div class="num">II</div><div class="inner">
+<div class="shots reveal"><img class="shot a" src="/lp/match_loop.webp" alt="Chanclazo Match gameplay" style="width:70%" /><img class="shot b" src="/lp/match_shot.webp" alt="A Chanclazo Match board" loading="lazy" style="width:42%" /></div>
+<div class="reveal"><div class="kick">Game two · Puzzle</div><h2>Chanclazo Match</h2>
+<div class="lines"><p>Sugar skulls. Piñatas. <b>Chanclas.</b></p><p>Line up three. Chain the combos.</p><p>Make a bomb and <b>watch the board burn.</b></p></div>
+<a class="go" href="/match">Match it →</a></div></div></section>
+
+<section class="cast reveal">
+<figure><img src="/play/abuela_sprite.webp" alt="The abuela" loading="lazy" /><figcaption>La Abuela<small>Never misses.</small></figcaption></figure>
+<figure><img src="/play/luchador_sprite.webp" alt="A luchador" loading="lazy" /><figcaption>El Luchador<small>Should have listened.</small></figcaption></figure>
+<figure><img src="/play/calaca_sprite.webp" alt="A calaca" loading="lazy" /><figcaption>La Calaca<small>Already dead. Still scared.</small></figcaption></figure>
+</section>
+
+<section class="fin reveal"><h2>Two games.<br/>One chancla.</h2><a class="go" href="/fling" style="--c:#ff922b">Chancla Strike</a> &nbsp; <a class="go" href="/match" style="--c:#38d9a9">Chanclazo Match</a>
+<p style="margin-top:28px;font-style:italic;opacity:.8">Free in your browser. No download.</p></section>
+<footer>© 2026 chanclazo.com · <a href="/lore">What is a chanclazo?</a></footer>
+<script>
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}}),{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script></body></html>

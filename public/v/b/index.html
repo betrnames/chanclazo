@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#1b1233" />
+<title>Chanclazo · Play free in your browser</title>
+<meta name="description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike and Chanclazo Match." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Chanclazo" />
+<meta property="og:title" content="Chanclazo" />
+<meta property="og:description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike and Chanclazo Match." />
+<meta property="og:url" content="https://chanclazo-downhill-demo.vercel.app/" />
+<meta property="og:image" content="https://chanclazo-downhill-demo.vercel.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Chanclazo: the abuela, furious, as a chancla flies past with calacas scattering and marigold petals bursting; chips for Chancla Strike and Chanclazo Match." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Chanclazo" />
+<meta name="twitter:description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike and Chanclazo Match." />
+<meta name="twitter:image" content="https://chanclazo-downhill-demo.vercel.app/og.png" />
+
+<link rel="icon" href="/cruise/logo_chancla.webp" />
+<link rel="apple-touch-icon" href="/play/icon-180.png" />
+<style>
+*{box-sizing:border-box}html,body{margin:0;background:#0f0a1e;color:#eee;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:inherit;text-decoration:none}
+.top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#1b1233;border-bottom:1px solid #2e2250;position:sticky;top:0;z-index:5}
+.top img{width:34px;height:34px}.top b{font-size:20px;font-weight:900;color:#ffd23f;letter-spacing:.5px}
+.top .tl{margin-left:auto;font-size:12px;opacity:.75;font-style:italic;text-align:right}
+main{max-width:1180px;margin:0 auto;padding:14px}
+.layout{display:grid;gap:14px}
+@media(min-width:960px){.layout{grid-template-columns:1fr 300px}}
+.frame{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:16/9;box-shadow:0 0 0 2px #2e2250}
+@media(max-width:600px) and (orientation:portrait){.frame{aspect-ratio:9/14}}
+.frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#000 center/cover;cursor:pointer}
+.cover::before{content:"";position:absolute;inset:0;background:rgba(10,4,24,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.cover>*{position:relative}
+.cover .ico{width:110px;height:110px;border-radius:24px;border:3px solid #fff;background:#fff center/cover;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.cover h2{margin:0;font-size:28px;font-weight:900}
+.cover .btn{background:#ffd23f;color:#1a0b30;font-weight:900;font-size:22px;padding:12px 44px;border-radius:999px;box-shadow:0 5px 0 #b8860b}
+.bar{display:flex;align-items:center;gap:10px;padding:10px 4px;flex-wrap:wrap}
+.bar h1{margin:0;font-size:20px}.bar .tag{font-size:12px;background:#2e2250;padding:3px 9px;border-radius:999px}
+.bar button{margin-left:auto;background:#2e2250;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer}
+.side h3,.below h3{margin:4px 0 10px;font-size:16px;text-transform:uppercase;letter-spacing:1px;color:#ffd23f}
+.thumbs{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+@media(min-width:960px){.thumbs{grid-template-columns:1fr}}
+.th{display:block;border-radius:12px;overflow:hidden;background:#1b1233;border:2px solid transparent;cursor:pointer;text-align:left;padding:0;color:#fff;font:inherit}
+.th[aria-current=true]{border-color:#ffd23f}
+.th img{width:100%;aspect-ratio:16/9;-o-object-fit:cover;object-fit:cover;display:block;background:#1a0b30}
+.th span{display:block;padding:8px 10px;font-weight:800;font-size:15px}
+.th small{display:block;font-weight:500;opacity:.7;font-size:12px}
+.below{display:grid;gap:14px;margin-top:18px}
+@media(min-width:760px){.below{grid-template-columns:1fr 1fr}}
+.card{background:#1b1233;border-radius:14px;padding:16px}
+.card p{margin:0 0 8px;line-height:1.5;font-size:15px}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;font-size:14px;align-items:center}
+kbd{background:#2e2250;border-radius:6px;padding:3px 8px;font-family:inherit;font-weight:700;white-space:nowrap}
+footer{text-align:center;padding:24px 14px max(24px,env(safe-area-inset-bottom));font-size:12px;opacity:.6}
+</style></head><body>
+<div class="top"><img src="/cruise/logo_chancla.webp" alt="" /><b>Chanclazo</b><span class="tl">When words fail, the Chanclazo speaks.</span></div>
+<main>
+<div class="layout">
+ <div>
+  <div class="frame" id="frame"><div class="cover" id="cover"><div class="ico" id="cico"></div><h2 id="ctitle"></h2><span class="btn">▶ Play</span></div></div>
+  <div class="bar"><h1 id="gtitle"></h1><span class="tag" id="gtag"></span><button id="fs">⛶ Full screen</button></div>
+ </div>
+ <aside class="side"><h3>Games</h3><div class="thumbs" id="thumbs"></div></aside>
+</div>
+<div class="below">
+ <div class="card"><h3>How to play</h3><div class="keys" id="how"></div></div>
+ <div class="card"><h3 id="atitle">About</h3><p id="about"></p><p style="opacity:.7;font-size:13px">Free. No download. Works on iPhone, Android and desktop browsers.</p></div>
+</div>
+</main>
+<footer>© 2026 chanclazo.com · <a href="/lore">What is a chanclazo?</a></footer>
+<script>
+const G={
+ fling:{t:'Chancla Strike',tag:'Physics · Slingshot',src:'/fling',img:'/lp/fling_shot.webp',anim:'/lp/fling_loop.webp',ico:'/play/abuela_sprite.webp',
+  about:'The abuela has had enough. Pull back her slingshot and send a chancla flying into forts full of luchadores and calacas. Topple the blocks, knock everyone out, and clear all 9 levels.',
+  how:[['Drag back','Aim the slingshot'],['Release','Throw the chancla'],['Tap mid-air','Split the triple chancla'],['↻','Restart the level']]},
+ match:{t:'Chanclazo Match',tag:'Puzzle · Match 3',src:'/match',img:'/lp/match_shot.webp',anim:'/lp/match_loop.webp',ico:'/play/t_skull.webp',
+  about:'A Día de Muertos match-3. Swap sugar skulls, piñatas and chanclas to line up three or more, set off combos and clear the board.',
+  how:[['Swipe','Swap two neighboring tiles'],['3 in a row','Clear the tiles'],['4 in a row','Make a line-clearing chancla'],['L or T shape','Make a sugar skull bomb'],['5 in a row','Make a color-clearing piñata']]}};
+let cur=new URLSearchParams(location.search).get('g');if(!G[cur])cur='fling';
+const $=id=>document.getElementById(id);
+function show(k,launch){cur=k;const g=G[k];$('frame').innerHTML='';
+ if(launch){const f=document.createElement('iframe');f.src=g.src;f.allow='fullscreen; autoplay';f.title=g.t;$('frame').appendChild(f)}
+ else{const c=document.createElement('div');c.className='cover';c.style.backgroundImage=`url(${g.img})`;c.innerHTML=`<div class="ico" style="background-image:url(${g.ico})"></div><h2>${g.t}</h2><span class="btn">▶ Play</span>`;c.onclick=()=>show(k,true);$('frame').appendChild(c)}
+ $('gtitle').textContent=g.t;$('gtag').textContent=g.tag;$('atitle').textContent='About '+g.t;$('about').textContent=g.about;
+ $('how').innerHTML=g.how.map(([a,b])=>`<kbd>${a}</kbd><span>${b}</span>`).join('');
+ document.querySelectorAll('.th').forEach(t=>t.setAttribute('aria-current',t.dataset.k===k));
+ history.replaceState(null,'','?g='+k)}
+$('thumbs').innerHTML=Object.entries(G).map(([k,g])=>`<button class="th" data-k="${k}"><img src="${g.anim}" alt="${g.t} gameplay" loading="lazy" ${k=='match'?'style="object-fit:contain"':''}/><span>${g.t}<small>${g.tag}</small></span></button>`).join('');
+document.querySelectorAll('.th').forEach(t=>t.onclick=()=>{show(t.dataset.k,false);scrollTo({top:0,behavior:'smooth'})});
+$('fs').onclick=()=>{const g=G[cur];const f=$('frame');if(!f.querySelector('iframe'))show(cur,true);const fr=$('frame');(fr.requestFullscreen||fr.webkitRequestFullscreen||(()=>location.href=g.src)).call(fr)};
+show(cur,false);
+</script></body></html>
