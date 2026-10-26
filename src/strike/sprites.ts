@@ -47,7 +47,7 @@ export function loadChars() {
 export interface Char {
   root: THREE.Group; kind: CharKind;
   play(name: string, o?: { once?: boolean; fade?: number; speed?: number }): void;
-  update(dt: number): void; setFlash(c: number): void; dispose(): void;
+  update(dt: number): void; setFlash(c: number): void; setLook(o: { emissive?: number; glow?: number; opacity?: number }): void; dispose(): void;
 }
 
 const tmp = new THREE.Vector3();
@@ -67,6 +67,7 @@ export function makeChar(kind: CharKind): Char {
   const sh = new THREE.Mesh(shadowGeo, shadowMat); sh.scale.set(w * 1.1, 1, w * 0.55); sh.position.y = 0.04; root.add(sh);
   if (kind === 'pinata') sh.visible = false;
 
+  let baseEm = 0x2a1c22, baseGlow = L.glow, baseOp = 1;
   let state = 'idle', st = 0, speed = 1, phase = Math.random() * 6, life = 0, frame = -1;
   const setFrame = (i: number) => { if (!L.cols || i === frame) return; frame = i; const c = i % L.cols, r = Math.floor(i / L.cols); map.offset.set(c / L.cols, 1 - (r + 1) / L.rows!); };
   setFrame(0);
@@ -82,7 +83,7 @@ export function makeChar(kind: CharKind): Char {
     },
     update(dt) {
       life += dt; st += dt * speed; const t = life + phase;
-      let sy = 1, sx = 1, rz = 0, y = 0, op = 1;
+      let sy = 1, sx = 1, rz = 0, y = 0, op = baseOp;
       if (state === 'idle' || state === 'walk') {
         const k = Math.sin(t * L.bob * (state === 'walk' ? 2 : 1));
         sy = 1 + k * 0.045; sx = 1 - k * 0.035; y = Math.max(0, k) * (state === 'walk' ? 0.12 : 0.04);
@@ -99,14 +100,16 @@ export function makeChar(kind: CharKind): Char {
         rz = k * 0.35; sy = 1 - Math.abs(k) * 0.15; sx = 1 + Math.abs(k) * 0.15;
         if (p >= 1) state = 'idle';
       } else if (state === 'die') {
-        const p = Math.min(1, st / 0.9); rz = p * 1.5; sy = 1 - p * 0.4; sx = 1 + p * 0.2; y = Math.sin(p * Math.PI) * 0.6; op = 1 - p;
+        const p = Math.min(1, st / 0.9); rz = p * 1.5; sy = 1 - p * 0.4; sx = 1 + p * 0.2; y = Math.sin(p * Math.PI) * 0.6; op = baseOp * (1 - p);
         sh.scale.multiplyScalar(0.98);
       }
       pivot.position.y = y; body.scale.set(sx, sy, 1); body.position.y = (L.h / 2) * sy; body.rotation.z = rz;
       if (op < 1) { mat.transparent = ink.transparent = true; mat.opacity = ink.opacity = op; glow.opacity = 0.32 * op; }
+      else if (mat.transparent) { mat.opacity = ink.opacity = 1; glow.opacity = 0.32; mat.transparent = ink.transparent = false; mat.needsUpdate = ink.needsUpdate = true; }
       if (cam) { root.updateWorldMatrix(true, false); pivot.getWorldPosition(tmp); pivot.lookAt(cam.position.x, tmp.y, cam.position.z); }
     },
-    setFlash(c) { mat.emissive.setHex(c || 0x2a1c22); glow.color.setHex(c ? 0xff3030 : L.glow); },
+    setFlash(c) { mat.emissive.setHex(c || baseEm); glow.color.setHex(c ? 0xff3030 : baseGlow); },
+    setLook(o) { if (o.emissive !== undefined) baseEm = o.emissive; if (o.glow !== undefined) baseGlow = o.glow; if (o.opacity !== undefined) baseOp = o.opacity; mat.emissive.setHex(baseEm); glow.color.setHex(baseGlow); },
     dispose() { root.removeFromParent(); geo.dispose(); mat.dispose(); ink.dispose(); glow.dispose(); if (L.cols) map.dispose(); },
   };
   return ch;

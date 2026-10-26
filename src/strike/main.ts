@@ -3,14 +3,18 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { loadChars, makeChar, toon, setSpriteCamera, type Char, type CharKind } from './sprites';
-import { initAudio, playWhoosh, playHit, playStrike, playMomHit, playCombo, playGameOver, playDodge, setMuted, isMuted } from '../game/sound';
+import { initAudio, playWhoosh, playHit, playStrike, playMomHit, playCombo, playGameOver, playDodge, playLevelUp, setMuted, isMuted } from '../game/sound';
 
 const $ = (id: string) => document.getElementById(id)!;
+// Visible-viewport size (iOS Safari/Chrome toolbars), kept in sync on resize/rotation
+let VW = 0, VH = 0;
+function measure() { VW = Math.round(window.visualViewport?.width ?? innerWidth); VH = Math.round(window.visualViewport?.height ?? innerHeight); }
+measure();
 const ROAD = 5.2, AHEAD = 78, BEST_KEY = 'chanclazo-strike-best';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
-renderer.setSize(innerWidth, innerHeight);
+renderer.setSize(VW, VH);
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
 (document.body as HTMLElement).insertBefore(renderer.domElement, document.body.firstChild);
 const scene = new THREE.Scene();
@@ -18,11 +22,11 @@ scene.fog = new THREE.FogExp2(0x2a1846, 0.017);
 scene.background = new THREE.Color(0x140a24);
 const loader = new THREE.TextureLoader();
 const tex = (u: string) => { const t = loader.load(u); t.colorSpace = THREE.SRGBColorSpace; return t; };
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 400);
+const camera = new THREE.PerspectiveCamera(60, VW / VH, 0.1, 400);
 scene.add(new THREE.HemisphereLight(0x8f7fe0, 0x3a2010, 1.5));
 const moon = new THREE.DirectionalLight(0x9db4ff, 0.9); moon.position.set(-60, 140, 40); scene.add(moon);
 const warm = new THREE.PointLight(0xff9a3c, 30, 16, 1.6); scene.add(warm); // candle glow around the player
-function fitCam() { camera.aspect = innerWidth / innerHeight; camera.fov = camera.aspect < 0.8 ? 74 : 58; camera.updateProjectionMatrix(); }
+function fitCam() { camera.aspect = VW / VH; camera.fov = camera.aspect < 0.8 ? 74 : 58; camera.updateProjectionMatrix(); }
 fitCam();
 
 // ── The road: a closed, winding, hilly spline with banked turns ──────────────
@@ -90,7 +94,6 @@ const roadMesh = ribbon(ROAD + 0.5, 0, 7, new THREE.MeshLambertMaterial({ map: r
 ribbon(11, 0.06, 10, new THREE.MeshLambertMaterial({ color: 0x2a1c14 }));
 ribbon(60, 0.6, 10, new THREE.MeshLambertMaterial({ color: 0x150d1c }), 4);
 
-// ── Minimap (like Cruising Bones' route card) ───────────────────────────────
 
 const COLORS = [0xff6b6b, 0xffd166, 0x06d6a0, 0x4cc9f0, 0xf72585, 0xff9f1c, 0x9b5de5];
 const box = new THREE.BoxGeometry(1, 1, 1);
@@ -248,22 +251,27 @@ let abuelaC: Char | null = null;
 const abuelaLight = new THREE.PointLight(0xff7a3c, 40, 14, 1.3); abuelaLight.position.set(0, 5, 2.5); abuela.add(abuelaLight);
 
 // ── Targets ──────────────────────────────────────────────────────────────────
-type Kind = 'luchador' | 'calaca' | 'pinata' | 'pot' | 'crate' | 'picado';
-interface T { kind: Kind; obj: THREE.Object3D; ch?: Char; s: number; x: number; hp: number; pts: number; r: number; h: number; cy: number; vx: number; t: number; flash: number; dead?: boolean; dying?: number }
+type Kind = 'luchador' | 'armor' | 'calaca' | 'ghost' | 'pinata' | 'pot' | 'crate' | 'picado';
+interface T { kind: Kind; obj: THREE.Object3D; ch?: Char; s: number; x: number; hp: number; pts: number; r: number; h: number; cy: number; vx: number; t: number; flash: number; dead?: boolean; dying?: number; cracked?: boolean }
 const targets: T[] = [];
 const potMat = toon(0xc2410c), potBand = toon(0x4cc9f0), crateMat = toon(0x8b5a2b);
-const SPEC: Record<Kind, { hp: number; pts: number; r: number; h: number; cy: number; colors: number[] }> = {
-  luchador: { hp: 2, pts: 150, r: 1.0, h: 1.4, cy: 1.2, colors: [0xd62828, 0xffd166, 0x8b1e1e] },
-  calaca: { hp: 1, pts: 100, r: 0.9, h: 1.4, cy: 1.2, colors: [0xfbf6ea, 0x1b1020, 0xf72585] },
-  pinata: { hp: 3, pts: 300, r: 1.2, h: 1.3, cy: 3.4, colors: [0xf72585, 0xffd166, 0x06d6a0, 0x4cc9f0, 0x9b5de5] },
-  pot: { hp: 1, pts: 40, r: 0.9, h: 1.0, cy: 0.9, colors: [0xc2410c, 0x4cc9f0, 0xe8a87c] },
-  crate: { hp: 1, pts: 40, r: 1.0, h: 1.0, cy: 0.9, colors: [0x8b5a2b, 0xa0703c] },
-  picado: { hp: 1, pts: 60, r: 3.4, h: 0.7, cy: 4.6, colors: COLORS },
+const SPEC: Record<Kind, { hp: number; pts: number; r: number; h: number; cy: number; colors: number[]; name: string }> = {
+  luchador: { hp: 1, pts: 150, r: 1.0, h: 1.4, cy: 1.2, colors: [0xd62828, 0xffd166, 0x8b1e1e], name: '¡KNOCKOUT!' },
+  armor: { hp: 2, pts: 400, r: 1.1, h: 1.5, cy: 1.3, colors: [0x9aa7b8, 0xd62828, 0xffd166], name: '¡ARMOR SMASHED!' },
+  calaca: { hp: 1, pts: 100, r: 0.9, h: 1.4, cy: 1.2, colors: [0xfbf6ea, 0x1b1020, 0xf72585], name: '¡CALACA DOWN!' },
+  ghost: { hp: 1, pts: 350, r: 1.0, h: 1.4, cy: 2.6, colors: [0x9be7ff, 0xffffff, 0x7048e8], name: '¡GHOST BUSTED!' },
+  pinata: { hp: 2, pts: 300, r: 1.2, h: 1.3, cy: 3.4, colors: [0xf72585, 0xffd166, 0x06d6a0, 0x4cc9f0, 0x9b5de5], name: '¡PIÑATA!' },
+  pot: { hp: 1, pts: 40, r: 0.9, h: 1.0, cy: 0.9, colors: [0xc2410c, 0x4cc9f0, 0xe8a87c], name: 'SMASH!' },
+  crate: { hp: 1, pts: 40, r: 1.0, h: 1.0, cy: 0.9, colors: [0x8b5a2b, 0xa0703c], name: 'SMASH!' },
+  picado: { hp: 1, pts: 60, r: 3.4, h: 0.7, cy: 4.6, colors: COLORS, name: '¡PAPEL PICADO!' },
 };
+const ARMOR_LOOK = { emissive: 0x23384f, glow: 0xa9c6ff };
 function spawn(kind: Kind, s: number, x: number) {
   const g = new THREE.Group(); let ch: Char | undefined;
   if (kind === 'luchador') ch = addChar('luchador', g, Math.random() < 0.5 ? 'Punch_Cross' : 'Dance_Loop');
+  else if (kind === 'armor') { ch = addChar('luchador', g, 'Punch_Cross'); ch.root.scale.setScalar(1.18); ch.setLook(ARMOR_LOOK); }
   else if (kind === 'calaca') ch = addChar('calaca', g, 'Walk_Loop');
+  else if (kind === 'ghost') { ch = addChar('calaca', g, 'Idle_Loop'); ch.root.position.y = 1.4; ch.setLook({ emissive: 0x1d4a66, glow: 0x7fe9ff, opacity: 0.62 }); }
   else if (kind === 'pinata') {
     ch = addChar('pinata', g, 'Idle_Loop'); ch.root.position.y = 2.4;
     const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 3, 4), toon(0xd9c49a)); rope.position.y = 5.9; g.add(rope);
@@ -275,7 +283,7 @@ function spawn(kind: Kind, s: number, x: number) {
   else { for (let k = 0; k < 9; k++) { const f = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.8), new THREE.MeshBasicMaterial({ color: COLORS[k % 7], side: THREE.DoubleSide })); f.position.set(-2.8 + k * 0.7, 4.6 - Math.cos((k - 4) / 4) * 0.4, 0); g.add(f); } }
   scene.add(g);
   const sp = SPEC[kind];
-  const t: T = { kind, obj: g, ch, s, x, hp: sp.hp, pts: sp.pts, r: sp.r, h: sp.h, cy: sp.cy, vx: kind === 'calaca' ? (Math.random() < 0.5 ? -1.8 : 1.8) : 0, t: Math.random() * 6, flash: 0 };
+  const t: T = { kind, obj: g, ch, s, x, hp: sp.hp, pts: sp.pts, r: sp.r, h: sp.h, cy: sp.cy, vx: kind === 'calaca' ? (Math.random() < 0.5 ? -1.8 : 1.8) : kind === 'ghost' ? (Math.random() < 0.5 ? -2.6 : 2.6) : 0, t: Math.random() * 6, flash: 0 };
   targets.push(t); posTarget(t);
 }
 const tf = mkFr();
@@ -284,112 +292,220 @@ function posTarget(t: T) {
   if (t.kind === 'picado') t.obj.lookAt(tf.p.clone().add(tf.t));
   else t.obj.lookAt(player.position.x, t.obj.position.y, player.position.z);
 }
+const centerOf = (t: T) => t.obj.position.clone().addScaledVector(t.obj.up, t.cy + (t.kind === 'ghost' ? Math.sin(t.t * 2.2) * 0.4 : 0));
 
 // ── Projectiles ──────────────────────────────────────────────────────────────
-interface Shot { m: THREE.Mesh; v: THREE.Vector3; s: ReturnType<typeof sheet>; f: number; enemy: boolean; life: number; max: number }
+type ShotType = 'chancla' | 'boot' | 'triple';
+const SHOTS: Record<ShotType, { label: string; wave: number; cool: number; dmg: number; scale: number }> = {
+  chancla: { label: 'Chancla', wave: 1, cool: 0.22, dmg: 1, scale: 1 },
+  boot: { label: 'Heavy boot', wave: 3, cool: 0.45, dmg: 2, scale: 1.6 },
+  triple: { label: 'Triple', wave: 5, cool: 0.38, dmg: 1, scale: 0.9 },
+};
+interface Shot { m: THREE.Mesh; v: THREE.Vector3; s: ReturnType<typeof sheet>; f: number; enemy: boolean; life: number; max: number; dmg: number; ring?: THREE.Mesh; ringX?: number; hitR: number }
 const shots: Shot[] = [];
 function chanclaMesh() {
   const s = sheet('/cruise/chancla_spin.webp');
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), new THREE.MeshBasicMaterial({ map: s.t, transparent: true, alphaTest: 0.3 }));
   scene.add(m); return { m, s };
 }
+// Landing warning ring for the abuela's chanclas
+const ringGeo = new THREE.RingGeometry(0.95, 1.3, 32).rotateX(-Math.PI / 2);
+function warnRing(at: Fr) {
+  const m = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xff3b3b, transparent: true, opacity: 0.85, depthWrite: false, fog: false, side: THREE.DoubleSide }));
+  const dot = new THREE.Mesh(new THREE.CircleGeometry(0.95, 24).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff3b3b, transparent: true, opacity: 0.35, depthWrite: false, fog: false, side: THREE.DoubleSide }));
+  m.add(dot); m.position.copy(at.p).addScaledVector(at.u, 0.08); m.up.copy(at.u); m.lookAt(at.p.clone().add(at.t)); m.renderOrder = 2; scene.add(m); return m;
+}
 
 // ── State ────────────────────────────────────────────────────────────────────
+const UNLOCK_KEY = 'chanclazo-strike-unlocks', HINT_KEY = 'chanclazo-strike-hinted';
 const st = { running: false, t: 0, speed: 11, s: 0, px: 0, steer: 0, score: 0, combo: 0, streak: 0, lives: 3, hurt: 0,
-  cool: 0, spawnAt: 30, abuelaIn: 2.5, stun: 0, shake: 0, best: parseInt(localStorage.getItem(BEST_KEY) ?? '0', 10) || 0 };
+  cool: 0, spawnAt: 30, abuelaIn: 3.5, stun: 0, shake: 0, wind: 0, slow: 0, wave: 1, hits: 0, bestCombo: 0, thrown: 0,
+  shot: 'chancla' as ShotType, unlocked: Math.max(1, parseInt(localStorage.getItem(UNLOCK_KEY) ?? '1', 10) || 1),
+  best: parseInt(localStorage.getItem(BEST_KEY) ?? '0', 10) || 0 };
 const input = { l: false, r: false };
 $('best').textContent = `Best ${st.best.toLocaleString()}`;
 const mult = () => 1 + Math.floor(st.combo / 3);
+const isTouch = matchMedia('(pointer: coarse)').matches;
 function hud() {
-  $('score').textContent = `${st.score.toLocaleString()}${mult() > 1 ? `  x${mult()}` : ''}`;
+  $('score').textContent = st.score.toLocaleString();
   $('speed').textContent = '❤'.repeat(Math.max(0, st.lives)) + '♡'.repeat(Math.max(0, 3 - st.lives));
+  $('wave').textContent = `Wave ${st.wave}`;
+  const c = $('combo'); if (st.combo >= 2) { c.textContent = `${st.combo} combo · x${mult()}`; c.classList.add('on'); } else c.classList.remove('on');
 }
 function flash(msg: string, color = '#ffd700') {
   const el = $('trick'); el.textContent = msg; el.style.color = color; el.style.opacity = '1';
-  clearTimeout((flash as any).t); (flash as any).t = setTimeout(() => (el.style.opacity = '0'), 650);
+  clearTimeout((flash as any).t); (flash as any).t = setTimeout(() => (el.style.opacity = '0'), 900);
 }
+const _sp = new THREE.Vector3();
+function toScreen(p: THREE.Vector3) { _sp.copy(p).project(camera); return { x: (_sp.x + 1) / 2 * VW, y: (1 - _sp.y) / 2 * VH, ok: _sp.z < 1 && _sp.z > -1 }; }
+function popup(at: THREE.Vector3, text: string, color = '#ffd166', big = false) {
+  const q = toScreen(at); if (!q.ok) return;
+  const d = document.createElement('div'); d.className = 'pop' + (big ? ' big' : ''); d.textContent = text; d.style.color = color;
+  d.style.left = q.x + 'px'; d.style.top = q.y + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 900);
+}
+function impact(strength = 0.25) { const f = $('impact'); f.style.transition = 'none'; f.style.opacity = String(strength); requestAnimationFrame(() => { f.style.transition = 'opacity .18s'; f.style.opacity = '0'; }); }
+function shotBar() {
+  const bar = $('shots'); const avail = (Object.keys(SHOTS) as ShotType[]).filter((k) => SHOTS[k].wave <= st.unlocked);
+  bar.classList.toggle('hidden', avail.length < 2);
+  bar.innerHTML = avail.map((k, i) => `<button data-k="${k}" class="${k === st.shot ? 'on' : ''}">${isTouch ? '' : `${i + 1} · `}${SHOTS[k].label}</button>`).join('');
+}
+$('shots').addEventListener('pointerdown', (e) => { e.stopPropagation(); const k = (e.target as HTMLElement).closest('button')?.getAttribute('data-k') as ShotType | null; if (k) { st.shot = k; shotBar(); } });
 function reset() {
   initAudio();
   for (const t of targets) { scene.remove(t.obj); dropChar(t.ch); } targets.length = 0;
-  for (const s of shots) scene.remove(s.m); shots.length = 0;
-  Object.assign(st, { running: true, t: 0, speed: 11, s: 0, px: 0, steer: 0, score: 0, combo: 0, streak: 0, lives: 3, hurt: 0, cool: 0, spawnAt: 30, abuelaIn: 2.5, stun: 0, shake: 0 });
-  layoutProps(0); kidC?.play('Idle_Loop');
-  $('start').classList.add('hidden'); $('over').classList.add('hidden'); hud();
+  for (const s of shots) { scene.remove(s.m); if (s.ring) scene.remove(s.ring); } shots.length = 0;
+  Object.assign(st, { running: true, t: 0, speed: 11, s: 0, px: 0, steer: 0, score: 0, combo: 0, streak: 0, lives: 3, hurt: 0, cool: 0, spawnAt: 30, abuelaIn: 3.5, stun: 0, shake: 0, wind: 0, slow: 0, wave: 1, hits: 0, bestCombo: 0, thrown: 0 });
+  if (SHOTS[st.shot].wave > st.unlocked) st.shot = 'chancla';
+  layoutProps(0); kidC?.play('Idle_Loop'); abuelaC?.setLook({}); 
+  $('start').classList.add('hidden'); $('over').classList.add('hidden'); hud(); shotBar();
+  const h = $('hint2'); h.textContent = isTouch ? 'Tap to throw, slide to dodge' : 'Click to throw · A/D or ←/→ to dodge';
+  if (!localStorage.getItem(HINT_KEY) || (window as any).__forceHint) { h.classList.add('on'); setTimeout(() => h.classList.remove('on'), 3000); localStorage.setItem(HINT_KEY, '1'); }
 }
 function gameOver() {
   st.running = false; playGameOver(); kidC?.play('Death01', { once: true });
-  if (st.score > st.best) { st.best = st.score; localStorage.setItem(BEST_KEY, String(st.score)); }
+  const newBest = st.score > st.best;
+  if (newBest) { st.best = st.score; localStorage.setItem(BEST_KEY, String(st.score)); }
   $('best').textContent = `Best ${st.best.toLocaleString()}`;
-  $('overMsg').textContent = 'The abuela got you three times. Nobody escapes the chancla.';
-  $('overScore').textContent = `${st.score.toLocaleString()} pts`;
-  $('over').classList.remove('hidden');
+  $('overMsg').textContent = 'The abuela got you three times. Nobody escapes the chancla!';
+  $('overScore').textContent = `${st.score.toLocaleString()} pts${newBest ? ' · New best!' : ''}`;
+  const m = Math.floor(st.t / 60), sec = Math.floor(st.t % 60);
+  $('overStats').innerHTML = [['Hits', st.hits], ['Best combo', st.bestCombo], ['Time survived', `${m}:${String(sec).padStart(2, '0')}`], ['Wave reached', st.wave], ['Best score', st.best.toLocaleString()]]
+    .map(([k, v]) => `<div><small>${k}</small><b>${v}</b></div>`).join('');
+  $('over').classList.remove('hidden'); $('combo').classList.remove('on'); $('warnA').classList.remove('on');
 }
 
-// ── Throwing (aim with a tap or click) ───────────────────────────────────────
+// ── Aim: lock-on reticle (mouse hover, touch tap, keyboard auto-aim) ─────────
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), pf = mkFr();
-function throwAt(cx: number, cy: number) {
+let mouse: { x: number; y: number } | null = null;
+function lockNear(sx: number, sy: number, radius: number): T | null {
+  let best: T | null = null, bd = radius;
+  for (const t of targets) {
+    if (t.dead || t.s < st.s + 4 || t.s > st.s + 60) continue;
+    const q = toScreen(centerOf(t)); if (!q.ok) continue;
+    const d = Math.hypot(q.x - sx, q.y - sy) - (t.kind === 'picado' ? 40 : 0);
+    if (d < bd) { bd = d; best = t; }
+  }
+  return best;
+}
+function autoTarget(): T | null { // the nearest target ahead of the player (keyboard / reticle hint)
+  let best: T | null = null, bd = 1e9;
+  for (const t of targets) { if (t.dead || t.s < st.s + 5 || t.s > st.s + 45 || t.kind === 'picado') continue; const d = (t.s - st.s) + Math.abs(t.x - st.px) * 3; if (d < bd) { bd = d; best = t; } }
+  return best;
+}
+function throwAt(cx: number, cy: number, lockTarget?: T | null) {
   if (!st.running || st.cool > 0) return;
-  ndc.set((cx / innerWidth) * 2 - 1, -(cy / innerHeight) * 2 + 1);
-  ray.setFromCamera(ndc, camera);
-  const objs: THREE.Object3D[] = [abuela]; targets.forEach(t => !t.dead && objs.push(t.obj));
-  const hit = ray.intersectObjects(objs, true)[0] ?? ray.intersectObject(roadMesh, false)[0];
-  const aim = hit ? hit.point.clone() : ray.ray.at(45, new THREE.Vector3());
+  const lock = lockTarget !== undefined ? lockTarget : lockNear(cx, cy, isTouch ? 120 : 80);
+  let aim: THREE.Vector3;
+  if (lock) aim = centerOf(lock);
+  else {
+    ndc.set((cx / VW) * 2 - 1, -(cy / VH) * 2 + 1); ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObjects([abuela], true)[0] ?? ray.intersectObject(roadMesh, false)[0];
+    aim = hit ? hit.point.clone() : ray.ray.at(45, new THREE.Vector3());
+  }
   frame(st.s, st.px, 0, pf);
   const from = pf.p.clone().addScaledVector(pf.u, 2.2).addScaledVector(pf.t, 0.6);
   if (aim.clone().sub(from).dot(pf.t) < 3) aim.copy(from).addScaledVector(pf.t, 20);
   const T = THREE.MathUtils.clamp(from.distanceTo(aim) / 55, 0.12, 0.9);
-  aim.addScaledVector(pf.t, st.speed * T * 0.0); // targets are static in the world now
-  const { m, s } = chanclaMesh(); m.position.copy(from);
-  const v = aim.sub(from).divideScalar(T); v.y += 0.5 * 14 * T;
-  shots.push({ m, v, s, f: 0, enemy: false, life: 0, max: T * 1.35 + 0.05 });
-  st.cool = 0.22; playWhoosh(1.2);
+  const S = SHOTS[st.shot];
+  const offs = st.shot === 'triple' ? [-1.4, 0, 1.4] : [0];
+  for (const o of offs) {
+    const a = aim.clone().addScaledVector(pf.r, o);
+    const { m, s } = chanclaMesh(); m.position.copy(from); m.scale.setScalar(S.scale);
+    const v = a.sub(from).divideScalar(T); v.y += 0.5 * 14 * T;
+    shots.push({ m, v, s, f: 0, enemy: false, life: 0, max: T * 1.35 + 0.05, dmg: S.dmg, hitR: 0.25 * S.scale });
+  }
+  st.thrown++; st.cool = S.cool; playWhoosh(st.shot === 'boot' ? 0.8 : 1.2);
+  const q = lock ? toScreen(aim) : { x: cx, y: cy }; const r = $('ret'); r.style.left = q.x + 'px'; r.style.top = q.y + 'px'; r.classList.remove('fire'); void r.offsetWidth; r.classList.add('fire');
   kidC?.play('Spell_Simple_Shoot', { once: true, fade: 0.05, speed: 2.2 }); clearTimeout((throwAt as any).t); (throwAt as any).t = setTimeout(() => st.running && kidC?.play('Idle_Loop', { fade: 0.2 }), 380);
 }
+function updateReticle() {
+  const r = $('ret'); if (!st.running) { r.className = 'hidden'; return; }
+  let t: T | null = null;
+  if (mouse && !isTouch) t = lockNear(mouse.x, mouse.y, 80);
+  if (!t && (isTouch || !mouse)) t = autoTarget();
+  if (t) { const q = toScreen(centerOf(t)); r.style.left = q.x + 'px'; r.style.top = q.y + 'px'; r.className = 'lock' + (r.classList.contains('fire') ? ' fire' : ''); }
+  else if (mouse && !isTouch) { r.style.left = mouse.x + 'px'; r.style.top = mouse.y + 'px'; r.className = 'free'; }
+  else r.className = 'hidden';
+}
+
+// ── The abuela: telegraphed throws ───────────────────────────────────────────
 const af = mkFr();
+const gentle = () => st.t < 25;
+function startWindup() { st.wind = gentle() ? 1.0 : Math.max(0.45, 0.85 - st.wave * 0.06); abuelaC?.play('Hit_Chest', { once: true, speed: 0.6 }); }
 function abuelaThrow() {
   if (!st.running || st.stun > 0) return;
   abuelaC?.play('Spell_Simple_Shoot', { once: true, fade: 0.1, speed: 1.6 }); setTimeout(() => st.stun <= 0 && abuelaC?.play('Idle_Loop', { fade: 0.25 }), 700);
   const { m, s } = chanclaMesh(); m.position.copy(abuela.position).y += 3.4;
-  const T = Math.max(0.85, 1.45 - st.t / 70);
-  const tx = THREE.MathUtils.clamp(st.px + st.steer * 1.5 + (Math.random() - 0.5) * 3, -ROAD + 0.5, ROAD - 0.5);
+  const T = gentle() ? 1.6 : Math.max(0.9, 1.5 - st.wave * 0.08);
+  const tx = THREE.MathUtils.clamp(st.px + st.steer * 1.2 + (Math.random() - 0.5) * 2.2, -ROAD + 1.8, ROAD - 1.8);
   frame(st.s + st.speed * T, tx, 1.4, af);
   const v = af.p.clone().sub(m.position).divideScalar(T); v.y += 0.5 * 9.8 * T;
-  m.scale.setScalar(1.3); shots.push({ m, v, s, f: 0, enemy: true, life: 0, max: T + 0.6 });
+  const ring = warnRing(frame(st.s + st.speed * T, tx, 0));
+  m.scale.setScalar(1.3); shots.push({ m, v, s, f: 0, enemy: true, life: 0, max: T + 0.6, dmg: 1, ring, ringX: tx, hitR: 0 });
 }
-function hitTarget(t: T, at: THREE.Vector3) {
-  t.hp--; t.flash = 0.15; st.shake = Math.max(st.shake, 0.25);
+function nextThrowIn() {
+  if (gentle()) return 3.4 * (0.85 + Math.random() * 0.3);
+  return Math.max(1.0, 3.1 - (st.wave - 1) * 0.3) * (0.75 + Math.random() * 0.5);
+}
+
+function hitTarget(t: T, at: THREE.Vector3, dmg: number) {
+  t.hp -= dmg; t.flash = 0.15; st.shake = Math.max(st.shake, 0.18); st.hits++;
   const spec = SPEC[t.kind];
   burst(at, spec.colors, 6, 4);
-  if (t.hp > 0) { playHit(); t.s += 1.2; t.ch?.play('Hit_Chest', { once: true, fade: 0.05 }); setTimeout(() => t.ch && !t.dead && t.ch.play('Punch_Cross'), 600); return; }
-  t.dead = true; st.combo++; st.streak++;
+  if (t.hp > 0) {
+    playHit(); t.s += 1.2; t.ch?.play('Hit_Chest', { once: true, fade: 0.05 }); setTimeout(() => t.ch && !t.dead && t.ch.play('Punch_Cross'), 600);
+    if (t.kind === 'armor' && !t.cracked) { t.cracked = true; t.ch?.setLook({ emissive: 0x2a1c22, glow: 0xffc65c }); burst(at, [0x9aa7b8, 0xd8e2ee, 0x5c6878], 14, 6); popup(at, 'CRACK!', '#cfe3ff', true); impact(0.18); }
+    return;
+  }
+  t.dead = true; st.combo++; st.streak++; st.bestCombo = Math.max(st.bestCombo, st.combo);
   const gain = t.pts * mult(); st.score += gain;
-  st.shake = t.kind === 'pinata' ? 0.6 : 0.4;
-  const center = t.obj.position.clone().addScaledVector(t.obj.up, t.cy);
-  burst(center, spec.colors, t.kind === 'pinata' ? 40 : t.kind === 'picado' ? 26 : 20, t.kind === 'pinata' ? 11 : 7, t.kind === 'picado' || t.kind === 'pinata');
+  const center = centerOf(t);
+  const heavy = t.kind === 'pinata' || t.kind === 'armor' || t.kind === 'ghost';
+  st.shake = heavy ? 0.35 : 0.22; st.slow = heavy ? 0.28 : 0.12; impact(heavy ? 0.32 : 0.18);
+  burst(center, spec.colors, heavy ? 36 : t.kind === 'picado' ? 26 : 20, heavy ? 10 : 7, t.kind === 'picado' || t.kind === 'pinata' || t.kind === 'ghost');
   if (t.kind === 'pinata') burst(center, [0xffd166, 0xff6b6b, 0x06d6a0], 20, 9);
   playStrike(); if (st.combo % 3 === 0) playCombo(st.combo);
-  const label = t.kind === 'luchador' ? '¡KNOCKOUT!' : t.kind === 'calaca' ? '¡CALACA DOWN!' : t.kind === 'pinata' ? '¡PIÑATA!' : 'SMASH!';
-  flash(`${label} +${gain}${st.streak >= 3 ? `  ${st.streak} STREAK` : ''}`);
+  popup(center, `+${gain}`, mult() > 1 ? '#7CFC00' : '#ffd166', heavy);
+  flash(`${spec.name}${st.streak >= 3 ? `  ${st.streak} streak` : ''}`);
   if (t.ch) { t.ch.play('Death01', { once: true, fade: 0.08 }); t.dying = 1.3; t.ch.setFlash(0); } else { scene.remove(t.obj); }
+}
+
+// ── Waves ────────────────────────────────────────────────────────────────────
+const WAVE_LEN = 25;
+const WAVE_MSG: Record<number, string> = { 2: 'Piñatas incoming!', 3: 'Armored luchadores: hit them twice!', 4: 'Ghost calacas float in!', 5: 'The abuela is getting faster!' };
+function onWave(w: number) {
+  st.wave = w; playLevelUp();
+  let msg = WAVE_MSG[w] ?? 'Faster abuela!';
+  for (const k of Object.keys(SHOTS) as ShotType[]) if (SHOTS[k].wave === w && w > st.unlocked) msg = `New: ${SHOTS[k].label}!`;
+  if (w > st.unlocked) { st.unlocked = w; localStorage.setItem(UNLOCK_KEY, String(w)); shotBar(); }
+  const b = $('banner'); b.innerHTML = `<b>Wave ${w}</b><span>${msg}</span>`; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
+}
+function pickSpawn(): Kind | 'group' {
+  const w = st.wave, table: [Kind | 'group', number][] = [['group', 30], ['calaca', 26], ['luchador', 22], ['picado', 10]];
+  if (w >= 2) table.push(['pinata', 12]);
+  if (w >= 3) table.push(['armor', 14]);
+  if (w >= 4) table.push(['ghost', 14]);
+  let r = Math.random() * table.reduce((a, b) => a + b[1], 0);
+  for (const [k, n] of table) { r -= n; if (r <= 0) return k; } return 'group';
 }
 
 // ── Loop ─────────────────────────────────────────────────────────────────────
 let last = performance.now();
-const cf = mkFr(), lf = mkFr(), camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), camUp = new THREE.Vector3(0, 1, 0);
+const cf = mkFr(), lf = mkFr(), camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), camUp = new THREE.Vector3(0, 1, 0), WUP = new THREE.Vector3(0, 1, 0), _u = new THREE.Vector3();
 let camInit = false;
 function loop() {
-  const now = performance.now(), dt = Math.min((now - last) / 1000, 0.05); last = now;
+  const now = performance.now(); let dt = Math.min((now - last) / 1000, 0.05); last = now;
+  if (st.slow > 0) { st.slow -= dt; dt *= 0.3; }
   if (st.running) step(dt);
-  // player on the road
   frame(st.s, st.px, 0, pf); player.position.copy(pf.p); player.up.copy(pf.u); player.lookAt(pf.p.clone().add(pf.t));
-  player.rotateZ(-st.steer * 0.2);
-  // camera: low, behind and slightly above, following the curve and banking with it
-  frame(st.s - 8.5, st.px * 0.6, 4.0, cf); frame(st.s + 9, st.px * 0.4, 1.4, lf);
+  player.rotateZ(-st.steer * 0.12);
+  // camera: behind and above; only a little of the road banking reaches the camera, so it never tilts oddly
+  frame(st.s - 8.5, st.px * 0.6, 4.2, cf); frame(st.s + 9, st.px * 0.4, 1.2, lf);
   const k = camInit ? Math.min(1, dt * 6) : 1; camInit = true;
-  camPos.lerp(cf.p, k); camLook.lerp(lf.p, k); camUp.lerp(cf.u, k);
-  const sh = st.shake; st.shake = Math.max(0, st.shake - dt * 1.6);
-  camera.position.copy(camPos).add(new THREE.Vector3((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh, 0));
-  camera.up.copy(camUp); camera.lookAt(camLook);
+  camPos.lerp(cf.p, k); camLook.lerp(lf.p, k); camUp.lerp(_u.copy(WUP).lerp(cf.u, 0.12).normalize(), k);
+  camera.position.copy(camPos); camera.up.copy(camUp); camera.lookAt(camLook);
+  const sh = st.shake; st.shake = Math.max(0, st.shake - dt * 2.2);
+  if (sh > 0) { camera.translateX((Math.random() - 0.5) * sh * 0.5); camera.translateY((Math.random() - 0.5) * sh * 0.5); } // subtle positional shake, no roll
   warm.position.copy(pf.p).addScaledVector(pf.u, 4); warm.intensity = 26 + Math.sin(now / 90) * 3;
   rig.position.copy(camera.position); rig.quaternion.copy(camera.quaternion);
   for (let i = 0; i < PET; i++) { petPos[i * 3 + 1] -= dt * 0.7; petPos[i * 3] += Math.sin(now / 900 + i) * dt * 0.4; petPos[i * 3 + 2] += dt * (st.running ? st.speed : 0) * 0.6; if (petPos[i * 3 + 1] < -4 || petPos[i * 3 + 2] > 2) { petPos[i * 3] = (Math.random() - 0.5) * 30; petPos[i * 3 + 1] = 2 + Math.random() * 8; petPos[i * 3 + 2] = -10 - Math.random() * 50; } }
@@ -402,18 +518,24 @@ function loop() {
   }
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life > parts[i].max) { scene.remove(parts[i].m); parts.splice(i, 1); }
   for (const c of mixers) c.update(dt);
-  for (const t of targets) for (const o of t.obj.children) if (o.userData.bb) o.quaternion.copy(camera.quaternion).premultiply(t.obj.quaternion.clone().invert());
+  // wind-up: the abuela leans back and grows, with a warning badge over her head
+  const wa = $('warnA');
+  if (st.running && st.wind > 0 && abuelaC) {
+    const p = 1 - st.wind / (gentle() ? 1.0 : 0.85); abuelaC.root.scale.setScalar(1 + Math.max(0, p) * 0.18); abuelaC.root.rotation.z = Math.sin(now / 50) * 0.05;
+    const q = toScreen(abuela.position.clone().addScaledVector(abuela.up, 4.2)); wa.style.left = q.x + 'px'; wa.style.top = q.y + 'px'; wa.classList.add('on');
+  } else { wa.classList.remove('on'); if (abuelaC) { abuelaC.root.scale.setScalar(1); abuelaC.root.rotation.z = 0; } }
   for (const s of shots) s.m.quaternion.copy(camera.quaternion);
+  updateReticle();
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
 
 function step(dt: number) {
   st.t += dt;
-  // speed follows the hills: faster downhill, slower uphill
+  const w = 1 + Math.floor(st.t / WAVE_LEN); if (w !== st.wave) onWave(w);
   const slope = lerpArr(Tg, st.s, _b).y;
-  st.speed = THREE.MathUtils.clamp(st.speed + (-slope * 14 + 0.25) * dt, 9, 13 + st.t * 0.12);
-  st.speed = Math.min(st.speed, 24);
+  st.speed = THREE.MathUtils.clamp(st.speed + (-slope * 14 + 0.25) * dt, 9, 13 + st.t * 0.1);
+  st.speed = Math.min(st.speed, 22);
   st.s += st.speed * dt;
   st.cool -= dt; st.hurt -= dt; st.stun -= dt;
   const want = THREE.MathUtils.clamp((input.r ? 1 : 0) - (input.l ? 1 : 0) + joyX, -1, 1);
@@ -423,47 +545,45 @@ function step(dt: number) {
 
   for (const p of props) if (p.s < st.s - 12) { p.s += p.span; place(p); }
 
-  // Abuela rides ahead, tracking the player's lane
   const abS = st.s + 30;
   const abX = THREE.MathUtils.lerp(abuela.userData.x ?? 0, st.px, Math.min(1, dt * 0.9)); abuela.userData.x = abX;
   frame(abS, abX, 0, af); abuela.position.copy(af.p); abuela.up.copy(af.u); abuela.lookAt(player.position.x, abuela.position.y, player.position.z);
   abuelaC?.setFlash(st.stun > 0 && Math.floor(st.t * 10) % 2 ? 0x550000 : 0);
-  if (st.stun <= 0) {
-    st.abuelaIn -= dt;
-    if (st.abuelaIn <= 0) { abuelaThrow(); st.abuelaIn = Math.max(0.8, 2.4 - st.t / 30) * (0.7 + Math.random() * 0.6); if (st.t > 25 && Math.random() < 0.35) setTimeout(abuelaThrow, 280); }
-  }
+  if (st.stun > 0) st.wind = 0;
+  else if (st.wind > 0) { st.wind -= dt; if (st.wind <= 0) { st.wind = 0; abuelaThrow(); if (st.wave >= 4 && Math.random() < 0.3) setTimeout(abuelaThrow, 300); } }
+  else { st.abuelaIn -= dt; if (st.abuelaIn <= 0) { startWindup(); st.abuelaIn = nextThrowIn(); } }
 
-  // Spawning along the road
   if (st.s + AHEAD > st.spawnAt) {
-    const s0 = st.spawnAt, r = Math.random(), x = () => (Math.random() * 2 - 1) * (ROAD - 1.2);
-    if (r < 0.25) spawn('luchador', s0, x());
-    else if (r < 0.48) spawn('calaca', s0, x());
-    else if (r < 0.58) spawn('pinata', s0, x());
-    else if (r < 0.7) spawn('picado', s0, 0);
-    else { const n = 2 + Math.floor(Math.random() * 3), x0 = x(); for (let k = 0; k < n; k++) spawn(Math.random() < 0.5 ? 'pot' : 'crate', s0 + k * 0.6, THREE.MathUtils.clamp(x0 + (k - n / 2) * 1.6, -ROAD + 0.7, ROAD - 0.7)); }
-    st.spawnAt += Math.max(6, 13 - st.t * 0.08);
+    const s0 = st.spawnAt, x = () => (Math.random() * 2 - 1) * (ROAD - 1.2), k = pickSpawn();
+    if (k === 'picado') spawn('picado', s0, 0);
+    else if (k === 'group') { const n = 2 + Math.floor(Math.random() * 3), x0 = x(); for (let j = 0; j < n; j++) spawn(Math.random() < 0.5 ? 'pot' : 'crate', s0 + j * 0.6, THREE.MathUtils.clamp(x0 + (j - n / 2) * 1.6, -ROAD + 0.7, ROAD - 0.7)); }
+    else spawn(k, s0, x());
+    st.spawnAt += Math.max(6, 12 - st.t * 0.06);
   }
   for (const t of targets) {
     if (t.dying !== undefined) { t.dying -= dt; if (t.dying <= 0) { scene.remove(t.obj); dropChar(t.ch); t.dying = undefined; } continue; }
     if (t.dead) continue;
     t.t += dt;
-    if (t.kind === 'calaca') { t.x += t.vx * dt; if (Math.abs(t.x) > ROAD - 1) t.vx *= -1; }
-    if (t.kind === 'calaca' || t.kind === 'luchador') posTarget(t);
+    if (t.kind === 'calaca' || t.kind === 'ghost') { t.x += t.vx * dt; if (Math.abs(t.x) > ROAD - 1) { t.vx *= -1; t.x = Math.sign(t.x) * (ROAD - 1); } }
+    if (t.kind === 'calaca' || t.kind === 'luchador' || t.kind === 'armor' || t.kind === 'ghost') posTarget(t);
+    if (t.kind === 'ghost' && t.ch) t.ch.root.position.y = 1.4 + Math.sin(t.t * 2.2) * 0.4;
     if (t.kind === 'pinata') t.obj.children[0].position.x = Math.sin(t.t * 3) * 0.3;
     t.flash -= dt; t.ch?.setFlash(t.flash > 0 ? 0x880000 : 0);
+    t.obj.visible = t.s > st.s + 1.5; // passed targets vanish so they never cover the player
     if (t.s < st.s - 4) { t.dead = true; scene.remove(t.obj); dropChar(t.ch); if (t.kind !== 'picado') st.streak = 0; }
   }
   for (let i = targets.length - 1; i >= 0; i--) if (targets[i].dead && targets[i].dying === undefined) targets.splice(i, 1);
 
-  // Projectiles
   const pc = player.position.clone().addScaledVector(player.up, 1.4);
   for (const s of shots) {
     s.life += dt; s.v.y -= (s.enemy ? 9.8 : 14) * dt; s.m.position.addScaledVector(s.v, dt);
     s.f += dt * 40; sprFrame(s.s, s.f);
     const p = s.m.position;
     if (s.enemy) {
+      if (s.ring) { const k = Math.min(1, s.life / (s.max - 0.6)); s.ring.scale.setScalar(1.5 - k * 0.6); (s.ring.material as THREE.MeshBasicMaterial).opacity = 0.5 + 0.4 * Math.abs(Math.sin(s.life * 12)); if (k >= 1) { scene.remove(s.ring); s.ring = undefined; } }
       if (p.distanceTo(pc) < 1.35 && st.hurt <= 0) {
-        s.life = 99; st.lives--; st.hurt = 1.2; st.combo = 0; st.streak = 0; st.shake = 0.8; playMomHit();
+        s.life = 99; st.lives--; st.hurt = 1.6; st.combo = 0; st.streak = 0; st.shake = 0.45; playMomHit(); impact(0.25);
+        $('impact').classList.add('red'); setTimeout(() => $('impact').classList.remove('red'), 250);
         flash('¡CHANCLAZO! Ouch!', '#ff4d4d'); burst(pc.clone(), [0xffffff, 0xffd166], 10, 5); hud();
         kidC?.play('Hit_Head', { once: true, fade: 0.05 }); setTimeout(() => st.running && kidC?.play('Idle_Loop', { fade: 0.2 }), 500);
         if (st.lives <= 0) { gameOver(); return; }
@@ -473,21 +593,21 @@ function step(dt: number) {
     }
     for (const t of targets) {
       if (t.dead) continue;
-      const c = t.obj.position.clone().addScaledVector(t.obj.up, t.cy), d = p.clone().sub(c), dy = d.dot(t.obj.up);
+      const c = centerOf(t), d = p.clone().sub(c), dy = d.dot(t.obj.up);
       const horiz = d.addScaledVector(t.obj.up, -dy).length();
-      if (horiz < t.r && Math.abs(dy) < t.h) { hitTarget(t, p.clone()); s.life = 99; break; }
+      if (horiz < t.r + s.hitR && Math.abs(dy) < t.h) { hitTarget(t, p.clone(), s.dmg); s.life = 99; break; }
     }
     if (s.life < 99 && st.stun <= 0) {
       const c = abuela.position.clone().addScaledVector(abuela.up, 2.2);
       if (p.distanceTo(c) < 2.0) {
-        s.life = 99; st.stun = 1.6; abuelaC?.play('Hit_Head', { once: true, fade: 0.05 }); setTimeout(() => abuelaC?.play('Idle_Loop', { fade: 0.3 }), 1500);
-        st.combo++; const gain = 250 * mult(); st.score += gain; st.shake = 0.5;
-        playStrike(); burst(c, [0xf72585, 0x06d6a0, 0xffd166], 18, 7); flash(`¡ABUELA STUNNED! +${gain}`, '#7CFC00');
+        s.life = 99; st.stun = 1.6; st.wind = 0; abuelaC?.play('Hit_Head', { once: true, fade: 0.05 }); setTimeout(() => abuelaC?.play('Idle_Loop', { fade: 0.3 }), 1500);
+        st.combo++; st.hits++; st.bestCombo = Math.max(st.bestCombo, st.combo); const gain = 250 * mult(); st.score += gain; st.shake = 0.3; st.slow = 0.25; impact(0.3);
+        playStrike(); burst(c, [0xf72585, 0x06d6a0, 0xffd166], 18, 7); flash('¡ABUELA STUNNED!', '#7CFC00'); popup(c, `+${gain}`, '#7CFC00', true);
       }
     }
-    if (s.life < 99 && s.life > s.max) { s.life = 99; st.combo = 0; st.streak = 0; } // a miss breaks the combo
+    if (s.life < 99 && s.life > s.max) { s.life = 99; st.combo = 0; st.streak = 0; }
   }
-  for (let i = shots.length - 1; i >= 0; i--) if (shots[i].life >= 99) { scene.remove(shots[i].m); shots.splice(i, 1); }
+  for (let i = shots.length - 1; i >= 0; i--) if (shots[i].life >= 99) { scene.remove(shots[i].m); if (shots[i].ring) scene.remove(shots[i].ring!); shots.splice(i, 1); }
   hud();
 }
 
@@ -498,20 +618,23 @@ addEventListener('keydown', e => {
   else if (k === 'arrowright' || k === 'd') input.r = true;
   else if (k === 'm') setMuted(!isMuted());
   else if ((k === 'enter' || k === ' ') && !st.running) { e.preventDefault(); if (!goBtn.disabled) reset(); }
-  else if (k === ' ' || k === 'arrowup' || k === 'w') { e.preventDefault(); throwAt(innerWidth / 2, innerHeight * 0.42); }
+  else if (k === ' ' || k === 'arrowup' || k === 'w') { e.preventDefault(); throwAt(VW / 2, VH * 0.42, autoTarget()); }
+  else if (k === '1' || k === '2' || k === '3') { const avail = (Object.keys(SHOTS) as ShotType[]).filter((s) => SHOTS[s].wave <= st.unlocked); const s = avail[+k - 1]; if (s) { st.shot = s; shotBar(); } }
 });
 addEventListener('keyup', e => {
   const k = e.key.toLowerCase();
   if (k === 'arrowleft' || k === 'a') input.l = false;
   if (k === 'arrowright' || k === 'd') input.r = false;
 });
-// Floating ghost thumb stick: a touch on the lower 40% of the screen becomes the stick;
-// drag sideways to dodge. A quick tap there without dragging still throws. Upper touches and mouse clicks throw.
+// Floating ghost thumb stick on the lower 40% of the screen: slide sideways to dodge. A quick tap there still throws.
 let joyX = 0; let joyId = -1, joyX0 = 0, joyY0 = 0, joyT0 = 0, joyDrag = false;
 const joyEl = $('joy'), knobEl = $('knob');
+let audioKicked = false;
+const kick = () => { if (!audioKicked) { audioKicked = true; initAudio(); } };
+addEventListener('touchend', kick, { passive: true }); addEventListener('pointerup', kick);
 renderer.domElement.addEventListener('pointerdown', e => {
   e.preventDefault();
-  if (e.pointerType === 'touch' && e.clientY > innerHeight * 0.6 && joyId < 0) {
+  if (e.pointerType === 'touch' && e.clientY > VH * 0.6 && joyId < 0) {
     joyId = e.pointerId; joyX0 = e.clientX; joyY0 = e.clientY; joyT0 = performance.now(); joyDrag = false;
     joyEl.style.left = joyX0 + 'px'; joyEl.style.top = joyY0 + 'px'; knobEl.style.transform = ''; joyEl.classList.add('on');
     renderer.domElement.setPointerCapture(e.pointerId); return;
@@ -519,19 +642,20 @@ renderer.domElement.addEventListener('pointerdown', e => {
   throwAt(e.clientX, e.clientY);
 });
 renderer.domElement.addEventListener('pointermove', e => {
+  if (e.pointerType === 'mouse') mouse = { x: e.clientX, y: e.clientY };
   if (e.pointerId !== joyId) return;
   const dx = THREE.MathUtils.clamp(e.clientX - joyX0, -45, 45);
   if (Math.abs(e.clientX - joyX0) > 10) joyDrag = true;
   if (joyDrag) { joyX = Math.abs(dx) < 6 ? 0 : dx / 45; knobEl.style.transform = `translateX(${dx}px)`; }
 });
+renderer.domElement.addEventListener('pointerleave', () => { mouse = null; });
 const joyEnd = (e: PointerEvent) => {
   if (e.pointerId !== joyId) return;
-  if (!joyDrag && performance.now() - joyT0 < 260) throwAt(joyX0, joyY0);
+  if (!joyDrag && performance.now() - joyT0 < 260) throwAt(joyX0, joyY0, autoTarget());
   joyId = -1; joyX = 0; joyEl.classList.remove('on'); knobEl.style.transform = '';
 };
 renderer.domElement.addEventListener('pointerup', joyEnd);
 renderer.domElement.addEventListener('pointercancel', joyEnd);
-if (matchMedia('(pointer: coarse)').matches) { const h = $('hint'); h.classList.remove('hidden'); setTimeout(() => (h.style.opacity = '0'), 9000); }
 const goBtn = $('go') as HTMLButtonElement; goBtn.disabled = true; goBtn.textContent = 'Loading…';
 loadChars().then(() => {
   abuelaC = addChar('abuela', abuela, 'Idle_Loop');
@@ -539,9 +663,9 @@ loadChars().then(() => {
   goBtn.disabled = false; goBtn.textContent = 'PLAY!';
 }).catch(() => { goBtn.textContent = 'Could not load, refresh'; });
 goBtn.addEventListener('click', reset); $('again').addEventListener('click', reset);
-$('over').querySelector('a')!.setAttribute('href', '/');
-addEventListener('resize', () => { fitCam(); renderer.setSize(innerWidth, innerHeight); });
+function onResize() { measure(); fitCam(); renderer.setSize(VW, VH); }
+addEventListener('resize', onResize); window.visualViewport?.addEventListener('resize', onResize); addEventListener('orientationchange', () => setTimeout(onResize, 250));
 layoutProps(0);
-(window as any).__strike = { st, targets, throwAt, camera, renderer, frame };
+(window as any).__strike = { tick(dt: number) { step(dt); frame(st.s, st.px, 0, pf); player.position.copy(pf.p); player.up.copy(pf.u); }, st, targets, shots, throwAt, autoTarget, camera, renderer, frame, input, reset, get joyX() { return joyX; }, setJoy(v: number) { joyX = v; } };
 setSpriteCamera(camera);
 loop();
