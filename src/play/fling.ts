@@ -14,8 +14,11 @@ let scale = 1, ox = 0, oy = 0, dpr = 1;
 function fit() {
   dpr = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
   // Frame the fort: world x 0..800, from 520 units above the ground to just below it.
-  const VIEW_H = 560; scale = Math.min(innerWidth / W, innerHeight / VIEW_H);
-  ox = (innerWidth - W * scale) / 2; oy = innerHeight - (GROUND + 40) * scale;
+  const VIEW_H = 560;
+  if (innerHeight > innerWidth * 1.15) {
+    // Portrait: zoom onto slingshot + fort (world x ~30..770) and lift the ground to ~78% height.
+    scale = innerWidth / 740; ox = innerWidth / 2 - 400 * scale; oy = innerHeight * 0.78 - GROUND * scale;
+  } else { scale = Math.min(innerWidth / W, innerHeight / VIEW_H); ox = (innerWidth - W * scale) / 2; oy = innerHeight - (GROUND + 40) * scale; }
 }
 // Orientation: iOS Safari reports the new size late, so re-check a few times after any rotate/resize.
 let forcePlay = false, portraitNow = false;
@@ -283,7 +286,9 @@ function onTap(el: Element, fn: () => void) {
 onTap(startScreen, startGame);
 onTap(go, startGame);
 startScreen.querySelector('a')?.addEventListener('touchend', (e) => e.stopPropagation()); startScreen.querySelector('a')?.addEventListener('click', (e) => e.stopPropagation()); startScreen.querySelector('a')?.addEventListener('pointerup', (e) => e.stopPropagation());
-onTap($('playAnyway'), () => { forcePlay = true; scheduleLayout(); maybeCountdown(); });
+let lastAny = 0;
+onTap($('playAnyway'), () => { const n = performance.now(); if (n - lastAny < 600) return; lastAny = n; forcePlay = true; onLayout(); startGame(); scheduleLayout(); report('play anyway → started'); });
+if (/[?&]debug=1/.test(location.search)) { let taps = 0; const card = $('rotate'); for (const ev of ['touchstart', 'touchend']) card.addEventListener(ev, (e) => { taps++; report(`taps ${taps}: ${ev} on ${(e.target as HTMLElement).id || (e.target as HTMLElement).tagName}`); }, { capture: true, passive: true }); }
 // Once sideways (or after Play anyway), auto-start after a short visible countdown.
 function maybeCountdown() {
   if (started || countdown !== null || portraitNow) return;

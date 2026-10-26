@@ -14,13 +14,15 @@
   <div class="phone">📱</div>
   <h1>Turn your phone sideways</h1>
   <p>Chanclazo Fling plays in landscape. Rotate your phone and Abuela will be ready to fling!</p>
-  <p class="keys"><a href="#" id="playAnyway">Play anyway</a></p>
+  <p class="keys">Screen won't turn? Turn off Rotation Lock in Control Center, or tap Play anyway.</p>
+  <p class="keys"><button id="playAnyway" type="button">Play anyway</button></p>
 </div></div>
 <style>
 #rotate{display:none;position:fixed;inset:0;z-index:9;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 50% 40%,#3a1a5a,#140a24 70%)}
 #rotate .phone{font-size:64px;display:inline-block;animation:rot 2.2s ease-in-out infinite;filter:drop-shadow(0 0 14px rgba(255,196,107,.7))}
 @keyframes rot{0%,20%{transform:rotate(0)}50%,70%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
 body.portrait #rotate{display:flex}
+#rotate .keys button{background:#e8590c;color:#fff;font-size:17px;margin-top:6px;padding:10px 22px;border:1px solid #ffc46b;border-radius:12px;font-weight:900}
 #rotate .keys a{display:inline-block;margin-top:6px;padding:8px 16px;border:1px solid #ffc46b;border-radius:12px;text-decoration:none;font-weight:800}
 html,body{height:100%;height:100dvh}
 .screen{overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
