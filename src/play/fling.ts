@@ -62,7 +62,7 @@ document.addEventListener('visibilitychange', scheduleLayout);
 fit();
 
 const IMG: Record<string, HTMLImageElement> = {};
-const names = { bg: '/play/night_bg.webp', abuela: '/play/abuela_sprite.webp', lucha: '/play/luchador_sprite.webp', calaca: '/play/calaca_sprite.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
+const names = { bg: '/play/night_bg.webp', abuela: '/play/abuela_sprite.webp', lucha: '/play/t_lucha.webp', calaca: '/play/t_skull.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
 
 type BKind = 'wood' | 'stone' | 'picado' | 'lucha' | 'calaca' | 'pinata';
 interface Meta { kind: BKind; w: number; h: number; hp: number; color?: string; dead?: boolean }
@@ -72,16 +72,16 @@ const meta = new Map<number, Meta>();
 type Piece = [BKind, number, number, number, number];
 const LEVELS: { shots: number; pieces: Piece[] }[] = [
   { shots: 3, pieces: [
-    ['pinata', 1010, 37, 52, 74], ['wood', 820, 60, 24, 120], ['wood', 940, 60, 24, 120], ['wood', 880, 132, 170, 22],
+    ['pinata', 1010, 43, 60, 84], ['wood', 820, 60, 24, 120], ['wood', 940, 60, 24, 120], ['wood', 880, 132, 170, 22],
     ['lucha', 880, 40, 56, 80], ['stone', 880, 175, 60, 64], ['calaca', 880, 245, 44, 76],
   ] },
   { shots: 4, pieces: [
-    ['pinata', 905, 37, 52, 74], ['stone', 760, 45, 50, 90], ['stone', 860, 45, 50, 90], ['wood', 810, 101, 160, 22], ['lucha', 810, 152, 56, 80],
+    ['pinata', 905, 43, 60, 84], ['stone', 760, 45, 50, 90], ['stone', 860, 45, 50, 90], ['wood', 810, 101, 160, 22], ['lucha', 810, 152, 56, 80],
     ['wood', 940, 75, 24, 150], ['wood', 1040, 75, 24, 150], ['picado', 990, 162, 140, 20], ['calaca', 990, 40, 44, 76],
     ['picado', 990, 190, 30, 36], ['calaca', 990, 212, 44, 76],
   ] },
   { shots: 4, pieces: [
-    ['pinata', 885, 37, 52, 74], ['stone', 730, 40, 40, 80], ['stone', 830, 40, 40, 80], ['wood', 780, 91, 150, 22],
+    ['pinata', 885, 43, 60, 84], ['stone', 730, 40, 40, 80], ['stone', 830, 40, 40, 80], ['wood', 780, 91, 150, 22],
     ['wood', 740, 152, 22, 100], ['wood', 820, 152, 22, 100], ['picado', 780, 213, 120, 22], ['lucha', 780, 142, 50, 72],
     ['stone', 940, 60, 50, 120], ['stone', 1040, 60, 50, 120], ['wood', 990, 131, 170, 22], ['calaca', 990, 40, 44, 76],
     ['wood', 950, 192, 22, 100], ['wood', 1030, 192, 22, 100], ['picado', 990, 253, 130, 22], ['lucha', 990, 182, 50, 72],
@@ -108,14 +108,19 @@ function build(n: number) {
   Composite.clear(world, false); meta.clear(); parts.length = 0; pops.length = 0;
   const ground = Bodies.rectangle(W / 2, GROUND + 60, W * 3, 120, { isStatic: true, friction: 0.9 });
   Composite.add(world, ground);
-  for (const [kind, x, yg, w, h] of LEVELS[n].pieces) {
+  for (const [kind, x, yg, w0, h0] of LEVELS[n].pieces) {
+    let w = w0, h = h0;
     const villain = kind === 'lucha' || kind === 'calaca';
     const opts: Matter.IChamferableBodyDefinition = {
       friction: 0.8, restitution: 0.05,
       density: kind === 'stone' ? 0.004 : kind === 'picado' ? 0.0006 : villain ? 0.0012 : 0.0015,
       chamfer: kind === 'stone' ? { radius: [Math.min(w, h) / 2.2, Math.min(w, h) / 2.2, 2, 2] } : villain ? { radius: 10 } : undefined,
     };
-    const b = Bodies.rectangle(x, GROUND - yg, w, h, opts);
+    // Villains are heads only: round bodies that roll; they sit where the old box's bottom was.
+    const R = kind === 'lucha' ? 27 : 25;
+    const b = villain ? Bodies.circle(x, GROUND - (yg - h / 2 + R), R, { friction: 0.6, frictionAir: 0.002, restitution: 0.2, density: 0.0014 })
+      : Bodies.rectangle(x, GROUND - yg, w, h, opts);
+    if (villain) { w = h = R * 2; }
     meta.set(b.id, { kind, w, h, hp: kind === 'stone' ? 9 : kind === 'wood' ? 5 : kind === 'picado' ? 1.5 : kind === 'pinata' ? 1.2 : 2.2, color: PICADO[(x + yg) % PICADO.length | 0] });
     Composite.add(world, b);
   }
@@ -292,7 +297,7 @@ function frameBody(now: number) {
     } else {
       const img = m.kind === 'lucha' ? IMG.lucha : IMG.calaca;
       ctx.shadowColor = m.kind === 'lucha' ? 'rgba(255,190,90,.8)' : 'rgba(160,230,255,.8)'; ctx.shadowBlur = 14;
-      if (img) { const h = m.h * 1.12, w = h * (img.width / img.height); ctx.drawImage(img, -w / 2, -h / 2 + Math.sin(t * 3 + b.id) * 1.5, w, h); }
+      if (img) { const k = (m.h * 1.18) / Math.max(img.width, img.height), w = img.width * k, h = img.height * k; ctx.drawImage(img, -w / 2, -h / 2, w, h); }
     }
     ctx.restore();
   }
