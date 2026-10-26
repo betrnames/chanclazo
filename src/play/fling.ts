@@ -5,37 +5,53 @@ import { $, loadImg, wakeAudio, stars, report } from './common';
 import * as A from './flingAudio';
 
 const { Engine, Bodies, Composite, Body, Events, Vector } = Matter;
-const W = 800, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
+const W = 1100, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
 const SLING = { x: 130, y: 760 };
 const MAXPULL = 140, POWER = 0.21;
 
 const cv = document.createElement('canvas'); (document.body as HTMLElement).insertBefore(cv, document.body.firstChild);
 const ctx = cv.getContext('2d')!;
 let scale = 1, ox = 0, oy = 0, dpr = 1;
+// Visible-area sizing: iOS 100vh/innerHeight can include space under the browser bars, so use
+// visualViewport when it is smaller, size the canvas to it, and respect safe-area insets (notch/home bar).
+let VW = window.innerWidth, VH = window.innerHeight;
+const safeProbe = document.createElement('div');
+safeProbe.style.cssText = 'position:fixed;inset:0;pointer-events:none;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+document.body.appendChild(safeProbe);
 function fit() {
-  dpr = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
-  // Frame the fort: world x 0..800, from 520 units above the ground to just below it.
-  const VIEW_H = 560;
-  if (innerHeight > innerWidth * 1.15) {
-    // Portrait: zoom onto slingshot + fort (world x ~30..770) and lift the ground to ~78% height.
-    scale = innerWidth / 740; ox = innerWidth / 2 - 400 * scale; oy = innerHeight * 0.78 - GROUND * scale;
-  } else { scale = Math.min(innerWidth / W, innerHeight / VIEW_H); ox = (innerWidth - W * scale) / 2; oy = innerHeight - (GROUND + 40) * scale; }
+  const vv = window.visualViewport;
+  VW = Math.round(vv ? Math.min(window.innerWidth, vv.width) : window.innerWidth);
+  VH = Math.round(vv ? Math.min(window.innerHeight, vv.height) : window.innerHeight);
+  document.documentElement.style.setProperty('--vh', VH + 'px');
+  cv.style.width = VW + 'px'; cv.style.height = VH + 'px';
+  dpr = Math.min(2, devicePixelRatio || 1); cv.width = VW * dpr; cv.height = VH * dpr;
+  const cs = getComputedStyle(safeProbe); const sl = parseFloat(cs.paddingLeft) || 0, sr = parseFloat(cs.paddingRight) || 0, sb = parseFloat(cs.paddingBottom) || 0;
+  const VIEW_H = 560, avW = VW - sl - sr, avH = VH - sb;
+  if (VH > VW * 1.15) {
+    // Portrait: zoom onto slingshot + fort and lift the ground to ~78% height.
+    scale = VW / 1060; ox = VW / 2 - (W / 2) * scale; oy = VH * 0.78 - GROUND * scale;
+  } else { scale = Math.min(avW / W, (avH - 46) / VIEW_H); ox = sl + (avW - W * scale) / 2; oy = avH - (GROUND + 30) * scale; }
 }
 // Orientation: iOS Safari reports the new size late, so re-check a few times after any rotate/resize.
 let forcePlay = false, portraitNow = false;
 function readPortrait() {
-  // innerWidth/innerHeight are the most reliable across Safari, Chrome for iOS (CriOS) and in-app views;
+  // VW/VH are the most reliable across Safari, Chrome for iOS (CriOS) and in-app views;
   // visualViewport can lag/zoom in CriOS, and the address bar changes height, so use it only as a tie-break.
   if (forcePlay) return false;
   const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   if (!touch) return false;
-  const w = innerWidth, h = innerHeight;
+  const w = window.innerWidth, h = window.innerHeight;
   let portrait = h > w;
   if (Math.abs(w - h) < 40) { const mq = matchMedia('(orientation: portrait)').matches; const vv = window.visualViewport; portrait = vv ? vv.height > vv.width : mq; }
   return portrait && Math.min(w, h) < 900;
 }
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const STANDALONE = (navigator as any).standalone === true || matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+let a2hsOff = (() => { try { return localStorage.getItem('chanclazo_a2hs_off') === '1'; } catch { return false; } })();
+setTimeout(() => { a2hsOff = true; updateA2hs(); }, 9000); // auto-hide (not remembered)
+function updateA2hs() { const el = document.getElementById('a2hs'); if (el) el.classList.toggle('hidden', !(IS_IOS && !STANDALONE && !a2hsOff && !portraitNow && window.innerWidth > window.innerHeight)); }
 function onLayout() {
-  portraitNow = readPortrait(); document.body.classList.toggle('portrait', portraitNow); fit(); last = performance.now();
+  portraitNow = readPortrait(); document.body.classList.toggle('portrait', portraitNow); fit(); updateA2hs(); last = performance.now();
 }
 function scheduleLayout() { onLayout(); for (const d of [120, 300, 650, 1200, 2000]) setTimeout(onLayout, d); }
 setInterval(() => { if (readPortrait() !== portraitNow) onLayout(); }, 700); // safety net if a rotate event is missed
@@ -46,9 +62,9 @@ document.addEventListener('visibilitychange', scheduleLayout);
 fit();
 
 const IMG: Record<string, HTMLImageElement> = {};
-const names = { bg: '/play/night_bg.webp', abuela: '/play/abuela_sprite.webp', lucha: '/play/luchador_sprite.webp', calaca: '/play/calaca_sprite.webp', chancla: '/play/t_chancla.webp' };
+const names = { bg: '/play/night_bg.webp', abuela: '/play/abuela_sprite.webp', lucha: '/play/luchador_sprite.webp', calaca: '/play/calaca_sprite.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
 
-type BKind = 'wood' | 'stone' | 'picado' | 'lucha' | 'calaca';
+type BKind = 'wood' | 'stone' | 'picado' | 'lucha' | 'calaca' | 'pinata';
 interface Meta { kind: BKind; w: number; h: number; hp: number; color?: string; dead?: boolean }
 const meta = new Map<number, Meta>();
 
@@ -56,20 +72,20 @@ const meta = new Map<number, Meta>();
 type Piece = [BKind, number, number, number, number];
 const LEVELS: { shots: number; pieces: Piece[] }[] = [
   { shots: 3, pieces: [
-    ['wood', 520, 60, 24, 120], ['wood', 640, 60, 24, 120], ['wood', 580, 132, 170, 22],
-    ['lucha', 580, 40, 56, 80], ['stone', 580, 175, 60, 64], ['calaca', 580, 245, 44, 76],
+    ['pinata', 1010, 37, 52, 74], ['wood', 820, 60, 24, 120], ['wood', 940, 60, 24, 120], ['wood', 880, 132, 170, 22],
+    ['lucha', 880, 40, 56, 80], ['stone', 880, 175, 60, 64], ['calaca', 880, 245, 44, 76],
   ] },
   { shots: 4, pieces: [
-    ['stone', 460, 45, 50, 90], ['stone', 560, 45, 50, 90], ['wood', 510, 101, 160, 22], ['lucha', 510, 152, 56, 80],
-    ['wood', 640, 75, 24, 150], ['wood', 740, 75, 24, 150], ['picado', 690, 162, 140, 20], ['calaca', 690, 40, 44, 76],
-    ['picado', 690, 190, 30, 36], ['calaca', 690, 212, 44, 76],
+    ['pinata', 905, 37, 52, 74], ['stone', 760, 45, 50, 90], ['stone', 860, 45, 50, 90], ['wood', 810, 101, 160, 22], ['lucha', 810, 152, 56, 80],
+    ['wood', 940, 75, 24, 150], ['wood', 1040, 75, 24, 150], ['picado', 990, 162, 140, 20], ['calaca', 990, 40, 44, 76],
+    ['picado', 990, 190, 30, 36], ['calaca', 990, 212, 44, 76],
   ] },
   { shots: 4, pieces: [
-    ['stone', 430, 40, 40, 80], ['stone', 530, 40, 40, 80], ['wood', 480, 91, 150, 22],
-    ['wood', 440, 152, 22, 100], ['wood', 520, 152, 22, 100], ['picado', 480, 213, 120, 22], ['lucha', 480, 142, 50, 72],
-    ['stone', 640, 60, 50, 120], ['stone', 740, 60, 50, 120], ['wood', 690, 131, 170, 22], ['calaca', 690, 40, 44, 76],
-    ['wood', 650, 192, 22, 100], ['wood', 730, 192, 22, 100], ['picado', 690, 253, 130, 22], ['lucha', 690, 182, 50, 72],
-    ['calaca', 480, 262, 40, 70],
+    ['pinata', 885, 37, 52, 74], ['stone', 730, 40, 40, 80], ['stone', 830, 40, 40, 80], ['wood', 780, 91, 150, 22],
+    ['wood', 740, 152, 22, 100], ['wood', 820, 152, 22, 100], ['picado', 780, 213, 120, 22], ['lucha', 780, 142, 50, 72],
+    ['stone', 940, 60, 50, 120], ['stone', 1040, 60, 50, 120], ['wood', 990, 131, 170, 22], ['calaca', 990, 40, 44, 76],
+    ['wood', 950, 192, 22, 100], ['wood', 1030, 192, 22, 100], ['picado', 990, 253, 130, 22], ['lucha', 990, 182, 50, 72],
+    ['calaca', 780, 262, 40, 70],
   ] },
 ];
 const PICADO = ['#f72585', '#4cc9f0', '#ffd166', '#06d6a0', '#9b5de5'];
@@ -100,7 +116,7 @@ function build(n: number) {
       chamfer: kind === 'stone' ? { radius: [Math.min(w, h) / 2.2, Math.min(w, h) / 2.2, 2, 2] } : villain ? { radius: 10 } : undefined,
     };
     const b = Bodies.rectangle(x, GROUND - yg, w, h, opts);
-    meta.set(b.id, { kind, w, h, hp: kind === 'stone' ? 9 : kind === 'wood' ? 5 : kind === 'picado' ? 1.5 : 2.2, color: PICADO[(x + yg) % PICADO.length | 0] });
+    meta.set(b.id, { kind, w, h, hp: kind === 'stone' ? 9 : kind === 'wood' ? 5 : kind === 'picado' ? 1.5 : kind === 'pinata' ? 1.2 : 2.2, color: PICADO[(x + yg) % PICADO.length | 0] });
     Composite.add(world, b);
   }
   shotsLeft = LEVELS[n].shots; shot = null; ended = false; hud();
@@ -112,6 +128,7 @@ function damage(b: Matter.Body, amt: number) {
   const m = meta.get(b.id); if (!m || m.dead) return;
   m.hp -= amt; if (m.hp > 0) return;
   m.dead = true; Composite.remove(world, b);
+  if (m.kind === 'pinata') { pinataBoom(b); return; }
   const villain = m.kind === 'lucha' || m.kind === 'calaca';
   const pts = villain ? 5000 : m.kind === 'stone' ? 800 : 500; score += pts; combo++;
   pops.push({ x: b.position.x, y: b.position.y - 20, t: `+${pts}`, life: 1.2 });
@@ -119,6 +136,22 @@ function damage(b: Matter.Body, amt: number) {
   else { if (m.kind === 'wood') A.breakWood(); else if (m.kind === 'stone') A.breakStone(); else A.ripPaper(); if (amt > 12) A.explosion(); burst(b.position.x, b.position.y, m.kind === 'wood' ? ['#8b5a2b', '#c08a4f'] : m.kind === 'stone' ? ['#8a8597', '#5d5868'] : PICADO, 12); }
   hud();
 }
+// Piñata: big candy/confetti/papel picado burst, strong shake, radial shove + damage, bonus points.
+const CANDY = ['#f72585', '#ffd166', '#06d6a0', '#4cc9f0', '#9b5de5', '#ff6b35', '#fff'];
+function pinataBoom(b: Matter.Body) {
+  const { x, y } = b.position; score += 3000; combo++;
+  pops.push({ x, y: y - 30, t: '¡PIÑATA! +3000', life: 1.6 });
+  for (let i = 0; i < 90; i++) { const a = Math.random() * Math.PI * 2, sp = 4 + Math.random() * 12; parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 5, life: 1.3 + Math.random() * 0.6, c: CANDY[i % CANDY.length], s: i % 3 === 0 ? 12 : 5 + Math.random() * 6 }); }
+  shake = 26; flashT = 0.25; A.explosion(); A.ripPaper(); setTimeout(() => A.knockout(), 120);
+  for (const o of Composite.allBodies(world)) {
+    if (o.isStatic || o === b) continue; const dx = o.position.x - x, dy = o.position.y - y, d = Math.hypot(dx, dy);
+    if (d > 260) continue; const k = (1 - d / 260);
+    Body.applyForce(o, o.position, { x: (dx / (d || 1)) * 0.06 * o.mass * k, y: ((dy / (d || 1)) * 0.06 - 0.05) * o.mass * k });
+    const mo = meta.get(o.id); if (mo && !mo.dead && k > 0.25) setTimeout(() => damage(o, 6 * k), 30);
+  }
+  hud();
+}
+let flashT = 0;
 Events.on(engine, 'collisionStart', (e) => {
   for (const p of e.pairs) {
     const rel = Vector.magnitude(Vector.sub(p.bodyA.velocity, p.bodyB.velocity));
@@ -203,11 +236,11 @@ function frameBody(now: number) {
   const dt = Math.min(0.033, (now - last) / 1000); last = now; t += dt;
   const portrait = isPortraitPhone();
   if (playing && !portrait) { Engine.update(engine, dt * 1000); checkFlow(); }
-  abuelaKick = Math.max(0, abuelaKick - dt * 3); shake = Math.max(0, shake - dt * 30);
+  abuelaKick = Math.max(0, abuelaKick - dt * 3); shake = Math.max(0, shake - dt * 34);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = '#140a24'; ctx.fillRect(0, 0, innerWidth, innerHeight);
-  const bg = IMG.bg; if (bg) { const s = Math.max(innerWidth / bg.width, innerHeight / bg.height); ctx.globalAlpha = 0.9; ctx.drawImage(bg, (innerWidth - bg.width * s) / 2, (innerHeight - bg.height * s) / 2, bg.width * s, bg.height * s); ctx.globalAlpha = 1; }
-  { const v = ctx.createLinearGradient(0, 0, 0, innerHeight); v.addColorStop(0, 'rgba(10,4,30,.72)'); v.addColorStop(1, 'rgba(25,8,40,.45)'); ctx.fillStyle = v; ctx.fillRect(0, 0, innerWidth, innerHeight); }
+  ctx.fillStyle = '#140a24'; ctx.fillRect(0, 0, VW, VH);
+  const bg = IMG.bg; if (bg) { const s = Math.max(VW / bg.width, VH / bg.height); ctx.globalAlpha = 0.9; ctx.drawImage(bg, (VW - bg.width * s) / 2, (VH - bg.height * s) / 2, bg.width * s, bg.height * s); ctx.globalAlpha = 1; }
+  { const v = ctx.createLinearGradient(0, 0, 0, VH); v.addColorStop(0, 'rgba(10,4,30,.72)'); v.addColorStop(1, 'rgba(25,8,40,.45)'); ctx.fillStyle = v; ctx.fillRect(0, 0, VW, VH); }
   const sx = (Math.random() - 0.5) * shake, sy = (Math.random() - 0.5) * shake;
   ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * (ox + sx), dpr * (oy + sy));
   // ground
@@ -215,7 +248,7 @@ function frameBody(now: number) {
   ctx.fillStyle = gg; ctx.fillRect(-W, GROUND, W * 3, H - GROUND + 200);
   ctx.fillStyle = '#ff9f1c'; for (let i = 0; i < 40; i++) { ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc((i * 97) % (W + 200) - 100, GROUND + 8 + (i * 37) % 60, 4, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
   // candles glow on ground
-  for (const cx of [60, 300, 790]) { const r = ctx.createRadialGradient(cx, GROUND - 10, 2, cx, GROUND - 10, 60 + Math.sin(t * 7 + cx) * 4); r.addColorStop(0, 'rgba(255,170,60,.55)'); r.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = r; ctx.fillRect(cx - 70, GROUND - 80, 140, 140); ctx.fillStyle = '#fbf3d5'; ctx.fillRect(cx - 4, GROUND - 22, 8, 22); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(cx, GROUND - 28, 4, 7, 0, 0, 7); ctx.fill(); }
+  for (const cx of [60, 420, 1080]) { const r = ctx.createRadialGradient(cx, GROUND - 10, 2, cx, GROUND - 10, 60 + Math.sin(t * 7 + cx) * 4); r.addColorStop(0, 'rgba(255,170,60,.55)'); r.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = r; ctx.fillRect(cx - 70, GROUND - 80, 140, 140); ctx.fillStyle = '#fbf3d5'; ctx.fillRect(cx - 4, GROUND - 22, 8, 22); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(cx, GROUND - 28, 4, 7, 0, 0, 7); ctx.fill(); }
   // slingshot (back fork)
   ctx.strokeStyle = '#5b3a1e'; ctx.lineWidth = 14; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(SLING.x, GROUND); ctx.lineTo(SLING.x, SLING.y + 60); ctx.lineTo(SLING.x - 22, SLING.y); ctx.moveTo(SLING.x, SLING.y + 60); ctx.lineTo(SLING.x + 22, SLING.y); ctx.stroke();
@@ -253,6 +286,9 @@ function frameBody(now: number) {
       ctx.fillStyle = m.color!; ctx.globalAlpha = 0.85; ctx.fillRect(-m.w / 2, -m.h / 2, m.w, m.h); ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(20,10,36,.6)'; for (let x = -m.w / 2 + 8; x < m.w / 2 - 4; x += 14) { ctx.beginPath(); ctx.arc(x, 0, 3, 0, 7); ctx.fill(); }
       ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(-m.w / 2, -m.h / 2, m.w, m.h);
+    } else if (m.kind === 'pinata') {
+      ctx.shadowColor = 'rgba(255,95,176,.9)'; ctx.shadowBlur = 16;
+      if (IMG.pinata) { const h = m.h * 1.1, w = h * (IMG.pinata.width / IMG.pinata.height); ctx.rotate(Math.sin(t * 2.2 + b.id) * 0.05); ctx.drawImage(IMG.pinata, -w / 2, -h / 2, w, h); }
     } else {
       const img = m.kind === 'lucha' ? IMG.lucha : IMG.calaca;
       ctx.shadowColor = m.kind === 'lucha' ? 'rgba(255,190,90,.8)' : 'rgba(160,230,255,.8)'; ctx.shadowBlur = 14;
@@ -265,6 +301,7 @@ function frameBody(now: number) {
   ctx.globalAlpha = 1; ctx.font = '900 30px system-ui'; ctx.textAlign = 'center';
   for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.life -= dt; p.y -= dt * 40; if (p.life <= 0) { pops.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life); ctx.lineWidth = 5; ctx.strokeStyle = '#1a0c2c'; ctx.strokeText(p.t, p.x, p.y); ctx.fillStyle = '#ffd166'; ctx.fillText(p.t, p.x, p.y); }
   ctx.globalAlpha = 1;
+  if (flashT > 0) { flashT -= dt; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = Math.max(0, flashT * 2.4); ctx.fillStyle = '#fff3d6'; ctx.fillRect(0, 0, VW, VH); ctx.globalAlpha = 1; }
 }
 
 // ── Start flow (iOS-safe) ────────────────────────────────────────────────────
@@ -306,8 +343,9 @@ function maybeCountdown() {
 }
 setInterval(maybeCountdown, 500);
 Promise.all(Object.entries(names).map(([k, v]) => loadImg(v).then((im) => { IMG[k] = im; }).catch(() => report(`image failed: ${v}`))));
+document.getElementById('a2hsX')?.addEventListener('click', () => { a2hsOff = true; try { localStorage.setItem('chanclazo_a2hs_off', '1'); } catch { /* ignore */ } updateA2hs(); });
 safe('wireMute', () => A.wireMute($('mute') as HTMLButtonElement));
 build(0);
 onLayout(); scheduleLayout();
 requestAnimationFrame(frame);
-(window as any).__fling = { engine, world, meta, get state() { return { level, score, shotsLeft, ended, villains: villainsLeft() }; } };
+(window as any).__fling = { engine, world, meta, boom: (b: Matter.Body) => damage(b, 99), get state() { return { level, score, shotsLeft, ended, villains: villainsLeft() }; } };
