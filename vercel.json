@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/games.html"
+    },
+    {
       "source": "/strike",
       "destination": "/strike.html"
     },
@@ -16,15 +20,21 @@
       "destination": "/match.html"
     },
     {
-      "source": "/demos",
-      "destination": "/demos.html"
-    },
-    {
-      "source": "/((?!cruise|strike|fling|match|demos).*)",
+      "source": "/((?!cruise|strike|fling|match|demos|games).*)",
       "destination": "/index.html"
     }
   ],
   "redirects": [
+    {
+      "source": "/demos",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/demos.html",
+      "destination": "/",
+      "permanent": false
+    },
     {
       "source": "/cruise",
       "destination": "/strike",
@@ -38,7 +48,7 @@
   ],
   "headers": [
     {
-      "source": "/(fling|match|strike|demos)(.html)?",
+      "source": "/(fling|match|strike|games|survival)?(.html)?",
       "headers": [
         {
           "key": "Cache-Control",

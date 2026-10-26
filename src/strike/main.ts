@@ -1,4 +1,4 @@
-// Chanclazo 3D: Strike Mode (demo). Ride a winding, hilly Día de Muertos cemetery road,
+// Chanclazo Strike. Ride a winding, hilly Día de Muertos cemetery road,
 // throw chanclas to break everything, and dodge the mad abuela's chanclas.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';

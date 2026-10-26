@@ -24,7 +24,7 @@ export default defineConfig({
         strike: path.resolve(__dirname, 'strike.html'),
         fling: path.resolve(__dirname, 'fling.html'),
         match: path.resolve(__dirname, 'match.html'),
-        demos: path.resolve(__dirname, 'demos.html'),
+        games: path.resolve(__dirname, 'games.html'),
       },
     },
   },
