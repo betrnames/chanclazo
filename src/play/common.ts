@@ -1,8 +1,28 @@
 import { initAudio, setMuted, isMuted } from '../game/sound';
 export const $ = (id: string) => document.getElementById(id)!;
 export function loadImg(src: string) { const i = new Image(); i.src = src; return new Promise<HTMLImageElement>((r, j) => { i.onload = () => r(i); i.onerror = j; }); }
-let audioOn = false;
-export function wakeAudio() { if (!audioOn) { audioOn = true; try { initAudio(); } catch { /* ignore */ } } }
+// iOS audio: 'playback' session (plays with the silent switch on, iOS 17+), a looping silent <audio>
+// fallback, and initAudio() called synchronously from touchend/pointerup/click (never touchstart).
+function setSession() { try { const as = (navigator as any).audioSession; if (as && as.type !== 'playback') as.type = 'playback'; } catch { /* ignore */ } }
+let silentEl: HTMLAudioElement | null = null;
+function silentWavUrl() {
+  const n = 4410, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf); const w = (o: number, t: string) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+export function iosAudioKick() {
+  setSession();
+  try { if (!silentEl) { silentEl = document.createElement('audio'); silentEl.src = silentWavUrl(); silentEl.loop = true; silentEl.setAttribute('playsinline', ''); silentEl.volume = 0.01; document.body.appendChild(silentEl); }
+    if (silentEl.paused) { const p = silentEl.play(); if (p && p.catch) p.catch(() => {}); } } catch { /* ignore */ }
+}
+export function wakeAudio() { iosAudioKick(); try { initAudio(); } catch { /* ignore */ } }
+export function autoUnlockAudio() {
+  setSession();
+  for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, wakeAudio, { capture: true, passive: true });
+  const re = () => { if (!document.hidden) { try { initAudio(); } catch { /* ignore */ } } };
+  document.addEventListener('visibilitychange', re); addEventListener('pageshow', re);
+}
 export function wireMute() {
   const b = $('mute') as HTMLButtonElement;
   const draw = () => (b.textContent = isMuted() ? '🔇' : '🔊');

@@ -1,6 +1,6 @@
 import './play.css';
 import { playHit, playStrike, playCombo, playLevelUp, playGameOver, playDodge, playShield } from '../game/sound';
-import { $, loadImg, wakeAudio, wireMute, stars } from './common';
+import { $, loadImg, wakeAudio, wireMute, stars, autoUnlockAudio } from './common';
 
 const N = 8, TYPES = 5, MOVES = 20, GOAL = 9000;
 // Regular tiles reuse the original art; specials: chancla = line clear, sugar skull = bomb, piñata = color clear
@@ -8,7 +8,7 @@ const TILE_SRC = ['/play/t_abuela.webp', '/play/t_lucha.webp', '/play/t_kid.webp
 const TILE_BG = ['#f72585', '#d62828', '#3a86ff', '#ff9f1c', '#06d6a0'];
 const SP = { none: 0, lineH: 1, lineV: 2, bomb: 3, color: 4 } as const;
 type Sp = (typeof SP)[keyof typeof SP];
-interface Tile { t: number; sp: Sp; x: number; y: number; scale: number; id: number }
+interface Tile { t: number; sp: Sp; x: number; y: number; scale: number; id: number; sq?: number; land?: number; fall?: boolean; glare?: number }
 let uid = 1;
 const grid: (Tile | null)[][] = [];
 const IMG: HTMLImageElement[] = []; let chanclaImg: HTMLImageElement, skullImg: HTMLImageElement, pinataImg: HTMLImageElement, bgImg: HTMLImageElement;
@@ -28,6 +28,14 @@ fit(); addEventListener('resize', fit);
 let score = 0, moves = MOVES, busy = false, playing = false, combo = 0;
 interface Part { x: number; y: number; vx: number; vy: number; life: number; c: string; s: number }
 const parts: Part[] = []; const pops: { x: number; y: number; t: string; life: number }[] = [];
+const sparks: { x: number; y: number; life: number; s: number }[] = [];
+let lastAct = performance.now(), nextGlare = 0, hintPair: [number, number, number, number] | null = null;
+function findMove(): [number, number, number, number] | null {
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) for (const [dr, dc] of [[0, 1], [1, 0]]) { const r2 = r + dr, c2 = c + dc; if (r2 >= N || c2 >= N) continue;
+    if (grid[r][c]?.sp === SP.color || grid[r2][c2]?.sp === SP.color) return [r, c, r2, c2];
+    swapCells(r, c, r2, c2); const ok = findRuns().length > 0; swapCells(r, c, r2, c2); if (ok) return [r, c, r2, c2]; }
+  return null;
+}
 const beams: { r?: number; c?: number; life: number }[] = [];
 function hud() { $('moves').textContent = String(moves); $('score').textContent = String(score); $('goal').textContent = String(GOAL); }
 
@@ -62,6 +70,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 function burstAt(r: number, c: number, color: string, n = 8) {
   const x = bx + (c + 0.5) * cell, y = by + (r + 0.5) * cell;
   for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.8) * 7, life: 1, c: i % 3 ? color : '#ffd166', s: 3 + Math.random() * 5 });
+  for (let i = 0; i < 4; i++) sparks.push({ x: x + (Math.random() - 0.5) * cell * 0.8, y: y + (Math.random() - 0.5) * cell * 0.8, life: 0.5 + Math.random() * 0.3, s: cell * (0.12 + Math.random() * 0.1) });
 }
 
 // Clear a set of cells, firing any specials inside (chains), then create new specials.
@@ -126,7 +135,7 @@ async function fireSpecialPair(r1: number, c1: number, r2: number, c2: number) {
 
 async function trySwap(r1: number, c1: number, r2: number, c2: number) {
   if (busy || !playing || r2 < 0 || c2 < 0 || r2 >= N || c2 >= N) return;
-  busy = true; swapCells(r1, c1, r2, c2); playDodge(); await sleep(170);
+  busy = true; lastAct = performance.now(); swapCells(r1, c1, r2, c2); for (const tt of [grid[r1][c1], grid[r2][c2]]) if (tt) tt.sq = 1; playDodge(); await sleep(170);
   const a = grid[r2][c2]!, b = grid[r1][c1]!;
   if (a.sp === SP.color || b.sp === SP.color) { moves--; hud(); await fireSpecialPair(r2, c2, r1, c1); await resolve(); }
   else if (a.sp && b.sp) { moves--; hud(); const set = new Set([r1 + ',' + c1, r2 + ',' + c2]); clearCells(set, []); await sleep(200); await gravity(); await resolve(); }
@@ -149,7 +158,7 @@ function checkEnd() {
 // ── Input: swipe/drag from a tile toward a neighbor ──────────────────────────
 let down: { r: number; c: number; x: number; y: number } | null = null;
 cv.addEventListener('pointerdown', (e) => {
-  wakeAudio(); const c = Math.floor((e.clientX - bx) / cell), r = Math.floor((e.clientY - by) / cell);
+  lastAct = performance.now(); const c = Math.floor((e.clientX - bx) / cell), r = Math.floor((e.clientY - by) / cell);
   if (r < 0 || c < 0 || r >= N || c >= N) return; down = { r, c, x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId);
 });
 cv.addEventListener('pointermove', (e) => {
@@ -183,10 +192,21 @@ function frame(now: number) {
   ctx.save(); ctx.beginPath(); ctx.rect(bx - 4, by - 4, cell * N + 8, cell * N + 8); ctx.clip();
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
     const tl = grid[r]?.[c]; if (!tl) continue;
-    const k = Math.min(1, dt * 14); tl.x += (c - tl.x) * k; tl.y += (r - tl.y) * Math.min(1, dt * 11); tl.scale += (1 - tl.scale) * Math.min(1, dt * 8);
+    const k = Math.min(1, dt * 14); tl.x += (c - tl.x) * k;
+    const dy = r - tl.y; if (dy > 0.08) tl.fall = true; tl.y += dy * Math.min(1, dt * 11);
+    if (tl.fall && dy < 0.03) { tl.fall = false; tl.land = 1; }   // landed: bounce
+    tl.scale += (1 - tl.scale) * Math.min(1, dt * 8);
     const x = bx + (tl.x + 0.5) * cell, y = by + (tl.y + 0.5) * cell, s = cell * 0.86 * tl.scale;
+    // alive: staggered breathing, swap squash, landing bounce, hint pulse
+    let sx = 1 + Math.sin(T * 2.1 + tl.id * 1.7) * 0.025, sy = 1 + Math.sin(T * 2.1 + tl.id * 1.7 + 1.2) * 0.025;
+    if (tl.sq) { const q = Math.sin((1 - tl.sq) * Math.PI) * 0.22; sx += q; sy -= q; tl.sq = Math.max(0, tl.sq - dt * 4.5); }
+    if (tl.land) { const q = Math.sin((1 - tl.land) * Math.PI * 2) * tl.land * 0.2; sx += q; sy -= q; tl.land = Math.max(0, tl.land - dt * 3.5); }
+    const hinted = hintPair && ((hintPair[0] === r && hintPair[1] === c) || (hintPair[2] === r && hintPair[3] === c));
+    if (hinted) { const q = (Math.sin(T * 6) + 1) * 0.06; sx += q; sy += q; }
+    ctx.save(); ctx.translate(x, y + s * (1 - sy) / 2); ctx.scale(sx, sy); ctx.translate(-x, -y);
+    if (hinted) { ctx.strokeStyle = `rgba(255,246,199,${0.5 + Math.sin(T * 6) * 0.35})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x - s / 2 - 2, y - s / 2 - 2, s + 4, s + 4, s * 0.28); ctx.stroke(); }
     if (tl.sp === SP.color) {
-      ctx.shadowColor = '#fff'; ctx.shadowBlur = 16 + Math.sin(T * 6) * 6; fitImg(pinataImg, x, y, s * 1.05, Math.sin(T * 3) * 0.12); ctx.shadowBlur = 0; continue;
+      ctx.shadowColor = '#fff'; ctx.shadowBlur = 16 + Math.sin(T * 6) * 6; fitImg(pinataImg, x, y, s * (1.05 + Math.sin(T * 5) * 0.05), Math.sin(T * 3) * 0.12); ctx.shadowBlur = 0; ctx.restore(); continue;
     }
     ctx.fillStyle = TILE_BG[tl.t]; ctx.globalAlpha = 0.9;
     ctx.beginPath(); ctx.roundRect(x - s / 2, y - s / 2, s, s, s * 0.26); ctx.fill(); ctx.globalAlpha = 1;
@@ -197,20 +217,33 @@ function frame(now: number) {
       ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.beginPath();
       if (tl.sp === SP.lineH) { ctx.moveTo(x - s / 2 + 4, y - s * 0.32); ctx.lineTo(x + s / 2 - 4, y - s * 0.32); } else { ctx.moveTo(x - s * 0.32, y - s / 2 + 4); ctx.lineTo(x - s * 0.32, y + s / 2 - 4); }
       ctx.stroke();
-    } else if (tl.sp === SP.bomb) { ctx.shadowColor = '#ff4d6d'; ctx.shadowBlur = 14 + Math.sin(T * 8) * 5; fitImg(skullImg, x + s * 0.2, y + s * 0.2, s * 0.55); ctx.shadowBlur = 0; }
+    } else if (tl.sp === SP.bomb) { ctx.shadowColor = '#ff4d6d'; ctx.shadowBlur = 14 + Math.sin(T * 8) * 5; fitImg(skullImg, x + s * 0.2, y + s * 0.2, s * (0.55 + Math.sin(T * 6) * 0.05)); ctx.shadowBlur = 0; }
+    if (tl.sp) { ctx.globalAlpha = 0.25 + Math.sin(T * 4 + tl.id) * 0.15; ctx.strokeStyle = tl.sp === SP.bomb ? '#ff4d6d' : '#ffd166'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x - s / 2, y - s / 2, s, s, s * 0.26); ctx.stroke(); ctx.globalAlpha = 1; }
+    if (tl.glare !== undefined) { // diagonal shimmer sweep
+      const g = (performance.now() - tl.glare) / 650; if (g > 1) tl.glare = undefined; else if (g > 0) {
+        ctx.save(); ctx.beginPath(); ctx.roundRect(x - s / 2, y - s / 2, s, s, s * 0.26); ctx.clip();
+        const gx = x - s + g * s * 2; const gr = ctx.createLinearGradient(gx - s * 0.3, y - s / 2, gx + s * 0.3, y + s / 2);
+        gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = gr; ctx.fillRect(x - s / 2, y - s / 2, s, s); ctx.restore(); } }
+    ctx.restore();
   }
   ctx.restore();
   for (let i = beams.length - 1; i >= 0; i--) { const b = beams[i]; b.life -= dt; if (b.life <= 0) { beams.splice(i, 1); continue; } ctx.globalAlpha = b.life / 0.35; ctx.fillStyle = '#fff6c7';
     if (b.r !== undefined) ctx.fillRect(bx, by + b.r * cell + cell * 0.3, cell * N, cell * 0.4); else ctx.fillRect(bx + b.c! * cell + cell * 0.3, by, cell * 0.4, cell * N); }
   ctx.globalAlpha = 1;
   for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.vy += 0.3; p.x += p.vx; p.y += p.vy; p.life -= dt * 1.6; if (p.life <= 0) { parts.splice(i, 1); continue; } ctx.globalAlpha = p.life; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.s, p.s); }
+  const nowMs = performance.now();
+  if (nowMs > nextGlare) { nextGlare = nowMs + 1500 + Math.random() * 1500; const n = 3 + Math.floor(Math.random() * 3); for (let i = 0; i < n; i++) { const tt = grid[Math.floor(Math.random() * N)]?.[Math.floor(Math.random() * N)]; if (tt) tt.glare = nowMs + i * 90; } }
+  if (playing && !busy && nowMs - lastAct > 5000) { if (!hintPair) hintPair = findMove(); } else hintPair = null;
+  for (let i = sparks.length - 1; i >= 0; i--) { const sp = sparks[i]; sp.life -= dt; if (sp.life <= 0) { sparks.splice(i, 1); continue; } const a = Math.min(1, sp.life * 3), z = sp.s * (0.6 + Math.sin(sp.life * 12) * 0.4);
+    ctx.globalAlpha = a; ctx.fillStyle = '#fff8d6'; ctx.beginPath(); ctx.moveTo(sp.x, sp.y - z); ctx.lineTo(sp.x + z * 0.25, sp.y - z * 0.25); ctx.lineTo(sp.x + z, sp.y); ctx.lineTo(sp.x + z * 0.25, sp.y + z * 0.25); ctx.lineTo(sp.x, sp.y + z); ctx.lineTo(sp.x - z * 0.25, sp.y + z * 0.25); ctx.lineTo(sp.x - z, sp.y); ctx.lineTo(sp.x - z * 0.25, sp.y - z * 0.25); ctx.closePath(); ctx.fill(); }
   ctx.globalAlpha = 1; ctx.textAlign = 'center'; ctx.font = `900 ${Math.round(cell * 0.45)}px system-ui`;
   for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.life -= dt; p.y -= dt * 30; if (p.life <= 0) { pops.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life * 2); ctx.lineWidth = 5; ctx.strokeStyle = '#1a0c2c'; ctx.strokeText(p.t, p.x, p.y); ctx.fillStyle = '#ffd166'; ctx.fillText(p.t, p.x, p.y); }
   ctx.globalAlpha = 1;
   requestAnimationFrame(frame);
 }
 
-wireMute(); hud();
+autoUnlockAudio(); wireMute(); hud();
 const go = $('go') as HTMLButtonElement; go.disabled = true; go.textContent = 'Loading…';
 Promise.all([...TILE_SRC.slice(0, 4).map(loadImg), loadImg('/play/t_chancla.webp'), loadImg('/play/t_skull.webp'), loadImg('/play/t_pinata.webp'), loadImg('/play/night_bg.webp')]).then((a) => {
   IMG.push(...a.slice(0, 4)); [chanclaImg, skullImg, pinataImg, bgImg] = a.slice(4) as HTMLImageElement[];
