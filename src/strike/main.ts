@@ -91,18 +91,6 @@ ribbon(11, 0.06, 10, new THREE.MeshLambertMaterial({ color: 0x2a1c14 }));
 ribbon(60, 0.6, 10, new THREE.MeshLambertMaterial({ color: 0x150d1c }), 4);
 
 // ── Minimap (like Cruising Bones' route card) ───────────────────────────────
-const mini = document.createElement('canvas'); mini.width = mini.height = 120;
-Object.assign(mini.style, { position: 'fixed', left: '10px', top: '52px', width: '96px', height: '96px', background: 'rgba(20,10,36,.65)', border: '2px solid #ffc46b', borderRadius: '10px', pointerEvents: 'none' });
-document.body.appendChild(mini);
-const mg = mini.getContext('2d')!;
-let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
-for (let i = 0; i < LEN; i++) { minX = Math.min(minX, P[i * 3]); maxX = Math.max(maxX, P[i * 3]); minZ = Math.min(minZ, P[i * 3 + 2]); maxZ = Math.max(maxZ, P[i * 3 + 2]); }
-const mm = (x: number, z: number): [number, number] => [10 + (x - minX) / (maxX - minX) * 100, 10 + (z - minZ) / (maxZ - minZ) * 100];
-function drawMini(s: number) {
-  mg.clearRect(0, 0, 120, 120); mg.strokeStyle = '#ffc46b'; mg.lineWidth = 2; mg.beginPath();
-  for (let i = 0; i <= LEN; i += 8) { const [x, y] = mm(P[(i % LEN) * 3], P[(i % LEN) * 3 + 2]); i ? mg.lineTo(x, y) : mg.moveTo(x, y); } mg.stroke();
-  const i = Math.floor(((s % LEN) + LEN) % LEN), [x, y] = mm(P[i * 3], P[i * 3 + 2]); mg.fillStyle = '#ff4d6d'; mg.beginPath(); mg.arc(x, y, 5, 0, 7); mg.fill();
-}
 
 const COLORS = [0xff6b6b, 0xffd166, 0x06d6a0, 0x4cc9f0, 0xf72585, 0xff9f1c, 0x9b5de5];
 const box = new THREE.BoxGeometry(1, 1, 1);
@@ -417,7 +405,6 @@ function loop() {
   for (const t of targets) for (const o of t.obj.children) if (o.userData.bb) o.quaternion.copy(camera.quaternion).premultiply(t.obj.quaternion.clone().invert());
   for (const s of shots) s.m.quaternion.copy(camera.quaternion);
   renderer.render(scene, camera);
-  if (Math.floor(now / 100) !== Math.floor((now - dt * 1000) / 100)) drawMini(st.s);
   requestAnimationFrame(loop);
 }
 
@@ -429,7 +416,7 @@ function step(dt: number) {
   st.speed = Math.min(st.speed, 24);
   st.s += st.speed * dt;
   st.cool -= dt; st.hurt -= dt; st.stun -= dt;
-  const want = (input.r ? 1 : 0) - (input.l ? 1 : 0);
+  const want = THREE.MathUtils.clamp((input.r ? 1 : 0) - (input.l ? 1 : 0) + joyX, -1, 1);
   st.steer += (want - st.steer) * Math.min(1, dt * 10);
   st.px = THREE.MathUtils.clamp(st.px + st.steer * dt * 9, -ROAD + 0.6, ROAD - 0.6);
   if (kidC) kidC.setFlash(st.hurt > 0 && Math.floor(st.t * 20) % 2 ? 0x660000 : 0);
@@ -518,15 +505,33 @@ addEventListener('keyup', e => {
   if (k === 'arrowleft' || k === 'a') input.l = false;
   if (k === 'arrowright' || k === 'd') input.r = false;
 });
-renderer.domElement.addEventListener('pointerdown', e => { e.preventDefault(); throwAt(e.clientX, e.clientY); });
-function hold(id: string, on: () => void, off: () => void) {
-  const el = $(id);
-  el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); on(); });
-  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(ev, off);
-}
-hold('tL', () => (input.l = true), () => (input.l = false));
-hold('tR', () => (input.r = true), () => (input.r = false));
-if (matchMedia('(pointer: coarse)').matches) $('touch').classList.remove('hidden');
+// Floating ghost thumb stick: a touch on the lower 40% of the screen becomes the stick;
+// drag sideways to dodge. A quick tap there without dragging still throws. Upper touches and mouse clicks throw.
+let joyX = 0; let joyId = -1, joyX0 = 0, joyY0 = 0, joyT0 = 0, joyDrag = false;
+const joyEl = $('joy'), knobEl = $('knob');
+renderer.domElement.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (e.pointerType === 'touch' && e.clientY > innerHeight * 0.6 && joyId < 0) {
+    joyId = e.pointerId; joyX0 = e.clientX; joyY0 = e.clientY; joyT0 = performance.now(); joyDrag = false;
+    joyEl.style.left = joyX0 + 'px'; joyEl.style.top = joyY0 + 'px'; knobEl.style.transform = ''; joyEl.classList.add('on');
+    renderer.domElement.setPointerCapture(e.pointerId); return;
+  }
+  throwAt(e.clientX, e.clientY);
+});
+renderer.domElement.addEventListener('pointermove', e => {
+  if (e.pointerId !== joyId) return;
+  const dx = THREE.MathUtils.clamp(e.clientX - joyX0, -45, 45);
+  if (Math.abs(e.clientX - joyX0) > 10) joyDrag = true;
+  if (joyDrag) { joyX = Math.abs(dx) < 6 ? 0 : dx / 45; knobEl.style.transform = `translateX(${dx}px)`; }
+});
+const joyEnd = (e: PointerEvent) => {
+  if (e.pointerId !== joyId) return;
+  if (!joyDrag && performance.now() - joyT0 < 260) throwAt(joyX0, joyY0);
+  joyId = -1; joyX = 0; joyEl.classList.remove('on'); knobEl.style.transform = '';
+};
+renderer.domElement.addEventListener('pointerup', joyEnd);
+renderer.domElement.addEventListener('pointercancel', joyEnd);
+if (matchMedia('(pointer: coarse)').matches) { const h = $('hint'); h.classList.remove('hidden'); setTimeout(() => (h.style.opacity = '0'), 9000); }
 const goBtn = $('go') as HTMLButtonElement; goBtn.disabled = true; goBtn.textContent = 'Loading…';
 loadChars().then(() => {
   abuelaC = addChar('abuela', abuela, 'Idle_Loop');
@@ -536,7 +541,7 @@ loadChars().then(() => {
 goBtn.addEventListener('click', reset); $('again').addEventListener('click', reset);
 $('over').querySelector('a')!.setAttribute('href', '/');
 addEventListener('resize', () => { fitCam(); renderer.setSize(innerWidth, innerHeight); });
-layoutProps(0); drawMini(0);
+layoutProps(0);
 (window as any).__strike = { st, targets, throwAt, camera, renderer, frame };
 setSpriteCamera(camera);
 loop();

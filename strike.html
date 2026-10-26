@@ -21,25 +21,23 @@ canvas{display:block}
 .card button{margin-top:12px;background:#e8590c;color:#fff;border:0;border-radius:12px;padding:12px 28px;font-size:20px;font-weight:900;cursor:pointer}
 .keys{font-size:12px;opacity:.8}
 .hidden{display:none!important}
-#touch{position:fixed;bottom:16px;left:0;right:0;display:flex;justify-content:space-between;padding:0 14px;pointer-events:none}
-#touch button{pointer-events:auto;width:72px;height:72px;border-radius:50%;border:3px solid #fff;background:rgba(232,89,12,.55);color:#fff;font-size:26px;font-weight:900}
-#touch .grp{display:flex;gap:12px}
-@media (hover:hover) and (pointer:fine){#touch{display:none}}
+#joy{position:fixed;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;border:2px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);pointer-events:none;opacity:0;transition:opacity .25s}
+#joy.on{opacity:1;transition:opacity .08s}
+#knob{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.22);box-shadow:0 0 12px rgba(255,196,107,.35)}
+#hint{position:fixed;bottom:18px;left:0;right:0;text-align:center;color:rgba(255,255,255,.55);font-size:12px;font-weight:700;pointer-events:none;transition:opacity 1s}
 </style>
 </head>
 <body>
 <div id="hud"><span class="pill" id="score">0</span><span class="pill" id="speed">❤❤❤</span><span class="pill" id="best">Best 0</span></div>
 <div id="trick"></div>
-<div id="touch" class="hidden">
-  <div class="grp"><button id="tL" aria-label="Left">◀</button><button id="tR" aria-label="Right">▶</button></div>
-  <div class="grp" style="align-items:center;color:#fff;font-weight:900;text-shadow:0 2px 4px #000;font-size:13px">Tap the street to throw</div>
-</div>
+<div id="joy"><div id="knob"></div></div>
+<div id="hint" class="hidden">Drag your thumb low on the screen to dodge · tap to throw</div>
 <div class="screen" id="start"><div class="card">
   <img src="/cruise/logo_chancla.webp" alt="Chanclazo logo" />
   <h1>CHANCLAZO 3D</h1>
   <p><b>Strike Mode (Demo)</b></p>
   <p>Día de Muertos night on the cemetery street. Throw chanclas at the luchadores, calacas, piñatas, pottery, and crates. Chain hits for a combo multiplier. The mad abuela throws them back, so stay on your toes!</p>
-  <p class="keys">Desktop: click or tap to throw · A/D or ← → to dodge · M mute<br/>Phone: tap to throw · ◀ ▶ to dodge</p>
+  <p class="keys">Desktop: click or tap to throw · A/D or ← → to dodge · M mute<br/>Phone: tap to throw · drag your thumb near the bottom to dodge</p>
   <button id="go">PLAY!</button>
   <p class="keys" style="margin-top:10px">Starring the original hand-drawn Chanclazo crew.</p>
 </div></div>
