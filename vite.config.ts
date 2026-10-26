@@ -19,12 +19,12 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'index.html'),
+        survival: path.resolve(__dirname, 'survival.html'),
         cruise: path.resolve(__dirname, 'cruise.html'),
         strike: path.resolve(__dirname, 'strike.html'),
         fling: path.resolve(__dirname, 'fling.html'),
         match: path.resolve(__dirname, 'match.html'),
-        games: path.resolve(__dirname, 'games.html'),
+        main: path.resolve(__dirname, 'index.html'),
       },
     },
   },

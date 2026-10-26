@@ -4,10 +4,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/games.html"
-    },
-    {
       "source": "/strike",
       "destination": "/strike.html"
     },
@@ -20,8 +16,8 @@
       "destination": "/match.html"
     },
     {
-      "source": "/((?!cruise|strike|fling|match|demos|games).*)",
-      "destination": "/index.html"
+      "source": "/((?!cruise|strike|fling|match|demos|assets|play|cruise/).+)",
+      "destination": "/survival.html"
     }
   ],
   "redirects": [
