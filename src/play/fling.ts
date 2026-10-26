@@ -1,7 +1,7 @@
 import './play.css';
 import Matter from 'matter-js';
 import { playWhoosh, playHit, playStrike, playLevelUp, playGameOver, playCombo } from '../game/sound';
-import { $, loadImg, wakeAudio, wireMute, stars } from './common';
+import { $, loadImg, wakeAudio, wireMute, stars, report } from './common';
 
 const { Engine, Bodies, Composite, Body, Events, Vector } = Matter;
 const W = 800, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
@@ -184,6 +184,10 @@ function trajectory() {
 }
 let last = performance.now(), t = 0;
 function frame(now: number) {
+  requestAnimationFrame(frame);
+  try { frameBody(now); } catch (err) { report('frame: ' + ((err as Error)?.message || err)); }
+}
+function frameBody(now: number) {
   const dt = Math.min(0.033, (now - last) / 1000); last = now; t += dt;
   const portrait = isPortraitPhone();
   if (playing && !portrait) { Engine.update(engine, dt * 1000); checkFlow(); }
@@ -249,18 +253,47 @@ function frame(now: number) {
   ctx.globalAlpha = 1; ctx.font = '900 30px system-ui'; ctx.textAlign = 'center';
   for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.life -= dt; p.y -= dt * 40; if (p.life <= 0) { pops.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life); ctx.lineWidth = 5; ctx.strokeStyle = '#1a0c2c'; ctx.strokeText(p.t, p.x, p.y); ctx.fillStyle = '#ffd166'; ctx.fillText(p.t, p.x, p.y); }
   ctx.globalAlpha = 1;
-  requestAnimationFrame(frame);
 }
 
-wireMute();
-const go = $('go') as HTMLButtonElement; go.disabled = true; go.textContent = 'Loading…';
-Promise.all(Object.entries(names).map(async ([k, v]) => (IMG[k] = await loadImg(v)))).then(() => { go.disabled = false; go.textContent = 'PLAY!'; });
-go.onclick = () => {
-  // Best effort only (Android Chrome). Never awaited, so iOS rejections or missing APIs can't block starting.
-  try { const el = document.documentElement as any; if (el.requestFullscreen && !document.fullscreenElement) { Promise.resolve(el.requestFullscreen({ navigationUI: 'hide' })).then(() => Promise.resolve((screen.orientation as any)?.lock?.('landscape')).catch(() => {})).catch(() => {}); } } catch { /* not supported */ }
-  wakeAudio(); $('start').classList.add('hidden'); level = 0; score = 0; build(0); playing = true; };
+// ── Start flow (iOS-safe) ────────────────────────────────────────────────────
+// The Play button is never disabled: the game draws whatever art has loaded so far.
+// Start is idempotent, nothing in it is awaited, and every risky call is isolated.
+const go = $('go') as HTMLButtonElement; const startScreen = $('start');
+let started = false, countdown: number | null = null;
+function safe(label: string, fn: () => void) { try { fn(); } catch (err) { report(`${label}: ${(err as Error)?.message || err}`); } }
+function startGame() {
+  if (started) return; started = true;
+  if (countdown !== null) { clearInterval(countdown); countdown = null; }
+  safe('ui', () => { startScreen.classList.add('hidden'); startScreen.style.display = 'none'; });
+  safe('level', () => { level = 0; score = 0; build(0); });
+  playing = true; last = performance.now();
+  safe('audio', () => wakeAudio());
+  safe('fullscreen', () => { // Android Chrome only; iOS has no element fullscreen. Fire-and-forget.
+    const el = document.documentElement as any; const req = el.requestFullscreen;
+    if (typeof req === 'function' && !document.fullscreenElement) {
+      const pr = req.call(el); if (pr && typeof pr.then === 'function') pr.then(() => { const lk = (screen.orientation as any)?.lock?.('landscape'); if (lk?.catch) lk.catch(() => {}); }, () => {});
+    }
+  });
+}
+// Bind with touchend + pointerup + click; startGame is idempotent so duplicates are harmless.
+function onTap(el: Element, fn: () => void) {
+  const h = (e: Event) => { e.stopPropagation(); if (e.cancelable && e.type === 'touchend') e.preventDefault(); fn(); };
+  el.addEventListener('touchend', h, { passive: false }); el.addEventListener('pointerup', h); el.addEventListener('click', h);
+}
+onTap(startScreen, startGame);
+onTap(go, startGame);
+startScreen.querySelector('a')?.addEventListener('touchend', (e) => e.stopPropagation()); startScreen.querySelector('a')?.addEventListener('click', (e) => e.stopPropagation()); startScreen.querySelector('a')?.addEventListener('pointerup', (e) => e.stopPropagation());
+onTap($('playAnyway'), () => { forcePlay = true; scheduleLayout(); maybeCountdown(); });
+// Once sideways (or after Play anyway), auto-start after a short visible countdown.
+function maybeCountdown() {
+  if (started || countdown !== null || portraitNow) return;
+  let n = 3; go.textContent = `PLAY! (${n})`;
+  countdown = window.setInterval(() => { if (portraitNow) { clearInterval(countdown!); countdown = null; go.textContent = 'PLAY!'; return; } n--; if (n <= 0) startGame(); else go.textContent = `PLAY! (${n})`; }, 1000);
+}
+setInterval(maybeCountdown, 500);
+Promise.all(Object.entries(names).map(([k, v]) => loadImg(v).then((im) => { IMG[k] = im; }).catch(() => report(`image failed: ${v}`))));
+safe('wireMute', wireMute);
 build(0);
-($('playAnyway') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); forcePlay = true; scheduleLayout(); };
 onLayout(); scheduleLayout();
 requestAnimationFrame(frame);
 (window as any).__fling = { engine, world, meta, get state() { return { level, score, shotsLeft, ended, villains: villainsLeft() }; } };

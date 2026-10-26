@@ -35,5 +35,16 @@
       "destination": "/strike",
       "permanent": false
     }
+  ],
+  "headers": [
+    {
+      "source": "/(fling|match|strike|demos)(.html)?",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    }
   ]
 }
