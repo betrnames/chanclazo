@@ -12,7 +12,19 @@
       "destination": "/strike.html"
     },
     {
-      "source": "/((?!cruise|strike).*)",
+      "source": "/fling",
+      "destination": "/fling.html"
+    },
+    {
+      "source": "/match",
+      "destination": "/match.html"
+    },
+    {
+      "source": "/demos",
+      "destination": "/demos.html"
+    },
+    {
+      "source": "/((?!cruise|strike|fling|match|demos).*)",
       "destination": "/index.html"
     }
   ]

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>Chanclazo Fling (Demo)</title>
+<link rel="icon" href="/cruise/logo_chancla.webp" />
+</head><body>
+<div class="hud">
+  <span class="pill"><small>Level</small><span id="lvl">1</span>/3</span>
+  <span class="pill"><small>Score</small><span id="score">0</span></span>
+  <span class="pill"><small>Chanclas</small><span id="left">3</span></span>
+  <button id="mute" aria-label="Sound on or off">🔊</button>
+</div>
+<div class="screen" id="start"><div class="card">
+  <img src="/cruise/logo_chancla.webp" alt="Chanclazo logo" />
+  <h1>Chanclazo Fling</h1>
+  <p>The luchadores and calacas are hiding in the cemetery. Help Abuela knock them down!</p>
+  <p class="keys">Drag back anywhere to aim, let go to fling a chancla.<br/>Topple every villain to clear the level. Fewer chanclas used = more stars.</p>
+  <button id="go">PLAY!</button>
+  <p class="keys"><a href="/demos">More Chanclazo demos</a></p>
+</div></div>
+<div class="screen hidden" id="end"><div class="card">
+  <h1 id="endTitle">Level clear!</h1>
+  <div class="stars" id="endStars"></div>
+  <p id="endMsg"></p>
+  <button id="next">Next level</button>
+  <p class="keys"><a href="#" id="retry">Retry level</a> · <a href="/demos">All demos</a></p>
+</div></div>
+<script type="module" src="/src/play/fling.ts"></script>
+</body></html>
