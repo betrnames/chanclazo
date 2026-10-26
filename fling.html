@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-<title>Chanclazo Fling · Chanclazo Games</title>
+<title>Chancla Strike</title>
 <link rel="icon" href="/cruise/logo_chancla.webp" />
 <link rel="manifest" href="/fling.webmanifest" />
 <meta name="theme-color" content="#140a24" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Chanclazo Fling" />
+<meta name="apple-mobile-web-app-title" content="Chancla Strike" />
 <link rel="apple-touch-icon" href="/play/icon-180.png" />
 </head><body>
 <div class="hud">
@@ -21,7 +21,7 @@
 <div id="rotate"><div class="card">
   <div class="phone">📱</div>
   <h1>Turn your phone sideways</h1>
-  <p>Chanclazo Fling plays in landscape. Rotate your phone and Abuela will be ready to fling!</p>
+  <p>Chancla Strike plays in landscape. Rotate your phone and Abuela will be ready to fling!</p>
   <p class="keys">Screen won't turn? Turn off Rotation Lock in Control Center, or tap Play anyway.</p>
   <p class="keys"><button id="playAnyway" type="button">Play anyway</button></p>
 </div></div>
@@ -47,24 +47,24 @@ html,body{height:100%;height:100dvh}
 <div id="a2hs" class="hidden"><span>For fullscreen: Share → Add to Home Screen</span><button id="a2hsX" type="button" aria-label="Dismiss">✕</button></div>
 <div class="screen" id="start"><div class="card">
   <img src="/cruise/logo_chancla.webp" alt="Chanclazo logo" />
-  <h1>Chanclazo Fling</h1>
+  <h1>Chancla Strike</h1>
   <p>Luchadores and calacas are hiding from the cemetery to the catacombs. Help Abuela knock them all down!</p>
   <p class="keys">Drag back anywhere to aim, let go to fling a chancla.<br/>Topple every villain to clear the level. Fewer chanclas used = more stars. Earn stars to unlock new areas.</p>
   <button id="go">PLAY!</button>
-  <p class="keys"><a href="/">More Chanclazo Games</a></p>
+  <p class="keys"><a href="/">More games</a></p>
 </div></div>
 <div class="screen hidden" id="end"><div class="card">
   <h1 id="endTitle">Level clear!</h1>
   <div class="stars" id="endStars"></div>
   <p id="endMsg"></p>
   <button id="next">Next level</button>
-  <p class="keys"><a href="#" id="retry">Retry level</a> · <a href="#" id="toMap">Level map</a> · <a href="/">All Chanclazo Games</a></p>
+  <p class="keys"><a href="#" id="retry">Retry level</a> · <a href="#" id="toMap">Level map</a> · <a href="/">All games</a></p>
 </div></div>
 <div class="screen hidden" id="map"><div class="card wide">
   <h1>Level Map</h1>
   <p class="keys" id="mapStars"></p>
   <div id="mapList"></div>
-  <p class="keys"><a href="/">All Chanclazo Games</a></p>
+  <p class="keys"><a href="/">All games</a></p>
 </div></div>
 <style>
 .hud .btns{display:flex;gap:6px}
