@@ -12,11 +12,12 @@
 <link rel="apple-touch-icon" href="/play/icon-180.png" />
 </head><body>
 <div class="hud">
-  <span class="pill"><small>Level</small><span id="lvl">1</span>/3</span>
+  <span class="pill"><small>Level</small><span id="lvl">1</span>/9</span>
   <span class="pill"><small>Score</small><span id="score">0</span></span>
   <span class="pill"><small>Chanclas</small><span id="left">3</span></span>
-  <button id="mute" aria-label="Sound on or off">🔊</button>
+  <span class="btns"><button id="restart" aria-label="Restart level">↻</button><button id="mapBtn" aria-label="Level map">☰</button><button id="mute" aria-label="Sound on or off">🔊</button></span>
 </div>
+<div id="shots" class="hidden"></div>
 <div id="rotate"><div class="card">
   <div class="phone">📱</div>
   <h1>Turn your phone sideways</h1>
@@ -47,8 +48,8 @@ html,body{height:100%;height:100dvh}
 <div class="screen" id="start"><div class="card">
   <img src="/cruise/logo_chancla.webp" alt="Chanclazo logo" />
   <h1>Chanclazo Fling</h1>
-  <p>The luchadores and calacas are hiding in the cemetery. Help Abuela knock them down!</p>
-  <p class="keys">Drag back anywhere to aim, let go to fling a chancla.<br/>Topple every villain to clear the level. Fewer chanclas used = more stars.</p>
+  <p>Luchadores and calacas are hiding from the cemetery to the catacombs. Help Abuela knock them all down!</p>
+  <p class="keys">Drag back anywhere to aim, let go to fling a chancla.<br/>Topple every villain to clear the level. Fewer chanclas used = more stars. Earn stars to unlock new areas.</p>
   <button id="go">PLAY!</button>
   <p class="keys"><a href="/demos">More Chanclazo demos</a></p>
 </div></div>
@@ -57,7 +58,33 @@ html,body{height:100%;height:100dvh}
   <div class="stars" id="endStars"></div>
   <p id="endMsg"></p>
   <button id="next">Next level</button>
-  <p class="keys"><a href="#" id="retry">Retry level</a> · <a href="/demos">All demos</a></p>
+  <p class="keys"><a href="#" id="retry">Retry level</a> · <a href="#" id="toMap">Level map</a> · <a href="/demos">All demos</a></p>
 </div></div>
+<div class="screen hidden" id="map"><div class="card wide">
+  <h1>Level Map</h1>
+  <p class="keys" id="mapStars"></p>
+  <div id="mapList"></div>
+  <p class="keys"><a href="/demos">All demos</a></p>
+</div></div>
+<style>
+.hud .btns{display:flex;gap:6px}
+#shots{position:fixed;z-index:3;left:max(10px,env(safe-area-inset-left));bottom:max(8px,env(safe-area-inset-bottom));display:flex;gap:6px}
+#shots.hidden{display:none}
+#shots button{background:rgba(20,10,36,.8);color:#fff;border:1px solid rgba(255,196,107,.45);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800}
+#shots button.on{background:#e8590c;border-color:#ffc46b}
+.stars .star{display:inline-block;color:#4a3a5c;transform:scale(.4);opacity:.6;animation:starpop .45s cubic-bezier(.2,1.6,.4,1) forwards}
+.stars .star.on{color:#ffc46b;text-shadow:0 0 14px rgba(255,196,107,.8)}
+@keyframes starpop{to{transform:scale(1);opacity:1}}
+.card.wide{max-width:560px;width:100%}
+.area{margin:8px 0;text-align:left}
+.aname{font-weight:900;color:#ffc46b;font-size:15px;margin-bottom:4px}
+.aname small{color:#d9c6ff;font-weight:700}
+.lvls{display:flex;gap:8px}
+.lvls button{flex:1;margin:0;padding:8px 4px;font-size:15px;border-radius:12px;background:#3a1d55;border:1px solid #ffc46b}
+.lvls button b{display:block;font-size:18px}
+.lvls button span{font-size:13px;color:#ffc46b;letter-spacing:1px}
+.lvls button.locked{opacity:.45;border-color:#6b5a7c}
+@media (max-height:500px){ .area{margin:4px 0} .lvls button{padding:4px} .lvls button b{font-size:15px} #map .card h1{font-size:20px} }
+</style>
 <script type="module" src="/src/play/fling.ts"></script>
 </body></html>

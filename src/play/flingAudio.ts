@@ -182,6 +182,26 @@ export function startMusic() {
   const g = ctx!.createGain(); g.gain.value = 0.18; windSrc.connect(f).connect(g).connect(music); windSrc.start(); lfo.start();
 }
 
+// ── v3 items ─────────────────────────────────────────────────────────────────
+export function clang() { // armored helmet cracks: metallic ring
+  if (!ok()) return; const t = now(); duck(0.5, 0.3);
+  for (const f of [523, 1187, 1840]) tone(t, 'triangle', f, f * 0.98, 0.5, 0.09);
+  noiseBurst(t, 0.04, 'highpass', 4000, 0.7, 0.2);
+}
+export function wail() { // ghost calaca vanishes: eerie glide with vibrato
+  if (!ok()) return; const t = now(); duck(0.3, 0.8);
+  const o = ctx!.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(700, t); o.frequency.exponentialRampToValueAtTime(260, t + 0.9);
+  const l = ctx!.createOscillator(); l.frequency.value = 7; const lg = ctx!.createGain(); lg.gain.value = 18; l.connect(lg).connect(o.frequency);
+  const g = ctx!.createGain(); env(g, t, 0.16, 0.08, 0.9); o.connect(g).connect(sfx); o.start(t); l.start(t); o.stop(t + 1.1); l.stop(t + 1.1); soundsPlayed++;
+  noiseBurst(t, 0.5, 'bandpass', 1200, 1, 0.08, sfx, 300);
+}
+export function firework() { // crate: boom + crackling sparks
+  if (!ok()) return; const t = now(); duck(0.2, 0.9);
+  noiseBurst(t, 0.6, 'lowpass', 1800, 0.7, 0.45, sfx, 120); tone(t, 'sine', 120, 35, 0.5, 0.4);
+  for (let i = 0; i < 10; i++) noiseBurst(t + 0.12 + Math.random() * 0.5, 0.02, 'highpass', 3000 + Math.random() * 3000, 1, 0.12);
+}
+export function split() { if (!ok()) return; const t = now(); tone(t, 'square', 900, 1400, 0.08, 0.05); noiseBurst(t, 0.06, 'highpass', 3000, 0.7, 0.1); }
+
 export function wireMute(btn: HTMLButtonElement) {
   const draw = () => (btn.textContent = muted ? '🔇' : '🔊');
   btn.onclick = (e) => { e.stopPropagation(); unlock(); setMuted(!muted); draw(); }; draw();
