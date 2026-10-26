@@ -17,7 +17,22 @@ function fit() {
   const VIEW_H = 560; scale = Math.min(innerWidth / W, innerHeight / VIEW_H);
   ox = (innerWidth - W * scale) / 2; oy = innerHeight - (GROUND + 40) * scale;
 }
-fit(); addEventListener('resize', fit);
+// Orientation: iOS Safari reports the new size late, so re-check a few times after any rotate/resize.
+let forcePlay = false, portraitNow = false;
+function readPortrait() {
+  const w = window.visualViewport?.width || innerWidth, h = window.visualViewport?.height || innerHeight;
+  const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+  return !forcePlay && touch && h > w && Math.min(w, h) < 900;
+}
+function onLayout() {
+  portraitNow = readPortrait(); document.body.classList.toggle('portrait', portraitNow); fit(); last = performance.now();
+}
+function scheduleLayout() { onLayout(); for (const d of [120, 300, 650, 1200]) setTimeout(onLayout, d); }
+addEventListener('resize', scheduleLayout); addEventListener('orientationchange', scheduleLayout);
+window.visualViewport?.addEventListener('resize', scheduleLayout);
+matchMedia('(orientation: landscape)').addEventListener?.('change', scheduleLayout);
+document.addEventListener('visibilitychange', scheduleLayout);
+fit();
 
 const IMG: Record<string, HTMLImageElement> = {};
 const names = { bg: '/play/night_bg.webp', abuela: '/play/abuela_sprite.webp', lucha: '/play/luchador_sprite.webp', calaca: '/play/calaca_sprite.webp', chancla: '/play/t_chancla.webp' };
@@ -104,7 +119,7 @@ Events.on(engine, 'collisionStart', (e) => {
 });
 
 // ── Input: drag back anywhere to aim ─────────────────────────────────────────
-function isPortraitPhone() { return matchMedia('(orientation: portrait) and (max-width: 900px)').matches; }
+function isPortraitPhone() { return portraitNow; }
 const toWorld = (cx: number, cy: number) => ({ x: (cx - ox) / scale, y: (cy - oy) / scale });
 let dragStart = { x: 0, y: 0 };
 cv.addEventListener('pointerdown', (e) => {
@@ -241,8 +256,11 @@ wireMute();
 const go = $('go') as HTMLButtonElement; go.disabled = true; go.textContent = 'Loading…';
 Promise.all(Object.entries(names).map(async ([k, v]) => (IMG[k] = await loadImg(v)))).then(() => { go.disabled = false; go.textContent = 'PLAY!'; });
 go.onclick = () => {
-  try { const el = document.documentElement as any; const p = el.requestFullscreen?.(); const lock = () => (screen.orientation as any)?.lock?.('landscape')?.catch?.(() => {}); if (p?.then) p.then(lock, () => {}); else lock(); } catch { /* iOS: not supported */ }
+  // Best effort only (Android Chrome). Never awaited, so iOS rejections or missing APIs can't block starting.
+  try { const el = document.documentElement as any; if (el.requestFullscreen && !document.fullscreenElement) { Promise.resolve(el.requestFullscreen({ navigationUI: 'hide' })).then(() => Promise.resolve((screen.orientation as any)?.lock?.('landscape')).catch(() => {})).catch(() => {}); } } catch { /* not supported */ }
   wakeAudio(); $('start').classList.add('hidden'); level = 0; score = 0; build(0); playing = true; };
 build(0);
+($('playAnyway') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); forcePlay = true; scheduleLayout(); };
+onLayout(); scheduleLayout();
 requestAnimationFrame(frame);
 (window as any).__fling = { engine, world, meta, get state() { return { level, score, shotsLeft, ended, villains: villainsLeft() }; } };
