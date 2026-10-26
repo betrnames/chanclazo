@@ -1,7 +1,8 @@
 import './play.css';
 import Matter from 'matter-js';
-import { playWhoosh, playHit, playStrike, playLevelUp, playGameOver, playCombo } from '../game/sound';
-import { $, loadImg, wakeAudio, wireMute, stars, report } from './common';
+import { playLevelUp, playGameOver } from '../game/sound';
+import { $, loadImg, wakeAudio, stars, report } from './common';
+import * as A from './flingAudio';
 
 const { Engine, Bodies, Composite, Body, Events, Vector } = Matter;
 const W = 800, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
@@ -23,14 +24,21 @@ function fit() {
 // Orientation: iOS Safari reports the new size late, so re-check a few times after any rotate/resize.
 let forcePlay = false, portraitNow = false;
 function readPortrait() {
-  const w = window.visualViewport?.width || innerWidth, h = window.visualViewport?.height || innerHeight;
-  const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-  return !forcePlay && touch && h > w && Math.min(w, h) < 900;
+  // innerWidth/innerHeight are the most reliable across Safari, Chrome for iOS (CriOS) and in-app views;
+  // visualViewport can lag/zoom in CriOS, and the address bar changes height, so use it only as a tie-break.
+  if (forcePlay) return false;
+  const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (!touch) return false;
+  const w = innerWidth, h = innerHeight;
+  let portrait = h > w;
+  if (Math.abs(w - h) < 40) { const mq = matchMedia('(orientation: portrait)').matches; const vv = window.visualViewport; portrait = vv ? vv.height > vv.width : mq; }
+  return portrait && Math.min(w, h) < 900;
 }
 function onLayout() {
   portraitNow = readPortrait(); document.body.classList.toggle('portrait', portraitNow); fit(); last = performance.now();
 }
-function scheduleLayout() { onLayout(); for (const d of [120, 300, 650, 1200]) setTimeout(onLayout, d); }
+function scheduleLayout() { onLayout(); for (const d of [120, 300, 650, 1200, 2000]) setTimeout(onLayout, d); }
+setInterval(() => { if (readPortrait() !== portraitNow) onLayout(); }, 700); // safety net if a rotate event is missed
 addEventListener('resize', scheduleLayout); addEventListener('orientationchange', scheduleLayout);
 window.visualViewport?.addEventListener('resize', scheduleLayout);
 matchMedia('(orientation: landscape)').addEventListener?.('change', scheduleLayout);
@@ -107,14 +115,15 @@ function damage(b: Matter.Body, amt: number) {
   const villain = m.kind === 'lucha' || m.kind === 'calaca';
   const pts = villain ? 5000 : m.kind === 'stone' ? 800 : 500; score += pts; combo++;
   pops.push({ x: b.position.x, y: b.position.y - 20, t: `+${pts}`, life: 1.2 });
-  if (villain) { playStrike(); shake = 10; burst(b.position.x, b.position.y, m.kind === 'lucha' ? ['#d62828', '#ffd166', '#fff'] : ['#fbf6ea', '#f72585', '#ffc300'], 26); if (combo > 1) playCombo(combo); }
-  else { playHit(); burst(b.position.x, b.position.y, m.kind === 'wood' ? ['#8b5a2b', '#c08a4f'] : m.kind === 'stone' ? ['#8a8597', '#5d5868'] : PICADO, 12); }
+  if (villain) { A.knockout(); if (combo > 1 || amt > 8) A.explosion(); shake = 10; burst(b.position.x, b.position.y, m.kind === 'lucha' ? ['#d62828', '#ffd166', '#fff'] : ['#fbf6ea', '#f72585', '#ffc300'], 26); }
+  else { if (m.kind === 'wood') A.breakWood(); else if (m.kind === 'stone') A.breakStone(); else A.ripPaper(); if (amt > 12) A.explosion(); burst(b.position.x, b.position.y, m.kind === 'wood' ? ['#8b5a2b', '#c08a4f'] : m.kind === 'stone' ? ['#8a8597', '#5d5868'] : PICADO, 12); }
   hud();
 }
 Events.on(engine, 'collisionStart', (e) => {
   for (const p of e.pairs) {
     const rel = Vector.magnitude(Vector.sub(p.bodyA.velocity, p.bodyB.velocity));
     if (rel < 2.2) continue;
+    const km = meta.get(p.bodyA.id) || meta.get(p.bodyB.id); if (km && rel > 3) A.knock(km.kind, rel);
     const massF = (b: Matter.Body) => (b.isStatic ? 3 : Math.min(3, b.mass / 2));
     damage(p.bodyA, (rel - 1.5) * 0.45 * massF(p.bodyB));
     damage(p.bodyB, (rel - 1.5) * 0.45 * massF(p.bodyA));
@@ -127,19 +136,19 @@ const toWorld = (cx: number, cy: number) => ({ x: (cx - ox) / scale, y: (cy - oy
 let dragStart = { x: 0, y: 0 };
 cv.addEventListener('pointerdown', (e) => {
   wakeAudio(); if (isPortraitPhone() || !playing || ended || shot || shotsLeft <= 0) return;
-  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; cv.setPointerCapture(e.pointerId);
+  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; A.unlock(); A.stretchStart(); A.stretch(0); cv.setPointerCapture(e.pointerId);
 });
 cv.addEventListener('pointermove', (e) => {
   if (!aiming) return; const p = toWorld(e.clientX, e.clientY);
   let dx = p.x - dragStart.x, dy = p.y - dragStart.y; const d = Math.hypot(dx, dy);
-  if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy };
+  if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy }; A.stretch(Math.hypot(dx, dy) / MAXPULL);
 });
 const release = () => {
-  if (!aiming) return; aiming = false;
+  if (!aiming) return; aiming = false; A.stretchStop();
   if (Math.hypot(pull.x, pull.y) < 25) { pull = { x: 0, y: 0 }; return; }
   const b = Bodies.circle(SLING.x + pull.x, SLING.y + pull.y, 18, { density: 0.006, restitution: 0.3, friction: 0.5, frictionAir: 0.004 });
   Composite.add(world, b); Body.setVelocity(b, { x: -pull.x * POWER, y: -pull.y * POWER }); Body.setAngularVelocity(b, 0.35);
-  shot = b; shotAt = performance.now(); shotsLeft--; combo = 0; abuelaKick = 1; playWhoosh(1.3); pull = { x: 0, y: 0 }; hud();
+  shot = b; shotAt = performance.now(); shotsLeft--; combo = 0; abuelaKick = 1; { const pw = Math.hypot(pull.x, pull.y) / MAXPULL; A.twang(pw); A.whoosh(pw); } pull = { x: 0, y: 0 }; hud();
 };
 cv.addEventListener('pointerup', release); cv.addEventListener('pointercancel', release);
 
@@ -270,7 +279,7 @@ function startGame() {
   safe('ui', () => { startScreen.classList.add('hidden'); startScreen.style.display = 'none'; });
   safe('level', () => { level = 0; score = 0; build(0); });
   playing = true; last = performance.now();
-  safe('audio', () => wakeAudio());
+  safe('audio', () => { wakeAudio(); A.unlock(); A.startMusic(); });
   safe('fullscreen', () => { // Android Chrome only; iOS has no element fullscreen. Fire-and-forget.
     const el = document.documentElement as any; const req = el.requestFullscreen;
     if (typeof req === 'function' && !document.fullscreenElement) {
@@ -297,7 +306,7 @@ function maybeCountdown() {
 }
 setInterval(maybeCountdown, 500);
 Promise.all(Object.entries(names).map(([k, v]) => loadImg(v).then((im) => { IMG[k] = im; }).catch(() => report(`image failed: ${v}`))));
-safe('wireMute', wireMute);
+safe('wireMute', () => A.wireMute($('mute') as HTMLButtonElement));
 build(0);
 onLayout(); scheduleLayout();
 requestAnimationFrame(frame);
