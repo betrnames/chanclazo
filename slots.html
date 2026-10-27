@@ -43,12 +43,12 @@ canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
 .card button:active{transform:translateY(3px);box-shadow:0 3px 0 #7c2d12}
 .card .links{margin-top:14px;font-size:13px}.card .links a{color:#ffd23f}
 @font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
-.screen.title{background:rgba(143,211,244,.35);flex-direction:column;justify-content:center;gap:10px;text-align:center;padding:60px 16px 24px}
+.screen.title{background:rgba(143,211,244,.35);flex-direction:column;justify-content:center;gap:8px;text-align:center;padding:56px 16px 16px}
 .tt-heads{display:flex;align-items:flex-end;justify-content:center;gap:2vmin}
-.tt-heads img{width:clamp(56px,14vmin,120px);filter:drop-shadow(0 4px 0 #5a2a00)}
-.tt-heads img.pin{width:clamp(120px,30vmin,260px);transform-origin:50% 0;animation:swing 2.6s ease-in-out infinite;order:0}
+.tt-heads img{width:clamp(56px,min(14vmin,11vh),120px);filter:drop-shadow(0 4px 0 #5a2a00)}
+.tt-heads img.pin{width:clamp(110px,min(30vmin,24vh),260px);transform-origin:50% 0;animation:swing 2.6s ease-in-out infinite;order:0}
 @keyframes swing{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
-.tt-title{margin:0;font-family:LilitaOne,system-ui,sans-serif;font-weight:400;font-size:clamp(54px,15vmin,130px);line-height:.92;color:#ffd23f;letter-spacing:2px;-webkit-text-stroke:clamp(5px,1.4vmin,10px) #5a2d86;paint-order:stroke fill;text-shadow:0 6px 0 #3b1a5c}
+.tt-title{margin:0;font-family:LilitaOne,system-ui,sans-serif;font-weight:400;font-size:clamp(48px,min(15vmin,11vh),130px);line-height:.92;color:#ffd23f;letter-spacing:2px;-webkit-text-stroke:clamp(5px,1.4vmin,10px) #5a2d86;paint-order:stroke fill;text-shadow:0 6px 0 #3b1a5c}
 .tt-ribbon{background:#e2197a;color:#fff;font-family:LilitaOne,system-ui,sans-serif;font-size:clamp(16px,3.6vmin,28px);padding:6px 34px;clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%,6% 50%);letter-spacing:1px}
 .tt-tap{margin-top:8px;font-family:LilitaOne,system-ui,sans-serif;font-size:clamp(26px,6vmin,46px);color:#fff;background:#18b5b0;border:4px solid #5a2a00;border-radius:999px;padding:10px 34px;cursor:pointer;box-shadow:0 6px 0 #5a2a00;animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
