@@ -87,8 +87,8 @@ a{color:inherit}
 @keyframes spinny{0%{transform:rotate(-20deg) scale(1)}50%{transform:rotate(340deg) scale(1.15)}100%{transform:rotate(700deg) scale(1)}}
 
 /* Arcade marquee title */
-.letters{position:relative;font-family:Bungee,"Bungee Shade",Impact,sans-serif;font-size:clamp(40px,11vw,120px);
-  line-height:.95;letter-spacing:.02em;text-transform:uppercase;display:flex;flex-wrap:wrap;justify-content:center;
+.letters{position:relative;font-family:Bungee,"Bungee Shade",Impact,sans-serif;font-size:clamp(36px,9.5vw,108px);
+  line-height:.95;letter-spacing:-0.01em;text-transform:uppercase;display:flex;flex-wrap:nowrap;justify-content:center;white-space:nowrap;max-width:100%;
   color:#fff; -webkit-text-stroke:clamp(2px,.35vw,5px) #2a0a00; paint-order:stroke fill;
   text-shadow:
     0 0 0 #2a0a00,
@@ -157,6 +157,7 @@ a{color:inherit}
   .title .side.left{justify-content:flex-end;padding-right:4%}
   .title .side.right{justify-content:flex-start;padding-left:4%}
 }
+@media (max-width:360px){.letters{font-size:clamp(28px,11vw,40px);letter-spacing:-0.03em}}
 @media (max-width:400px) and (orientation:portrait){
   .letters{font-size:clamp(36px,12.5vw,52px)}
   .arcade-btn{font-size:clamp(18px,6vw,26px);padding:12px 22px}
