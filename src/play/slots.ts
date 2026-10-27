@@ -464,12 +464,24 @@ function roundRect(x: number, y: number, w: number, h: number, r: number) {
   ctx.closePath();
 }
 
+// Solid Día de Muertos folk-art tile colors, one per symbol (no gradients).
+const TILE: Record<string, string> = {
+  abuela: '#f7a21b',  // marigold
+  skull: '#e2197a',   // magenta
+  lucha: '#18b5b0',   // turquoise
+  chancla: '#8cc63f', // lime
+  bottle: '#7b3fbf',  // violet
+  pinata: '#ff5a36',  // chile red-orange
+};
+
 function drawSym(sym: Sym, x: number, y: number, s: number, wildGlow = false) {
   const im = imgs[sym === 'pinata' ? 'pinata' : sym];
   ctx.save();
   const r = s * 0.12;
-  ctx.fillStyle = wildGlow ? 'rgba(255,210,63,.35)' : 'rgba(0,0,0,.35)';
+  ctx.fillStyle = TILE[sym] || '#f7a21b';
   roundRect(x - s / 2, y - s / 2, s, s, r); ctx.fill();
+  ctx.strokeStyle = 'rgba(26,10,46,.55)'; ctx.lineWidth = Math.max(1.5, s * 0.03);
+  roundRect(x - s / 2, y - s / 2, s, s, r); ctx.stroke();
   if (wildGlow) { ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2; roundRect(x - s / 2, y - s / 2, s, s, r); ctx.stroke(); }
   if (im && im.complete) {
     const max = s * 0.86;
@@ -509,6 +521,15 @@ function drawMachine(dt: number) {
   ctx.font = `900 ${Math.max(13, box.w * 0.04)}px system-ui`;
   ctx.textAlign = 'center';
   ctx.fillText('PIÑATA SLOTS', box.x + box.w / 2, box.y + g.titleH * 0.42);
+  const sk = imgs.calaca;
+  if (sk && sk.complete && sk.width) {
+    const sh = g.titleH * 0.95;
+    const sw = sk.width * (sh / sk.height);
+    const tw = ctx.measureText('PIÑATA SLOTS').width;
+    const sy = box.y + g.titleH * 0.04;
+    ctx.drawImage(sk, box.x + box.w / 2 - tw / 2 - sw - 10, sy, sw, sh);
+    ctx.drawImage(sk, box.x + box.w / 2 + tw / 2 + 10, sy, sw, sh);
+  }
   ctx.font = `${Math.max(9, box.w * 0.022)}px Georgia`;
   ctx.fillStyle = 'rgba(243,233,210,.75)';
   ctx.fillText('(working title) · free play · 5×4', box.x + box.w / 2, box.y + g.titleH * 0.78);
@@ -839,6 +860,7 @@ async function boot() {
   $('mute').onclick = (e) => { e.stopPropagation(); A.unlock(); A.setMuted(!A.isMuted()); setHud(); };
   const loads: Promise<unknown>[] = [
     loadImg('/play/t_abuela.webp').then(i => imgs.abuela = i),
+    loadImg('/lp/calaca_head.webp').then(i => imgs.calaca = i),
     loadImg('/play/t_skull.webp').then(i => imgs.skull = i),
     loadImg('/play/t_lucha.webp').then(i => imgs.lucha = i),
     loadImg('/play/t_chancla.webp').then(i => imgs.chancla = i),
