@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-<meta name="theme-color" content="#f7a21b" />
+<meta name="theme-color" content="#8fd3f4" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>Piñata Slots (working title) · Chanclazo</title>
 <meta name="description" content="Free-play piñata slot machine. Spin for free credits, smash piñatas with the chancla. No real money." />
@@ -22,7 +22,7 @@
 <link rel="icon" href="/cruise/logo_chancla.webp" />
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#f7a21b;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;background:#8fd3f4;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
 .hud{position:absolute;left:0;right:0;top:env(safe-area-inset-top);display:flex;align-items:center;gap:8px;padding:8px 10px;pointer-events:none;z-index:5}
@@ -42,13 +42,25 @@ canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
 .card button{background:#ffd23f;color:#2a0a00;border:3px solid #fff;border-radius:16px;font-weight:900;font-size:22px;padding:12px 28px;cursor:pointer;box-shadow:0 6px 0 #7c2d12}
 .card button:active{transform:translateY(3px);box-shadow:0 3px 0 #7c2d12}
 .card .links{margin-top:14px;font-size:13px}.card .links a{color:#ffd23f}
+@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
+.screen.title{background:rgba(143,211,244,.35);flex-direction:column;justify-content:center;gap:10px;text-align:center;padding:60px 16px 24px}
+.tt-heads{display:flex;align-items:flex-end;justify-content:center;gap:2vmin}
+.tt-heads img{width:clamp(56px,14vmin,120px);filter:drop-shadow(0 4px 0 #5a2a00)}
+.tt-heads img.pin{width:clamp(120px,30vmin,260px);transform-origin:50% 0;animation:swing 2.6s ease-in-out infinite;order:0}
+@keyframes swing{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+.tt-title{margin:0;font-family:LilitaOne,system-ui,sans-serif;font-weight:400;font-size:clamp(54px,15vmin,130px);line-height:.92;color:#ffd23f;letter-spacing:2px;-webkit-text-stroke:clamp(5px,1.4vmin,10px) #5a2d86;paint-order:stroke fill;text-shadow:0 6px 0 #3b1a5c}
+.tt-ribbon{background:#e2197a;color:#fff;font-family:LilitaOne,system-ui,sans-serif;font-size:clamp(16px,3.6vmin,28px);padding:6px 34px;clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%,6% 50%);letter-spacing:1px}
+.tt-tap{margin-top:8px;font-family:LilitaOne,system-ui,sans-serif;font-size:clamp(26px,6vmin,46px);color:#fff;background:#18b5b0;border:4px solid #5a2a00;border-radius:999px;padding:10px 34px;cursor:pointer;box-shadow:0 6px 0 #5a2a00;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.tt-menu{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+.tt-menu button,.tt-menu a{font-family:LilitaOne,system-ui,sans-serif;font-size:18px;color:#fff;background:#7b3fbf;border:3px solid #5a2a00;border-radius:14px;padding:8px 18px;cursor:pointer;text-decoration:none;box-shadow:0 4px 0 #5a2a00}
 </style>
 </head><body>
 <div id="app">
   <div class="hud">
     <a href="/" aria-label="Back to games">← Games</a>
-    <span class="pill"><small>Credits</small><span id="credits">3000</span></span>
-    <span class="pill"><small>Bet</small><span id="bet">10</span></span>
+    <span class="pill" style="display:none"><small>Credits</small><span id="credits">3000</span></span>
+    <span class="pill" style="display:none"><small>Bet</small><span id="bet">10</span></span>
     <span class="pill" id="winPill" style="display:none"><small>Win</small><span id="win">0</span></span>
     <span class="pill" id="freePill" style="display:none"><small>Free spins</small><span id="free">0</span></span>
     <span class="spacer"></span>
@@ -57,7 +69,18 @@ canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
   <canvas id="game"></canvas>
   <div class="disclaimer">Free play only · No real money · No purchases</div>
 </div>
-<div class="screen" id="start"><div class="card">
+<div class="screen title" id="start">
+  <div class="tt-heads" aria-hidden="true"><img src="/lp/abuela_head.webp" alt=""/><img class="pin" src="/play/t_pinata.webp" alt=""/><img src="/lp/lucha_head.webp" alt=""/><img src="/lp/calaca_head.webp" alt=""/></div>
+  <h1 class="tt-title">PIÑATA<br/>SLOTS</h1>
+  <div class="tt-ribbon">Free play · Working title</div>
+  <button id="go" class="tt-tap">TAP TO PLAY</button>
+  <div class="tt-menu">
+    <button id="rulesBtn" type="button">Rules</button>
+    <button id="soundBtn" type="button">Sound: on</button>
+    <a href="/">All games</a>
+  </div>
+</div>
+<div class="screen hidden" id="rules"><div class="card">
   <img class="logo" src="/cruise/logo_chancla.webp" alt="Chanclazo logo" />
   <h1>Piñata Slots</h1>
   <p class="sub">Working title · Free play</p>
@@ -71,8 +94,7 @@ canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
     <b>Piñata Smash:</b> Tap piñatas with the chancla. The big llama explodes at the end.
   </div>
   <p style="font-size:12px;opacity:.8">Credits are pretend. Nothing here costs money, and nothing can be cashed out.</p>
-  <button id="go">PLAY FREE</button>
-  <div class="links"><a href="/">All games</a></div>
+  <button id="rulesClose" type="button">Got it</button>
 </div></div>
 <div class="screen hidden" id="end"><div class="card">
   <h1 id="endTitle">Nice smash!</h1>

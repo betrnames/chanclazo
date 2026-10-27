@@ -426,32 +426,131 @@ function fit() {
 addEventListener('resize', fit);
 
 function machineBox() {
-  const top = 52;
-  const bot = 22;
-  const pad = 8;
+  const top = 50;
+  const bot = 18;
+  const pad = 6;
   const availW = W - pad * 2;
-  const availH = H - top - bot - pad;
-  // taller cabinet for 4 rows
-  let mh = availH, mw = mh / 0.95;
-  if (mw > availW) { mw = availW; mh = mw * 0.95; }
-  if (W > H) { // landscape: use width, keep height
-    mw = Math.min(availW, availH * 1.55);
-    mh = Math.min(availH, mw * 0.72);
-  }
+  const availH = H - top - bot;
+  let mw: number, mh: number;
+  if (W > H) { mh = availH; mw = Math.min(availW, mh * 1.18); mh = Math.min(mh, mw / 1.0); }
+  else { mw = availW; mh = Math.min(availH, mw * 1.45); }
   return { x: (W - mw) / 2, y: top + (availH - mh) / 2, w: mw, h: mh };
 }
 
 function cellGeom(box: {x:number;y:number;w:number;h:number}) {
-  const titleH = Math.max(28, box.h * 0.09);
-  const btnH = Math.max(40, box.h * 0.13);
-  const pad = box.w * 0.03;
-  const reelGap = box.w * 0.01;
-  const areaH = box.h - titleH - btnH - pad;
+  const nicheH = box.h * 0.17;          // character heads in arched niches
+  const plaqueH = Math.max(18, box.h * 0.065);
+  const titleH = nicheH + plaqueH;
+  const btnH = Math.max(52, box.h * 0.14); // control bar
+  const pad = box.w * 0.075;            // carved frame + garlands
+  const reelGap = box.w * 0.008;
+  const areaH = box.h - titleH - btnH - box.h * 0.02;
   const rw = (box.w - pad * 2 - reelGap * (COLS - 1)) / COLS;
   const rh = areaH / ROWS;
   const ox = box.x + pad;
   const oy = box.y + titleH;
-  return { pad, reelGap, rw, rh, ox, oy, titleH, btnH };
+  return { pad, reelGap, rw, rh, ox, oy, titleH, btnH, nicheH, plaqueH };
+}
+
+// Control hit areas, refreshed every frame by drawControls.
+const ctrl = { up: [0, 0, 0, 0], down: [0, 0, 0, 0], spin: [0, 0, 0] };
+
+function marigold(x: number, y: number, r: number) {
+  ctx.fillStyle = '#e8590c';
+  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r * 0.55, y + Math.sin(a) * r * 0.55, r * 0.5, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = '#f7a21b'; ctx.beginPath(); ctx.arc(x, y, r * 0.7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(x, y, r * 0.32, 0, Math.PI * 2); ctx.fill();
+}
+
+const NICHES: [string, string][] = [['abuela', 'CHANCLAZO'], ['lucha', 'CHANCLA WILD'], ['calaca', 'PIÑATA SMASH']];
+
+function drawCabinet(box: {x:number;y:number;w:number;h:number}, g: ReturnType<typeof cellGeom>) {
+  const STONE = '#7b4fb5', STONE_D = '#5a3590', STONE_L = '#9d74d6';
+  const frameTop = box.y + g.nicheH;
+  const frameBot = box.y + box.h - g.btnH * 0.55;
+  // niches (arched) with heads
+  const nw = box.w * 0.27, gap = (box.w - nw * 3) / 4;
+  for (let i = 0; i < 3; i++) {
+    const nx = box.x + gap + i * (nw + gap), ny = box.y;
+    ctx.fillStyle = STONE_D;
+    ctx.beginPath(); ctx.moveTo(nx, frameTop + 2); ctx.lineTo(nx, ny + nw * 0.5); ctx.arc(nx + nw / 2, ny + nw * 0.5, nw / 2, Math.PI, 0); ctx.lineTo(nx + nw, frameTop + 2); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = STONE;
+    const iw = nw * 0.8, ix = nx + (nw - iw) / 2;
+    ctx.beginPath(); ctx.moveTo(ix, frameTop + 2); ctx.lineTo(ix, ny + nw * 0.5); ctx.arc(ix + iw / 2, ny + nw * 0.5, iw / 2, Math.PI, 0); ctx.lineTo(ix + iw, frameTop + 2); ctx.closePath(); ctx.fill();
+    const im = imgs[NICHES[i][0] + '_head'];
+    if (im && im.complete && im.width) {
+      const hh = g.nicheH * 1.05, hw = Math.min(iw * 1.05, im.width * (hh / im.height)), h2 = im.height * (hw / im.width);
+      ctx.drawImage(im, nx + nw / 2 - hw / 2, frameTop + g.plaqueH * 0.15 - h2, hw, h2);
+    }
+  }
+  // carved frame body
+  ctx.fillStyle = STONE_D; roundRect(box.x, frameTop, box.w, frameBot - frameTop, 14); ctx.fill();
+  ctx.fillStyle = STONE; roundRect(box.x + 5, frameTop + 5, box.w - 10, frameBot - frameTop - 10, 11); ctx.fill();
+  // stone block lines on the side pillars
+  ctx.strokeStyle = STONE_D; ctx.lineWidth = 2;
+  const pw = g.pad - 6;
+  for (let yy = frameTop + g.plaqueH + 8; yy < frameBot - 10; yy += Math.max(18, pw * 0.9)) {
+    ctx.beginPath(); ctx.moveTo(box.x + 6, yy); ctx.lineTo(box.x + pw, yy); ctx.moveTo(box.x + box.w - pw, yy); ctx.lineTo(box.x + box.w - 6, yy); ctx.stroke();
+  }
+  ctx.fillStyle = STONE_L; ctx.fillRect(box.x + 8, frameTop + 7, box.w - 16, 3);
+  // plaques
+  for (let i = 0; i < 3; i++) {
+    const nx = box.x + gap + i * (nw + gap);
+    const px = nx - nw * 0.04, pwid = nw * 1.08, py = frameTop + g.plaqueH * 0.12, ph = g.plaqueH * 0.8;
+    ctx.fillStyle = STONE_D; roundRect(px, py, pwid, ph, 6); ctx.fill();
+    ctx.strokeStyle = STONE_L; ctx.lineWidth = 2; roundRect(px + 3, py + 3, pwid - 6, ph - 6, 4); ctx.stroke();
+    ctx.fillStyle = '#ffe9c2'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    let fs = ph * 0.5; ctx.font = `900 ${fs}px system-ui`;
+    while (ctx.measureText(NICHES[i][1]).width > pwid * 0.86 && fs > 7) { fs -= 0.5; ctx.font = `900 ${fs}px system-ui`; }
+    ctx.fillText(NICHES[i][1], px + pwid / 2, py + ph / 2 + 1);
+  }
+  // marigold garlands down both sides
+  const gr = Math.max(5, g.pad * 0.2);
+  for (let yy = frameTop + g.plaqueH + gr * 2; yy < frameBot - gr * 1.5; yy += gr * 2.1) {
+    marigold(box.x + g.pad * 0.48, yy, gr); marigold(box.x + box.w - g.pad * 0.48, yy, gr);
+  }
+}
+
+function drawControls(box: {x:number;y:number;w:number;h:number}, g: ReturnType<typeof cellGeom>) {
+  const by = box.y + box.h - g.btnH * 0.82, bh = g.btnH * 0.72;
+  ctx.fillStyle = '#3b1a5c'; roundRect(box.x + 4, by, box.w - 8, bh, 12); ctx.fill();
+  ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2; roundRect(box.x + 4, by, box.w - 8, bh, 12); ctx.stroke();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  const sm = Math.max(9, bh * 0.2), big = Math.max(14, bh * 0.36);
+  ctx.fillStyle = '#ffd23f'; ctx.font = `800 ${sm}px system-ui`;
+  ctx.fillText('FREE-PLAY BALANCE', box.x + 16, by + bh * 0.38);
+  ctx.fillStyle = '#fff'; ctx.font = `900 ${big}px system-ui`;
+  ctx.fillText(credits.toLocaleString('en-US'), box.x + 16, by + bh * 0.8);
+  // spin button (big round, right)
+  const r = Math.min(g.btnH * 0.62, box.w * 0.11);
+  const sx = box.x + box.w - 12 - r, sy = by + bh / 2;
+  // bet block
+  const aw = Math.max(26, r * 0.62);
+  const ax = sx - r - 10 - aw;
+  const bx = ax - 8 - Math.max(64, box.w * 0.14);
+  ctx.fillStyle = '#ffd23f'; ctx.font = `800 ${sm}px system-ui`; ctx.fillText('BET', bx, by + bh * 0.38);
+  ctx.fillStyle = '#fff'; ctx.font = `900 ${big}px system-ui`; ctx.fillText(String(bet()), bx, by + bh * 0.8);
+  const ah = bh / 2 - 4;
+  ctrl.up = [ax, by + 3, aw, ah]; ctrl.down = [ax, by + bh / 2 + 1, aw, ah];
+  const canBet = mode === 'idle' && freeSpins === 0;
+  for (const [k, up] of [['up', true], ['down', false]] as const) {
+    const [x, y, w, h] = ctrl[k];
+    ctx.fillStyle = '#5a2d86'; roundRect(x, y, w, h, 6); ctx.fill();
+    ctx.fillStyle = canBet ? '#fff' : 'rgba(255,255,255,.4)'; ctx.beginPath();
+    const cx = x + w / 2, cy = y + h / 2, t = Math.min(w, h) * 0.28;
+    if (up) { ctx.moveTo(cx - t, cy + t * 0.6); ctx.lineTo(cx + t, cy + t * 0.6); ctx.lineTo(cx, cy - t * 0.7); }
+    else { ctx.moveTo(cx - t, cy - t * 0.6); ctx.lineTo(cx + t, cy - t * 0.6); ctx.lineTo(cx, cy + t * 0.7); }
+    ctx.closePath(); ctx.fill();
+  }
+  ctrl.spin = [sx, sy, r];
+  ctx.fillStyle = '#5a2a00'; ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = mode === 'idle' ? '#ffd23f' : '#f7a21b'; ctx.beginPath(); ctx.arc(sx, sy, r * 0.86, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#5a2a00'; ctx.lineWidth = Math.max(3, r * 0.1);
+  ctx.beginPath(); ctx.arc(sx, sy, r * 0.58, -Math.PI * 0.35, Math.PI * 1.35); ctx.stroke();
+  const ea = -Math.PI * 0.35, ex = sx + Math.cos(ea) * r * 0.58, ey = sy + Math.sin(ea) * r * 0.58;
+  ctx.fillStyle = '#5a2a00'; ctx.beginPath(); ctx.moveTo(ex - r * 0.2, ey - r * 0.12); ctx.lineTo(ex + r * 0.16, ey - r * 0.2); ctx.lineTo(ex + r * 0.06, ey + r * 0.2); ctx.closePath(); ctx.fill();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `900 ${Math.max(10, r * 0.3)}px system-ui`;
+  ctx.fillText(freeSpins > 0 ? `FREE ${freeSpins}` : 'SPIN', sx, sy + 1);
 }
 
 function roundRect(x: number, y: number, w: number, h: number, r: number) {
@@ -492,50 +591,18 @@ function drawSym(sym: Sym, x: number, y: number, s: number, wildGlow = false) {
   ctx.restore();
 }
 
-function drawBtn(x: number, y: number, w: number, h: number, label: string, primary = false) {
-  ctx.save();
-  if (primary) {
-    ctx.fillStyle = '#ffd23f';
-  } else ctx.fillStyle = '#18b5b0';
-  roundRect(x, y, w, h, 12); ctx.fill();
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; roundRect(x, y, w, h, 12); ctx.stroke();
-  ctx.fillStyle = primary ? '#5a2a00' : '#ffffff';
-  ctx.font = `900 ${Math.max(13, h * 0.38)}px system-ui`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
-  ctx.restore();
-}
-
 function drawMachine(dt: number) {
   const box = machineBox();
   const g = cellGeom(box);
   ctx.save();
-  ctx.fillStyle = '#c2185b'; roundRect(box.x, box.y, box.w, box.h, 16); ctx.fill();
-  ctx.strokeStyle = '#5a2a00'; ctx.lineWidth = 5; roundRect(box.x, box.y, box.w, box.h, 16); ctx.stroke();
-
-  ctx.fillStyle = '#ffd23f';
-  ctx.font = `900 ${Math.max(13, box.w * 0.04)}px system-ui`;
-  ctx.textAlign = 'center';
-  ctx.fillText('PIÑATA SLOTS', box.x + box.w / 2, box.y + g.titleH * 0.42);
-  const sk = imgs.calaca;
-  if (sk && sk.complete && sk.width) {
-    const sh = g.titleH * 0.95;
-    const sw = sk.width * (sh / sk.height);
-    const tw = ctx.measureText('PIÑATA SLOTS').width;
-    const sy = box.y + g.titleH * 0.04;
-    ctx.drawImage(sk, box.x + box.w / 2 - tw / 2 - sw - 10, sy, sw, sh);
-    ctx.drawImage(sk, box.x + box.w / 2 + tw / 2 + 10, sy, sw, sh);
-  }
-  ctx.font = `${Math.max(9, box.w * 0.022)}px Georgia`;
-  ctx.fillStyle = '#ffe9c2';
-  ctx.fillText('(working title) · free play · 5×4', box.x + box.w / 2, box.y + g.titleH * 0.78);
+  drawCabinet(box, g);
 
   const winY = g.oy;
   const winH = g.rh * ROWS;
   ctx.save();
   roundRect(g.ox - 3, winY - 3, COLS * g.rw + (COLS - 1) * g.reelGap + 6, winH + 6, 8);
   ctx.clip();
-  ctx.fillStyle = '#fff3d6';
+  ctx.fillStyle = '#3d1760';
   ctx.fillRect(g.ox - 3, winY - 3, COLS * g.rw + (COLS - 1) * g.reelGap + 6, winH + 6);
 
   for (let c = 0; c < COLS; c++) {
@@ -555,7 +622,7 @@ function drawMachine(dt: number) {
         drawSym(grid[c][r], cx + g.rw / 2, winY + (r + 0.5) * g.rh, Math.min(g.rw, g.rh) * 0.9, wild);
       }
     }
-    ctx.strokeStyle = 'rgba(90,42,0,.35)'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#7b4fb5'; ctx.lineWidth = 1.5;
     ctx.strokeRect(cx, winY, g.rw, winH);
   }
   ctx.restore();
@@ -578,34 +645,17 @@ function drawMachine(dt: number) {
     ctx.restore();
   }
 
-  const btnY = box.y + box.h - g.btnH;
-  const bw = box.w * 0.16;
-  const spinW = box.w * 0.38;
-  const spinLabel = freeSpins > 0 ? `FREE (${freeSpins})` : mode === 'spinning' ? '…' : 'SPIN';
-  drawBtn(box.x + box.w * 0.08, btnY + 2, bw, g.btnH - 6, '−');
-  drawBtn(box.x + box.w / 2 - spinW / 2, btnY + 2, spinW, g.btnH - 6, spinLabel, true);
-  drawBtn(box.x + box.w * 0.76, btnY + 2, bw, g.btnH - 6, '+');
+  drawControls(box, g);
   ctx.restore();
   return { box, g };
 }
 
 function hitControls(x: number, y: number) {
-  const box = machineBox();
-  const g = cellGeom(box);
-  const btnY = box.y + box.h - g.btnH;
-  const bw = box.w * 0.16;
-  const spinW = box.w * 0.38;
-  const bh = g.btnH - 6;
-  const inR = (bx: number, by: number, bw: number, bh: number) => x >= bx && x <= bx + bw && y >= by && y <= by + bh;
-  if (inR(box.x + box.w * 0.08, btnY + 2, bw, bh)) {
-    if (mode === 'idle' && freeSpins === 0) { betIdx = (betIdx + BETS.length - 1) % BETS.length; setHud(); }
-    return;
-  }
-  if (inR(box.x + box.w * 0.76, btnY + 2, bw, bh)) {
-    if (mode === 'idle' && freeSpins === 0) { betIdx = (betIdx + 1) % BETS.length; setHud(); }
-    return;
-  }
-  if (inR(box.x + box.w / 2 - spinW / 2, btnY + 2, spinW, bh) && mode === 'idle') startSpin();
+  const inR = (r: number[]) => x >= r[0] - 4 && x <= r[0] + r[2] + 4 && y >= r[1] - 2 && y <= r[1] + r[3] + 2;
+  if (inR(ctrl.down)) { if (mode === 'idle' && freeSpins === 0 && betIdx > 0) { betIdx--; setHud(); } return; }
+  if (inR(ctrl.up)) { if (mode === 'idle' && freeSpins === 0 && betIdx < BETS.length - 1) { betIdx++; setHud(); } return; }
+  const [sx, sy, r] = ctrl.spin;
+  if (Math.hypot(x - sx, y - sy) <= r * 1.1 && mode === 'idle') startSpin();
 }
 
 function drawBonus(dt: number) {
@@ -752,13 +802,33 @@ function drawFx(dt: number) {
 }
 
 function drawBg() {
-  ctx.fillStyle = '#f7a21b'; ctx.fillRect(0, 0, W, H);
-  ctx.save(); ctx.translate(W / 2, H * 0.3); ctx.rotate(performance.now() / 20000); ctx.globalAlpha = 0.35;
-  for (let i = 0; i < 12; i++) {
-    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(0, 0);
-    ctx.arc(0, 0, Math.max(W, H), i * Math.PI / 6, i * Math.PI / 6 + 0.12); ctx.fill();
+  // sky
+  ctx.fillStyle = '#8fd3f4'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ffe28a'; ctx.beginPath(); ctx.arc(W * 0.85, H * 0.12, Math.min(W, H) * 0.07, 0, Math.PI * 2); ctx.fill();
+  // warm buildings
+  const cols = ['#f4a261', '#e76f51', '#ffcf56', '#f28482', '#2ec4b6', '#f7a21b'];
+  const bw = Math.max(70, W / 9);
+  for (let i = 0, x = -10; x < W; i++, x += bw) {
+    const h = H * (0.38 + ((i * 37) % 5) * 0.05), y = H - h;
+    ctx.fillStyle = cols[i % cols.length]; ctx.fillRect(x, y, bw + 1, h);
+    ctx.fillStyle = '#b5523b'; ctx.fillRect(x - 3, y - 8, bw + 7, 10);
+    ctx.fillStyle = '#ffe9c2';
+    for (let wy = y + 22; wy < H - 50; wy += 46) for (let wx = x + bw * 0.18; wx < x + bw - 20; wx += bw * 0.42) ctx.fillRect(wx, wy, bw * 0.22, 24);
   }
-  ctx.restore();
+  ctx.fillStyle = '#e9c46a'; ctx.fillRect(0, H - 40, W, 40);
+  // papel picado bunting
+  const flags = ['#e2197a', '#18b5b0', '#8cc63f', '#f7a21b', '#7b3fbf', '#ff5a36'];
+  for (const [yy, amp] of [[H * 0.02, 18], [H * 0.09, 26]] as const) {
+    const fw = Math.max(26, W / 22);
+    ctx.strokeStyle = '#5a2a00'; ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let x = 0; x <= W; x += 8) { const y = yy + Math.sin((x / W) * Math.PI) * amp; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.stroke();
+    for (let k = 0, x = 4; x < W; k++, x += fw + 4) {
+      const y = yy + Math.sin(((x + fw / 2) / W) * Math.PI) * amp;
+      ctx.fillStyle = flags[(k + (yy > H * 0.05 ? 3 : 0)) % flags.length];
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + fw, y); ctx.lineTo(x + fw, y + fw * 0.9); ctx.lineTo(x + fw / 2, y + fw * 1.15); ctx.lineTo(x, y + fw * 0.9); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#8fd3f4'; ctx.beginPath(); ctx.arc(x + fw / 2, y + fw * 0.45, fw * 0.14, 0, Math.PI * 2); ctx.fill();
+    }
+  }
 }
 
 let last = performance.now();
@@ -855,7 +925,9 @@ async function boot() {
   $('mute').onclick = (e) => { e.stopPropagation(); A.unlock(); A.setMuted(!A.isMuted()); setHud(); };
   const loads: Promise<unknown>[] = [
     loadImg('/play/t_abuela.webp').then(i => imgs.abuela = i),
-    loadImg('/lp/calaca_head.webp').then(i => imgs.calaca = i),
+    loadImg('/lp/calaca_head.webp').then(i => imgs.calaca_head = i),
+    loadImg('/lp/abuela_head.webp').then(i => imgs.abuela_head = i),
+    loadImg('/lp/lucha_head.webp').then(i => imgs.lucha_head = i),
     loadImg('/play/t_skull.webp').then(i => imgs.skull = i),
     loadImg('/play/t_lucha.webp').then(i => imgs.lucha = i),
     loadImg('/play/t_chancla.webp').then(i => imgs.chancla = i),
@@ -869,7 +941,11 @@ async function boot() {
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
   fit(); setHud();
   requestAnimationFrame(frame);
-  $('go').onclick = () => { $('start').classList.add('hidden'); A.unlock(); wakeAudio(); startSpin(); };
+  $('go').onclick = () => { $('start').classList.add('hidden'); A.unlock(); wakeAudio(); };
+  $('rulesBtn').onclick = () => $('rules').classList.remove('hidden');
+  $('rulesClose').onclick = () => $('rules').classList.add('hidden');
+  const syncSound = () => { $('soundBtn').textContent = A.isMuted() ? 'Sound: off' : 'Sound: on'; };
+  $('soundBtn').onclick = () => { A.unlock(); A.setMuted(!A.isMuted()); setHud(); syncSound(); }; syncSound();
   $('again').onclick = () => { $('end').classList.add('hidden'); mode = 'idle'; };
 }
 boot();
