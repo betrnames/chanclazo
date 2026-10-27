@@ -495,13 +495,11 @@ function drawSym(sym: Sym, x: number, y: number, s: number, wildGlow = false) {
 function drawBtn(x: number, y: number, w: number, h: number, label: string, primary = false) {
   ctx.save();
   if (primary) {
-    const g = ctx.createLinearGradient(x, y, x, y + h);
-    g.addColorStop(0, '#ffd84a'); g.addColorStop(1, '#e8590c');
-    ctx.fillStyle = g;
-  } else ctx.fillStyle = '#2a1548';
+    ctx.fillStyle = '#ffd23f';
+  } else ctx.fillStyle = '#18b5b0';
   roundRect(x, y, w, h, 12); ctx.fill();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; roundRect(x, y, w, h, 12); ctx.stroke();
-  ctx.fillStyle = primary ? '#2a0a00' : '#ffd23f';
+  ctx.fillStyle = primary ? '#5a2a00' : '#ffffff';
   ctx.font = `900 ${Math.max(13, h * 0.38)}px system-ui`;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(label, x + w / 2, y + h / 2 + 1);
@@ -512,10 +510,8 @@ function drawMachine(dt: number) {
   const box = machineBox();
   const g = cellGeom(box);
   ctx.save();
-  const grd = ctx.createLinearGradient(box.x, box.y, box.x, box.y + box.h);
-  grd.addColorStop(0, '#5c1a8a'); grd.addColorStop(1, '#1a0a2e');
-  ctx.fillStyle = grd; roundRect(box.x, box.y, box.w, box.h, 16); ctx.fill();
-  ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 4; roundRect(box.x, box.y, box.w, box.h, 16); ctx.stroke();
+  ctx.fillStyle = '#c2185b'; roundRect(box.x, box.y, box.w, box.h, 16); ctx.fill();
+  ctx.strokeStyle = '#5a2a00'; ctx.lineWidth = 5; roundRect(box.x, box.y, box.w, box.h, 16); ctx.stroke();
 
   ctx.fillStyle = '#ffd23f';
   ctx.font = `900 ${Math.max(13, box.w * 0.04)}px system-ui`;
@@ -531,7 +527,7 @@ function drawMachine(dt: number) {
     ctx.drawImage(sk, box.x + box.w / 2 + tw / 2 + 10, sy, sw, sh);
   }
   ctx.font = `${Math.max(9, box.w * 0.022)}px Georgia`;
-  ctx.fillStyle = 'rgba(243,233,210,.75)';
+  ctx.fillStyle = '#ffe9c2';
   ctx.fillText('(working title) · free play · 5×4', box.x + box.w / 2, box.y + g.titleH * 0.78);
 
   const winY = g.oy;
@@ -539,7 +535,7 @@ function drawMachine(dt: number) {
   ctx.save();
   roundRect(g.ox - 3, winY - 3, COLS * g.rw + (COLS - 1) * g.reelGap + 6, winH + 6, 8);
   ctx.clip();
-  ctx.fillStyle = '#0d0618';
+  ctx.fillStyle = '#fff3d6';
   ctx.fillRect(g.ox - 3, winY - 3, COLS * g.rw + (COLS - 1) * g.reelGap + 6, winH + 6);
 
   for (let c = 0; c < COLS; c++) {
@@ -559,7 +555,7 @@ function drawMachine(dt: number) {
         drawSym(grid[c][r], cx + g.rw / 2, winY + (r + 0.5) * g.rh, Math.min(g.rw, g.rh) * 0.9, wild);
       }
     }
-    ctx.strokeStyle = 'rgba(255,210,63,.22)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(90,42,0,.35)'; ctx.lineWidth = 1.5;
     ctx.strokeRect(cx, winY, g.rw, winH);
   }
   ctx.restore();
@@ -613,7 +609,7 @@ function hitControls(x: number, y: number) {
 }
 
 function drawBonus(dt: number) {
-  ctx.fillStyle = 'rgba(10,4,24,.55)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(122,31,79,.6)'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#ffd23f';
   ctx.font = `900 ${Math.max(20, W * 0.055)}px system-ui`;
   ctx.textAlign = 'center';
@@ -671,7 +667,7 @@ function drawBlast(dt: number) {
 }
 
 function drawPick() {
-  ctx.fillStyle = 'rgba(10,4,24,.7)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(122,31,79,.75)'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#ffd23f';
   ctx.font = `900 ${Math.max(20, W * 0.055)}px system-ui`;
   ctx.textAlign = 'center';
@@ -685,7 +681,7 @@ function drawPick() {
       const s = Math.min(100, W * 0.22);
       ctx.drawImage(im, it.x - s / 2, it.y - s / 2, s, s);
     } else if (it.revealed) {
-      ctx.fillStyle = 'rgba(0,0,0,.55)';
+      ctx.fillStyle = '#7a1f4f';
       roundRect(it.x - 48, it.y - 28, 96, 56, 12); ctx.fill();
       ctx.fillStyle = '#ffd23f';
       ctx.font = '900 22px system-ui';
@@ -746,7 +742,7 @@ function drawFx(dt: number) {
     ctx.font = `900 ${Math.max(16, W * 0.045)}px system-ui`;
     const m = ctx.measureText(toast);
     const bw = m.width + 36, bh = 42;
-    ctx.fillStyle = 'rgba(0,0,0,.65)';
+    ctx.fillStyle = '#5a2a00';
     roundRect(W / 2 - bw / 2, H * 0.16, bw, bh, 12); ctx.fill();
     ctx.fillStyle = '#ffd23f';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -756,10 +752,8 @@ function drawFx(dt: number) {
 }
 
 function drawBg() {
-  const g = ctx.createRadialGradient(W / 2, H * 0.35, 20, W / 2, H * 0.5, Math.max(W, H) * 0.7);
-  g.addColorStop(0, '#4a1578'); g.addColorStop(0.5, '#1a0a2e'); g.addColorStop(1, '#0a0414');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  ctx.save(); ctx.translate(W / 2, H * 0.3); ctx.rotate(performance.now() / 20000); ctx.globalAlpha = 0.08;
+  ctx.fillStyle = '#f7a21b'; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(W / 2, H * 0.3); ctx.rotate(performance.now() / 20000); ctx.globalAlpha = 0.35;
   for (let i = 0; i < 12; i++) {
     ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(0, 0);
     ctx.arc(0, 0, Math.max(W, H), i * Math.PI / 6, i * Math.PI / 6 + 0.12); ctx.fill();

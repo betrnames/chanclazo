@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-<meta name="theme-color" content="#1a0a2e" />
+<meta name="theme-color" content="#f7a21b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <title>Piñata Slots (working title) · Chanclazo</title>
 <meta name="description" content="Free-play piñata slot machine. Spin for free credits, smash piñatas with the chancla. No real money." />
@@ -22,24 +22,24 @@
 <link rel="icon" href="/cruise/logo_chancla.webp" />
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#1a0a2e;color:#f3e9d2;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;background:#f7a21b;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
 .hud{position:absolute;left:0;right:0;top:env(safe-area-inset-top);display:flex;align-items:center;gap:8px;padding:8px 10px;pointer-events:none;z-index:5}
-.hud .pill{pointer-events:auto;background:rgba(0,0,0,.55);border:2px solid #ffd23f;border-radius:12px;padding:6px 10px;font-weight:800;font-size:13px;display:flex;flex-direction:column;line-height:1.15}
+.hud .pill{pointer-events:auto;background:#c2185b;border:2px solid #5a2a00;border-radius:12px;padding:6px 10px;font-weight:800;font-size:13px;display:flex;flex-direction:column;line-height:1.15}
 .hud .pill small{font-size:10px;opacity:.75;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-.hud a,.hud button{pointer-events:auto;background:rgba(0,0,0,.55);border:2px solid #ffd23f;border-radius:12px;color:#ffd23f;font-weight:900;padding:8px 12px;font-size:14px;text-decoration:none;cursor:pointer}
+.hud a,.hud button{pointer-events:auto;background:#18b5b0;border:2px solid #5a2a00;border-radius:12px;color:#fff;font-weight:900;padding:8px 12px;font-size:14px;text-decoration:none;cursor:pointer}
 .hud .spacer{flex:1}
-.disclaimer{position:absolute;left:0;right:0;bottom:env(safe-area-inset-bottom);text-align:center;font-size:10px;opacity:.7;padding:4px 8px;pointer-events:none;z-index:5}
-.screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,4,24,.78);z-index:10;padding:16px;overflow:auto}
+.disclaimer{position:absolute;left:0;right:0;bottom:env(safe-area-inset-bottom);text-align:center;font-size:10px;color:#5a2a00;font-weight:700;padding:4px 8px;pointer-events:none;z-index:5}
+.screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(122,31,79,.55);z-index:10;padding:16px;overflow:auto}
 .screen.hidden{display:none}
-.card{background:linear-gradient(160deg,#3a1460,#1a0a2e);border:4px solid #ffd23f;border-radius:22px;padding:22px 20px;max-width:420px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.55)}
+.card{background:#c2185b;border:4px solid #5a2a00;border-radius:22px;padding:22px 20px;max-width:420px;width:100%;text-align:center;box-shadow:0 10px 0 #5a2a00}
 .card img.logo{width:72px;height:72px}
 .card h1{margin:8px 0 6px;font-size:clamp(26px,7vw,36px);color:#ffd23f;font-weight:900;line-height:1.05}
 .card .sub{font-size:13px;opacity:.85;font-style:italic;margin:0 0 12px}
 .card p{margin:0 0 10px;font-size:15px;line-height:1.4}
-.card .keys{font-size:13px;opacity:.9;text-align:left;background:rgba(0,0,0,.35);border-radius:12px;padding:10px 12px;margin:12px 0}
-.card button{background:linear-gradient(#ffd84a,#ff9f1c);color:#2a0a00;border:3px solid #fff;border-radius:16px;font-weight:900;font-size:22px;padding:12px 28px;cursor:pointer;box-shadow:0 6px 0 #7c2d12}
+.card .keys{font-size:13px;text-align:left;background:#7a1f4f;border-radius:12px;padding:10px 12px;margin:12px 0}
+.card button{background:#ffd23f;color:#2a0a00;border:3px solid #fff;border-radius:16px;font-weight:900;font-size:22px;padding:12px 28px;cursor:pointer;box-shadow:0 6px 0 #7c2d12}
 .card button:active{transform:translateY(3px);box-shadow:0 3px 0 #7c2d12}
 .card .links{margin-top:14px;font-size:13px}.card .links a{color:#ffd23f}
 </style>
