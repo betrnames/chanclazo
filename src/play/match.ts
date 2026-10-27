@@ -13,8 +13,9 @@ const LEVELS = [
 let level = Math.min(LEVELS.length, Math.max(1, parseInt(new URLSearchParams(location.search).get('level') || '1', 10) || 1));
 let MOVES = LEVELS[level - 1].moves, GOAL = LEVELS[level - 1].goal;
 // Regular tiles reuse the original art; specials: chancla = line clear, sugar skull = bomb, piñata = color clear
-const TILE_SRC = ['/play/t_abuela.webp', '/play/t_lucha.webp', '/play/t_kid.webp', '/play/t_bottle.webp', '/play/abuela_sprite.webp'];
-const TILE_BG = ['#f72585', '#d62828', '#3a86ff', '#ff9f1c', '#06d6a0'];
+const TILE_SRC = ['/play/t_abuela.webp', '/play/t_lucha.webp', '/play/t_skull.webp', '/play/t_bottle.webp', '/play/abuela_sprite.webp'];
+// Solid folk-art tile colors: abuela marigold, luchador turquoise, sugar skull magenta, bottle violet, marigold flower lime.
+const TILE_BG = ['#f7a21b', '#18b5b0', '#e2197a', '#7b3fbf', '#8cc63f'];
 const SP = { none: 0, lineH: 1, lineV: 2, bomb: 3, color: 4 } as const;
 type Sp = (typeof SP)[keyof typeof SP];
 interface Tile { t: number; sp: Sp; x: number; y: number; scale: number; id: number; sq?: number; land?: number; fall?: boolean; glare?: number }
@@ -194,13 +195,13 @@ function fitImg(img: HTMLImageElement, x: number, y: number, s: number, rot = 0)
 let last = performance.now(), T = 0;
 function frame(now: number) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#140a24'; ctx.fillRect(0, 0, innerWidth, innerHeight);
-  if (bgImg) { const s = Math.max(innerWidth / bgImg.width, innerHeight / bgImg.height); ctx.globalAlpha = 0.75; ctx.drawImage(bgImg, (innerWidth - bgImg.width * s) / 2, (innerHeight - bgImg.height * s) / 2, bgImg.width * s, bgImg.height * s); ctx.globalAlpha = 1; }
-  { const v = ctx.createLinearGradient(0, 0, 0, innerHeight); v.addColorStop(0, 'rgba(10,4,30,.72)'); v.addColorStop(1, 'rgba(25,8,40,.45)'); ctx.fillStyle = v; ctx.fillRect(0, 0, innerWidth, innerHeight); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#8fd3f4'; ctx.fillRect(0, 0, innerWidth, innerHeight);
+  if (bgImg && false) { const s = Math.max(innerWidth / bgImg.width, innerHeight / bgImg.height); ctx.globalAlpha = 0.75; ctx.drawImage(bgImg, (innerWidth - bgImg.width * s) / 2, (innerHeight - bgImg.height * s) / 2, bgImg.width * s, bgImg.height * s); ctx.globalAlpha = 1; }
+  { const fl = ['#e2197a', '#18b5b0', '#8cc63f', '#f7a21b', '#7b3fbf', '#ff5a36']; const fw = Math.max(26, innerWidth / 22); for (let k = 0, x = 4; x < innerWidth; k++, x += fw + 4) { const y = 4 + Math.sin(((x + fw / 2) / innerWidth) * Math.PI) * 14; ctx.fillStyle = fl[k % fl.length]; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + fw, y); ctx.lineTo(x + fw, y + fw * 0.9); ctx.lineTo(x + fw / 2, y + fw * 1.15); ctx.lineTo(x, y + fw * 0.9); ctx.closePath(); ctx.fill(); } ctx.fillStyle = '#f7a21b'; ctx.fillRect(0, innerHeight * 0.55, innerWidth, innerHeight * 0.45); }
   // board
-  ctx.fillStyle = 'rgba(20,10,36,.78)'; ctx.strokeStyle = 'rgba(255,196,107,.6)'; ctx.lineWidth = 2;
+  ctx.fillStyle = '#7b4fb5'; ctx.strokeStyle = '#5a2a00'; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.roundRect(bx - 8, by - 8, cell * N + 16, cell * N + 16, 16); ctx.fill(); ctx.stroke();
-  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if ((r + c) % 2) { ctx.fillStyle = 'rgba(255,255,255,.04)'; ctx.fillRect(bx + c * cell, by + r * cell, cell, cell); }
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if ((r + c) % 2) { ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(bx + c * cell, by + r * cell, cell, cell); }
   ctx.save(); ctx.beginPath(); ctx.rect(bx - 4, by - 4, cell * N + 8, cell * N + 8); ctx.clip();
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
     const tl = grid[r]?.[c]; if (!tl) continue;
@@ -250,7 +251,7 @@ function frame(now: number) {
   for (let i = sparks.length - 1; i >= 0; i--) { const sp = sparks[i]; sp.life -= dt; if (sp.life <= 0) { sparks.splice(i, 1); continue; } const a = Math.min(1, sp.life * 3), z = sp.s * (0.6 + Math.sin(sp.life * 12) * 0.4);
     ctx.globalAlpha = a; ctx.fillStyle = '#fff8d6'; ctx.beginPath(); ctx.moveTo(sp.x, sp.y - z); ctx.lineTo(sp.x + z * 0.25, sp.y - z * 0.25); ctx.lineTo(sp.x + z, sp.y); ctx.lineTo(sp.x + z * 0.25, sp.y + z * 0.25); ctx.lineTo(sp.x, sp.y + z); ctx.lineTo(sp.x - z * 0.25, sp.y + z * 0.25); ctx.lineTo(sp.x - z, sp.y); ctx.lineTo(sp.x - z * 0.25, sp.y - z * 0.25); ctx.closePath(); ctx.fill(); }
   ctx.globalAlpha = 1; ctx.textAlign = 'center'; ctx.font = `900 ${Math.round(cell * 0.45)}px system-ui`;
-  for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.life -= dt; p.y -= dt * 30; if (p.life <= 0) { pops.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life * 2); ctx.lineWidth = 5; ctx.strokeStyle = '#1a0c2c'; ctx.strokeText(p.t, p.x, p.y); ctx.fillStyle = '#ffd166'; ctx.fillText(p.t, p.x, p.y); }
+  for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.life -= dt; p.y -= dt * 30; if (p.life <= 0) { pops.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life * 2); ctx.lineWidth = 5; ctx.strokeStyle = '#5a2a00'; ctx.strokeText(p.t, p.x, p.y); ctx.fillStyle = '#ffd166'; ctx.fillText(p.t, p.x, p.y); }
   ctx.globalAlpha = 1;
   requestAnimationFrame(frame);
 }
