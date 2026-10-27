@@ -1,8 +1,5 @@
-# Cloudflare Pages — ported from vercel.json (pretty URLs + legacy game redirects)
-/fling          /fling.html          200
-/match          /match.html          200
-/lore           /lore.html           200
-/slots          /slots.html          200
+# Cloudflare Pages serves foo.html at /foo automatically.
+# Only legacy game paths need redirects (ported from vercel.json).
 /demos          /                    302
 /demos.html     /                    302
 /survival       /                    302
