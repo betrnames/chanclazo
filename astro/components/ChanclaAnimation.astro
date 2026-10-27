@@ -1,0 +1,30 @@
+---
+/** ORIGINAL live-site (main) chancla: same asset, size, drop-shadow, spinny timing. Do not recolor or add outline glow. */
+interface Props { class?: string }
+const { class: className = '' } = Astro.props;
+---
+<img
+  class:list={['chancla', className]}
+  src="/play/t_chancla.webp"
+  alt="A spinning chancla"
+  width="170"
+  height="170"
+  decoding="async"
+/>
+<style>
+  /* Exact from main chanclazo.com — restore original look & feel */
+  .chancla{
+    position:relative;
+    width:min(30vw,170px);
+    height:auto;
+    margin-bottom:10px;
+    animation:spinny 3s cubic-bezier(.6,0,.4,1) infinite;
+    filter:drop-shadow(0 0 20px #ffd43b);
+    z-index:12;
+  }
+  @keyframes spinny{
+    0%{transform:rotate(-20deg) scale(1)}
+    50%{transform:rotate(340deg) scale(1.15)}
+    100%{transform:rotate(700deg) scale(1)}
+  }
+</style>

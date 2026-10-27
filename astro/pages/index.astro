@@ -1,0 +1,287 @@
+---
+import Base from '../layouts/Base.astro';
+import PapelPicado from '../components/PapelPicado.astro';
+import Petals from '../components/Petals.astro';
+import ChanclaAnimation from '../components/ChanclaAnimation.astro';
+import MarqueeTitle from '../components/MarqueeTitle.astro';
+import PlayNow from '../components/PlayNow.astro';
+import Character from '../components/Character.astro';
+import GameCard from '../components/GameCard.astro';
+
+---
+<Base>
+  <header class="hero" id="top" data-title="1">
+    <Petals />
+    <div class="hero-rail">
+      <PapelPicado />
+      <!-- Llama swings from the picado line — hero character, prominent -->
+      <div class="llama-swing" data-reveal>
+        <Character kind="llama" class="llama-hero" alt="Llama piñata swinging from the papel picado" />
+      </div>
+    </div>
+
+    <div class="hero-stage">
+      <!-- Left edge: abuela winding up, cropped, pointing energy toward CTA -->
+      <div class="layer left" aria-hidden="false">
+        <Character kind="abuela" class="abuela-windup" />
+      </div>
+
+      <!-- Focal column: title → chancla → hook → PLAY NOW -->
+      <div class="focal">
+        <MarqueeTitle />
+        <ChanclaAnimation />
+        <p class="hook">When words fail, the Chanclazo speaks.</p>
+        <div class="cta">
+          <PlayNow href="#games" />
+          <p class="sub">Insert chancla · free play</p>
+        </div>
+      </div>
+
+      <!-- Right edge: heads peeking, framing toward center/CTA -->
+      <div class="layer right">
+        <Character kind="lucha" class="peek-lucha" />
+        <Character kind="calaca" class="peek-calaca" />
+      </div>
+    </div>
+
+    <div class="fold-peek" aria-hidden="true">
+      <span>Games below</span>
+      <div class="peek-bar"></div>
+    </div>
+
+    <!-- Title option switcher (preview only) -->
+    <nav class="title-switch" aria-label="Title style options">
+      <a href="/?title=1" class="on" title="Original wordmark">1</a>
+      <a href="/?title=2" title="Lotería poster">2</a>
+      <a href="/?title=3" title="Rótulo marquee">3</a>
+    </nav>
+  </header>
+
+  <main>
+    <GameCard
+      num="I"
+      name="Chancla Strike"
+      kick="Game one · Physics"
+      pitch="Pull back. Aim. Let it fly. Forts crumble. Luchadores drop."
+      href="/fling"
+      cta="Throw it →"
+      color="#ff922b"
+      shot="/lp/fling_loop.webp"
+      shotAlt="Chancla Strike gameplay"
+      shotB="/lp/fling_shot2.webp"
+      shotBAlt="A chancla mid-flight"
+    />
+    <GameCard
+      num="II"
+      name="Chanclazo Match"
+      kick="Game two · Puzzle"
+      pitch="Sugar skulls. Piñatas. Chanclas. Line up three and chain the combos."
+      href="/match"
+      cta="Match it →"
+      color="#38d9a9"
+      shot="/lp/match_loop.webp"
+      shotAlt="Chanclazo Match gameplay"
+      shotB="/lp/match_shot.webp"
+      shotBAlt="A Chanclazo Match board"
+      reverse
+    />
+    <GameCard
+      num="III"
+      name="Piñata Slots"
+      kick="Game three · Free-play slots"
+      pitch="Spin for the llama piñata. Free spins, then smash with the chancla."
+      href="/slots"
+      cta="Spin it →"
+      color="#f06595"
+      shot="/lp/slots_loop.webp"
+      shotAlt="Piñata Slots gameplay"
+      shotB="/lp/slots_bonus.webp"
+      shotBAlt="A piñata smash bonus"
+      note="Working title · Free play only. No real money."
+    />
+
+    <section class="fin reveal">
+      <h2>Three games.<br/>One chancla.</h2>
+      <div class="fin-links">
+        <a class="go" href="/fling" style="--c:#ff922b">Chancla Strike</a>
+        <a class="go" href="/match" style="--c:#38d9a9">Chanclazo Match</a>
+        <a class="go" href="/slots" style="--c:#f06595">Piñata Slots</a>
+      </div>
+      <p class="fin-note">Free in your browser. No download.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 chanclazo.com · <a href="/lore">What is a chanclazo?</a></p>
+  </footer>
+</Base>
+
+<style>
+  /* Spacing scale + solid marigold hero */
+  .hero{
+    --hero-bg:#ff8c1a;
+    position:relative;
+    background:var(--hero-bg);
+    color:var(--ink);
+    min-height:100svh;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    padding:max(6px,env(safe-area-inset-top)) 0 0;
+    overflow:hidden;
+  }
+  .hero-rail{position:relative;z-index:6;padding:0 clamp(8px,2vw,20px)}
+
+  /* Llama: hangs from picado at UPPER-LEFT — does NOT cover title */
+  .llama-swing{
+    position:absolute;
+    top:clamp(20px,4.5vw,36px);
+    left:clamp(4px,2vw,24px);
+    width:clamp(88px,18vw,150px);
+    z-index:7;
+    transform-origin:top center;
+    animation:swing 3.2s ease-in-out infinite;
+    pointer-events:none;
+  }
+  .llama-swing :global(.char){width:100%}
+  @keyframes swing{
+    0%,100%{transform:rotate(-10deg)}
+    50%{transform:rotate(10deg)}
+  }
+
+  .hero-stage{
+    position:relative;
+    z-index:4;
+    flex:1;
+    display:grid;
+    grid-template-columns:minmax(72px,1fr) minmax(0,560px) minmax(72px,1fr);
+    align-items:center;
+    gap:0;
+    padding:clamp(8px,2vw,20px) clamp(8px,2vw,24px) 0;
+    min-height:0;
+  }
+
+   .focal{
+    grid-column:2;
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+    gap:2px;
+    z-index:10;
+    padding:0 4px var(--space-3);
+  }
+  .hook{
+    margin:6px 0 10px;
+    font-size:clamp(15px,3.2vw,22px);
+    font-style:italic;font-weight:600;max-width:18em;
+    color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.45);
+  }
+  .cta{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:4px}
+  .sub{margin:0;font-family:Impact,sans-serif;font-size:clamp(10px,2vw,13px);letter-spacing:.28em;text-transform:uppercase;opacity:.85}
+
+  /* Side layers: absolute-ish framing, cropped into edges, behind focal */
+  .layer{position:relative;height:100%;min-height:180px;pointer-events:none;z-index:2}
+  .layer.left{
+    grid-column:1;align-self:end;
+    display:flex;justify-content:flex-start;align-items:flex-end;
+    margin-left:clamp(-48px,-5vw,-8px);
+    margin-bottom:clamp(24px,6vh,72px);
+    transform:rotate(-5deg);transform-origin:bottom left;
+  }
+  .layer.right{
+    grid-column:3;align-self:center;
+    display:flex;flex-direction:column;align-items:flex-end;gap:clamp(10px,2vw,24px);
+    margin-right:clamp(-36px,-4vw,-4px);
+    padding-bottom:10%;
+  }
+  .abuela-windup{width:clamp(150px,26vw,300px)}
+  .peek-lucha{width:clamp(78px,13vw,148px)}
+  .peek-calaca{width:clamp(68px,11vw,128px)}
+  .layer.right :global(.peek-lucha.on){transform:rotate(9deg) translateY(0)}
+  .layer.right :global(.peek-calaca.on){transform:rotate(-5deg) translateY(0)}
+  .layer.right :global(.peek-lucha){transform:rotate(9deg)}
+  .layer.right :global(.peek-calaca){transform:rotate(-5deg)}
+
+  .fold-peek{
+    z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;
+    padding:8px 16px 0;font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:.7;
+  }
+  .peek-bar{
+    width:min(100%,440px);height:20px;background:var(--cream);
+    border-radius:14px 14px 0 0;box-shadow:0 -4px 0 rgba(42,10,0,.08);
+  }
+
+  .title-switch{
+    position:absolute;top:max(8px,env(safe-area-inset-top));right:10px;z-index:30;
+    display:flex;gap:6px;
+  }
+  .title-switch a{
+    width:36px;height:36px;display:grid;place-items:center;
+    border:2px solid var(--ink);border-radius:8px;
+    background:rgba(255,244,224,.9);font-family:Impact,sans-serif;
+    text-decoration:none;font-size:14px;min-width:var(--tap);min-height:var(--tap);
+  }
+  .title-switch a.on{background:#ffd43b;box-shadow:2px 2px 0 var(--ink)}
+
+  /* Mobile: overlay side characters so focal stack stays above-the-fold */
+  @media (max-width:720px){
+    .hero-stage{
+      grid-template-columns:1fr;
+      grid-template-rows:1fr;
+      padding-top:4px;
+    }
+    .focal{grid-column:1;padding-bottom:8px}
+    .layer.left,.layer.right{
+      position:absolute;bottom:8%;height:auto;min-height:0;margin:0;z-index:3;
+    }
+    .layer.left{left:0;bottom:4%;margin-left:-18px}
+    .layer.right{right:0;bottom:6%;margin-right:-12px;padding-bottom:0}
+    .abuela-windup{width:clamp(88px,30vw,120px);opacity:.95}
+    .peek-lucha{width:clamp(58px,19vw,88px)}
+    .peek-calaca{width:clamp(50px,17vw,76px)}
+    .llama-swing{width:clamp(64px,20vw,92px);left:4px}
+    /* corner peeks only — leave title→chancla→PLAY clear */
+    .layer.left{bottom:0;left:-20px;max-height:30%;overflow:hidden}
+    .layer.right{bottom:0;right:-14px;max-height:34%;overflow:hidden}
+    .focal{padding-bottom:12px}
+    .cta{position:relative;z-index:11}
+    /* Ensure CTA in thumb zone — upper-mid */
+    .hook{margin:4px 0 8px;font-size:clamp(14px,3.8vw,18px)}
+  }
+
+  @media (orientation:landscape) and (max-height:480px){
+    .llama-swing{width:64px}
+    .fold-peek{display:none}
+    .abuela-windup{width:18vw}
+    .peek-lucha,.peek-calaca{width:10vw}
+  }
+
+  .fin{text-align:center;padding:12vh 18px 6vh;background:var(--cream);color:var(--ink)}
+  .fin h2{font-family:Impact,sans-serif;font-size:clamp(32px,9vw,72px);margin:0 0 20px;text-transform:uppercase;line-height:.95}
+  .fin-links{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  .fin .go{
+    display:inline-flex;align-items:center;justify-content:center;min-height:44px;
+    padding:12px 22px;background:var(--c);color:var(--ink);
+    font-family:Impact,sans-serif;font-size:18px;text-transform:uppercase;text-decoration:none;
+    box-shadow:5px 5px 0 var(--ink);border:3px solid var(--ink);border-radius:8px;
+  }
+  .fin-note{margin-top:28px;font-style:italic;opacity:.8}
+  .fin.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
+  .fin.reveal.on{opacity:1;transform:none}
+  footer{text-align:center;padding:20px 16px max(24px,env(safe-area-inset-bottom));font-size:12px;opacity:.7;background:var(--cream-2);color:var(--ink)}
+  footer a{text-decoration:underline}
+</style>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.classList.add('on');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal,[data-reveal],.char').forEach((el) => {
+    if (reduce) el.classList.add('on');
+    else io.observe(el);
+  });
+</script>

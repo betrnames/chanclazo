@@ -1,0 +1,34 @@
+---
+const gaId = (import.meta.env.PUBLIC_GA_ID || import.meta.env.VITE_GA_ID || '').trim();
+---
+{gaId && (
+  <script is:inline define:vars={{ gaId }}>
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { window.dataLayer.push(arguments); };
+    window.gtag('js', new Date());
+    window.gtag('config', gaId, { send_page_view: false, anonymize_ip: true });
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + gaId;
+    s.dataset.ga = gaId;
+    document.head.appendChild(s);
+    var path = location.pathname.replace(/\.html$/, '') || '/';
+    var titles = { '/': 'Home', '/fling': 'Chancla Strike', '/match': 'Chanclazo Match', '/slots': 'Piñata Slots', '/lore': 'Lore' };
+    window.gtag('event', 'page_view', {
+      page_title: titles[path] || document.title,
+      page_path: path,
+      page_location: location.origin + path
+    });
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest && e.target.closest('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      var game = null;
+      if (href.indexOf('/fling') === 0) game = 'fling';
+      else if (href.indexOf('/match') === 0) game = 'match';
+      else if (href.indexOf('/slots') === 0) game = 'slots';
+      else if (href.indexOf('/lore') === 0) game = 'lore';
+      if (game && window.gtag) window.gtag('event', 'landing_card_click', { game: game });
+    }, true);
+  </script>
+)}

@@ -1,0 +1,90 @@
+---
+interface Props {
+  num: string;
+  name: string;
+  kick: string;
+  pitch: string;
+  href: string;
+  cta: string;
+  color: string;
+  shot: string;
+  shotAlt: string;
+  shotB?: string;
+  shotBAlt?: string;
+  note?: string;
+  reverse?: boolean;
+}
+const p = Astro.props;
+---
+<article class:list={['card', { reverse: p.reverse }]} style={`--c:${p.color}`} id={p.num === 'I' ? 'games' : undefined}>
+  <div class="shots reveal">
+    <img class="shot a" src={p.shot} alt={p.shotAlt} loading="lazy" width="640" height="360" />
+    {p.shotB && <img class="shot b" src={p.shotB} alt={p.shotBAlt || ''} loading="lazy" width="320" height="240" />}
+  </div>
+  <div class="body reveal">
+    <p class="kick">{p.kick}</p>
+    <h2>{p.name}</h2>
+    <p class="pitch">{p.pitch}</p>
+    {p.note && <p class="note">{p.note}</p>}
+    <a class="go" href={p.href}>{p.cta}</a>
+  </div>
+</article>
+<style>
+  .card{
+    display:grid;
+    gap:var(--space-5);
+    align-items:center;
+    padding:var(--space-7) clamp(16px,4vw,28px);
+    background:var(--cream);
+    color:var(--ink);
+  }
+  .card:nth-child(even){background:var(--cream-2)}
+  @media(min-width:860px){
+    .card{grid-template-columns:1.05fr 1fr;max-width:var(--max);margin:0 auto;width:100%}
+    .card.reverse .shots{order:2}
+  }
+  .kick{
+    margin:0 0 var(--space-2);
+    font-size:13px;letter-spacing:3px;text-transform:uppercase;
+    color:var(--c);font-family:Impact,sans-serif;
+  }
+  h2{
+    margin:0 0 var(--space-3);
+    font-family:Impact,"Arial Black",sans-serif;
+    font-size:clamp(36px,8vw,72px);
+    line-height:.95;text-transform:uppercase;
+    text-shadow:3px 3px 0 var(--c);
+  }
+  .pitch{
+    margin:0 0 var(--space-4);
+    font-size:clamp(18px,3.6vw,24px);
+    line-height:1.35;
+    max-width:28em;
+  }
+  .note{margin:0 0 var(--space-3);font-size:13px;opacity:.75;font-style:italic}
+  .go{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-height:var(--tap);
+    padding:12px 26px;
+    background:var(--c);color:var(--ink);
+    font-family:Impact,sans-serif;font-size:clamp(18px,4vw,22px);
+    letter-spacing:1px;text-transform:uppercase;text-decoration:none;
+    box-shadow:5px 5px 0 var(--ink);
+    border:3px solid var(--ink);border-radius:8px;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .go:hover{transform:translateY(-2px) rotate(1deg);box-shadow:7px 7px 0 var(--ink)}
+  .go:active{transform:translateY(2px);box-shadow:2px 2px 0 var(--ink)}
+  .shots{position:relative;min-height:200px}
+  .shot{
+    width:88%;border:5px solid var(--ink);border-radius:8px;
+    box-shadow:8px 8px 0 var(--c);background:#1a0a2e;
+  }
+  .shot.a{transform:rotate(-2deg)}
+  .shot.b{
+    position:absolute;width:48%;right:0;bottom:-24px;
+    transform:rotate(4deg);box-shadow:6px 6px 0 var(--ink);
+  }
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
+  .reveal.on{opacity:1;transform:none}
+</style>

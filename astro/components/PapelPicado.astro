@@ -1,0 +1,30 @@
+---
+const colors = ['#e8590c','#c2255c','#7048e8','#0ca678','#ffd43b','#f72585','#4cc9f0'];
+const n = 16;
+---
+<div class="picado" aria-hidden="true">
+  {Array.from({length:n}, (_,i) => (
+    <i style={`background:${colors[i%7]};--d:${i}`}></i>
+  ))}
+</div>
+<style>
+  .picado{
+    width:100%;
+    height:clamp(28px,6vw,48px);
+    display:flex;
+    justify-content:space-around;
+    align-items:flex-start;
+    z-index:3;
+    pointer-events:none;
+  }
+  .picado i{
+    width:clamp(22px,5vw,40px);
+    height:clamp(26px,5.5vw,46px);
+    flex:none;
+    clip-path:polygon(0 0,100% 0,100% 78%,88% 100%,75% 78%,62% 100%,50% 78%,38% 100%,25% 78%,12% 100%,0 78%);
+    animation:sway 2.8s ease-in-out infinite alternate;
+    transform-origin:top;
+    animation-delay:calc(var(--d,0) * -.25s);
+  }
+  @keyframes sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+</style>

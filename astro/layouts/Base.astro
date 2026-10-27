@@ -1,0 +1,44 @@
+---
+import '../styles/global.css';
+import Analytics from '../components/Analytics.astro';
+interface Props {
+  title?: string;
+  description?: string;
+}
+const site = import.meta.env.VITE_SITE_URL || 'https://chanclazo.com';
+const {
+  title = 'Chanclazo',
+  description = 'When words fail, the Chanclazo speaks. Day of the Dead browser games: Chancla Strike, Chanclazo Match, and Piñata Slots.',
+} = Astro.props;
+const ogAlt = 'Chanclazo: the abuela with a flying chancla, luchador and sugar skull heads, and marigold petals; chips for Chancla Strike, Chanclazo Match, and Piñata Slots.';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#ff8c1a" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Chanclazo" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={`${site}/`} />
+  <meta property="og:image" content={`${site}/og.png`} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content={ogAlt} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={`${site}/og.png`} />
+  <meta name="twitter:image:alt" content={ogAlt} />
+  <link rel="icon" href="/cruise/logo_chancla.webp" />
+  <link rel="apple-touch-icon" href="/play/icon-180.png" />
+</head>
+<body>
+  <slot />
+  <Analytics />
+</body>
+</html>

@@ -1,0 +1,25 @@
+---
+const cols = ['#ffd43b','#ff922b','#ff6b6b','#ffe066'];
+---
+<div class="petals" aria-hidden="true">
+  {Array.from({length:16}, (_,i) => {
+    const left = (i * 5.5 + 3) % 100;
+    const delay = -i * 0.7;
+    const dur = 9 + (i % 5);
+    const col = cols[i % 4];
+    return <i class="petal" style={`left:${left}%;animation-duration:${dur}s;animation-delay:${delay}s;background:${col}`}></i>;
+  })}
+</div>
+<style>
+  .petals{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+  .petal{
+    position:absolute;top:-12px;
+    width:clamp(8px,1.4vw,16px);height:clamp(5px,.9vw,10px);
+    border-radius:50%;opacity:.85;
+    animation:fall linear infinite;
+  }
+  @keyframes fall{
+    0%{transform:translateY(-10%) rotate(0)}
+    100%{transform:translateY(110vh) rotate(360deg)}
+  }
+</style>

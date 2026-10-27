@@ -1,0 +1,30 @@
+@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:Frijole;src:url(/fonts/Frijole-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
+@font-face{font-family:EmblemaOne;src:url(/fonts/EmblemaOne-Regular.ttf) format("truetype");font-weight:400;font-display:swap}
+
+:root{
+  --marigold:#ff8c1a;
+  --cream:#fff4e0;
+  --cream-2:#ffe8c8;
+  --ink:#2a0a00;
+  --magenta:#c2255c;
+  --purple:#5f3dc4;
+  --pink:#f06595;
+  --teal:#38d9a9;
+  --gold:#ffd43b;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;
+  --space-5:24px;--space-6:32px;--space-7:48px;--space-8:64px;
+  --tap:44px;
+  --max:1120px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+html,body{margin:0;background:var(--cream);color:var(--ink);font-family:Georgia,"Times New Roman",serif;overflow-x:hidden}
+a{color:inherit}
+img{max-width:100%;height:auto;display:block}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .reveal,[data-reveal]{opacity:1!important;transform:none!important}
+}

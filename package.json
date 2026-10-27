@@ -11,11 +11,15 @@
     "url": "https://github.com/betrnames/chanclazo.git"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "astro dev",
+    "build": "npm run build:games && npm run build:astro && npm run build:merge",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview",
-    "deploy:vercel": "npm run build && vercel --prod"
+    "preview": "astro preview",
+    "deploy:vercel": "npm run build && vercel --prod",
+    "dev:games": "vite",
+    "build:games": "tsc -b && vite build",
+    "build:astro": "astro build",
+    "build:merge": "node scripts/merge-dist.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -50,7 +54,13 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
+    "astro": "^5.18.2",
     "typescript": "~5.9.3",
     "vite": "^7.3.5"
+  },
+  "allowScripts": {
+    "esbuild@0.27.4": true,
+    "esbuild@0.25.12": true,
+    "sharp@0.34.5": true
   }
 }

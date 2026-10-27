@@ -1,0 +1,86 @@
+---
+/** Title options via ?title=1|2|3 (client-switched for static CF Pages) */
+const letters = ['C','h','a','n','c','l','a','z','o'];
+---
+<div class="wordmark opt-1" data-title-opt="1" id="wordmark">
+  <h1 class="letters" aria-label="Chanclazo">
+    {letters.map((L, i) => <span style={`--i:${i}`}>{L}</span>)}
+  </h1>
+</div>
+<style>
+  .letters{
+    margin:0;line-height:.95;letter-spacing:1px;text-transform:uppercase;
+    display:flex;flex-wrap:nowrap;justify-content:center;max-width:100%;
+  }
+  @media (max-width:420px){.letters{flex-wrap:wrap}}
+  .letters span{
+    display:inline-block;
+    animation:wob 2.2s ease-in-out infinite;
+    animation-delay:calc(var(--i) * -.18s);
+  }
+  @keyframes wob{
+    0%,100%{transform:translateY(0) rotate(-3deg)}
+    50%{transform:translateY(-10px) rotate(3deg)}
+  }
+
+  /* (1) Original Impact wordmark + arcade outline (from live main) */
+  .opt-1 .letters{font-family:Impact,"Arial Black",sans-serif;font-size:clamp(52px,14vw,140px)}
+  .opt-1 .letters span{
+    color:#f3e9d2;
+    -webkit-text-stroke:clamp(1px,.2vw,3px) #2a0a00;
+    paint-order:stroke fill;
+    text-shadow:3px 3px 0 #c2255c,6px 6px 0 #5f3dc4,9px 9px 0 #0b0614,0 0 18px rgba(255,212,59,.35);
+  }
+
+  /* (2) Lotería / folk-poster — Lilita One */
+  .opt-2 .letters{font-family:LilitaOne,Impact,sans-serif;font-size:clamp(48px,13vw,128px);letter-spacing:.02em}
+  .opt-2 .letters span{
+    color:#fff8e7;
+    -webkit-text-stroke:clamp(2px,.35vw,5px) #2a0a00;
+    paint-order:stroke fill;
+    text-shadow:3px 3px 0 #e03131,6px 6px 0 #c2255c,9px 9px 0 #2a0a00;
+  }
+
+  /* (3) Rótulo / sign-painter — Frijole, marigold + pink */
+  .opt-3 .letters{font-family:Frijole,EmblemaOne,Impact,sans-serif;font-size:clamp(40px,11vw,110px);letter-spacing:.04em}
+  .opt-3 .letters span{
+    color:#ffd43b;
+    -webkit-text-stroke:clamp(2px,.3vw,4px) #2a0a00;
+    paint-order:stroke fill;
+    text-shadow:2px 2px 0 #f06595,4px 4px 0 #c2255c,7px 7px 0 #2a0a00,0 0 12px rgba(255,140,26,.5);
+  }
+
+  @media (max-width:380px){
+    .opt-1 .letters{font-size:clamp(44px,15vw,56px)}
+    .opt-2 .letters{font-size:clamp(40px,14vw,52px)}
+    .opt-3 .letters{font-size:clamp(34px,12vw,44px)}
+  }
+</style>
+<script>
+  (function () {
+    const wm = document.getElementById('wordmark');
+    if (!wm) return;
+    const apply = () => {
+      const t = new URLSearchParams(location.search).get('title');
+      const opt = t === '2' ? '2' : t === '3' ? '3' : '1';
+      wm.classList.remove('opt-1', 'opt-2', 'opt-3');
+      wm.classList.add('opt-' + opt);
+      wm.dataset.titleOpt = opt;
+      document.querySelectorAll('.title-switch a').forEach((a) => {
+        a.classList.toggle('on', a.getAttribute('href') === '/?title=' + opt);
+      });
+      const hero = document.getElementById('top');
+      if (hero) hero.dataset.title = opt;
+    };
+    apply();
+    // soft nav for switcher without full reload flicker
+    document.querySelectorAll('.title-switch a').forEach((a) => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = a.getAttribute('href') || '/?title=1';
+        history.replaceState(null, '', href);
+        apply();
+      });
+    });
+  })();
+</script>

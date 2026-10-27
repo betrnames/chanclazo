@@ -1,0 +1,31 @@
+---
+interface Props {
+  kind: 'abuela' | 'lucha' | 'calaca' | 'llama';
+  class?: string;
+  alt?: string;
+}
+const meta = {
+  abuela: { src: '/play/abuela_sprite.webp', alt: 'La Abuela, full body, fists raised', w: 387, h: 512 },
+  lucha:  { src: '/play/t_lucha.webp', alt: 'Luchador mask', w: 200, h: 200 },
+  calaca: { src: '/play/t_skull.webp', alt: 'Sugar skull', w: 200, h: 200 },
+  llama:  { src: '/play/t_pinata.webp', alt: 'Llama piñata, full body', w: 200, h: 260 },
+} as const;
+const { kind, class: className = '', alt } = Astro.props;
+const m = meta[kind];
+---
+<div class:list={['char', kind, className]} data-reveal>
+  <img src={m.src} alt={alt || m.alt} width={m.w} height={m.h} decoding="async" />
+</div>
+<style>
+  .char{
+    position:relative;
+    filter:drop-shadow(0 10px 0 rgba(42,10,0,.18));
+    opacity:0;
+    /* use translate only so parent can own rotate */
+    --reveal-y: 24px;
+    transform: translateY(var(--reveal-y));
+    transition:opacity .8s ease, transform .8s cubic-bezier(.2,.8,.2,1);
+  }
+  .char.on{opacity:1;transform:translateY(0)}
+  .char img{width:100%;height:auto;display:block}
+</style>
