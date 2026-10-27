@@ -834,6 +834,7 @@ canvas.addEventListener('pointermove', e => {
 canvas.addEventListener('pointerup', e => onPtr(e, false));
 
 (window as any).__slots = {
+  setBet: (v: number) => { const i = BETS.indexOf(v); if (i >= 0) { betIdx = i; setHud(); } },
   spin: () => startSpin(),
   forceBonus: () => { if (mode === 'idle') enterBonus(); },
   forcePick: () => { if (mode === 'idle') enterPick(); },
