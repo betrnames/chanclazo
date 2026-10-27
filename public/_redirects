@@ -1,0 +1,10 @@
+# Cloudflare Pages serves foo.html at /foo automatically.
+# Only legacy game paths need redirects (ported from vercel.json).
+/demos          /                    302
+/demos.html     /                    302
+/survival       /                    302
+/survival.html  /                    302
+/strike         /                    302
+/strike.html    /                    302
+/cruise         /                    302
+/cruise.html    /                    302

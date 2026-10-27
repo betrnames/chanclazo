@@ -3,6 +3,83 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/fling",
+      "destination": "/fling.html"
+    },
+    {
+      "source": "/match",
+      "destination": "/match.html"
+    },
+    {
+      "source": "/lore",
+      "destination": "/lore.html"
+    },
+    {
+      "source": "/slots",
+      "destination": "/slots.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/demos",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/demos.html",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/survival",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/survival.html",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/strike",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/strike.html",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/cruise",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/cruise.html",
+      "destination": "/",
+      "permanent": false
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(fling|match|lore|slots)?(.html)?",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/fling.webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    }
   ]
 }
