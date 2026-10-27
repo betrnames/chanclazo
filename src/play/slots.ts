@@ -1,32 +1,35 @@
-import { $, loadImg, autoUnlockAudio, wireMute, wakeAudio } from './common';
+import { $, loadImg, autoUnlockAudio, wakeAudio } from './common';
+import * as A from './slotsAudio';
 
 // ── Free-play only. Credits never buy or cash anything. ─────────────────────
 const START_CREDITS = 1000;
 const BETS = [5, 10, 20, 50];
 const COLS = 5;
-const ROWS = 3;
-const FREE_SPINS_ON_SCATTER = [0, 0, 0, 8, 12, 20]; // index = scatter count
+const ROWS = 4;
+// Tuned for ~2% free-spin triggers and ~96% RTP (see sim). Index = scatter count.
+const FREE_SPINS_ON_SCATTER = [0, 0, 0, 6, 9, 14];
 const PAY: Record<string, number[]> = {
   // pay for 3 / 4 / 5 of a kind on a line (× bet / 10)
-  abuela: [25, 80, 250],
-  skull:  [20, 60, 200],
-  lucha:  [15, 45, 150],
-  chancla:[10, 30, 100],
-  bottle: [5,  15,  50],
-  pinata: [30, 100, 400], // wild also pays as itself
+  abuela: [4.5, 16, 55],
+  skull:  [3.5, 13, 45],
+  lucha:  [3, 11, 36],
+  chancla:[2, 7.5, 26],
+  bottle: [1, 3.5, 13],
+  pinata: [5.5, 20, 72],
 };
-const LINES: [number, number, number, number, number][] = [
-  [1,1,1,1,1], [0,0,0,0,0], [2,2,2,2,2],
-  [0,1,2,1,0], [2,1,0,1,2],
-  [0,0,1,2,2], [2,2,1,0,0],
-  [1,0,0,0,1], [1,2,2,2,1],
+const LINES: number[][] = [
+  [0,0,0,0,0], [1,1,1,1,1], [2,2,2,2,2], [3,3,3,3,3],
+  [0,1,2,3,3], [3,2,1,0,0],
+  [0,0,1,2,3], [3,3,2,1,0],
+  [1,2,3,2,1], [2,1,0,1,2],
+  [0,1,2,1,0], [3,2,1,2,3],
 ];
 
 type Sym = 'abuela' | 'skull' | 'lucha' | 'chancla' | 'bottle' | 'pinata';
 const SYMS: Sym[] = ['abuela', 'skull', 'lucha', 'chancla', 'bottle', 'pinata'];
-const WEIGHTS = [14, 16, 18, 22, 24, 6]; // pinata rarer
+const WEIGHTS = [12, 14, 18, 24, 30, 3]; // pinata rarer on 5×4
 
-type Mode = 'idle' | 'spinning' | 'resolve' | 'bonus' | 'blast';
+type Mode = 'idle' | 'spinning' | 'resolve' | 'expand' | 'abuela' | 'pick' | 'bonus' | 'blast';
 
 const imgs: Record<string, HTMLImageElement> = {};
 const pinataVars = ['pinata_llama', 'pinata_rosa', 'pinata_azul', 'pinata_lima'];
@@ -37,11 +40,12 @@ let lastWin = 0;
 let freeSpins = 0;
 let freeMult = 1;
 let mode: Mode = 'idle';
-let grid: Sym[][] = []; // [col][row]
+let grid: Sym[][] = [];
 let stopAt: number[] = [];
 let spinT = 0;
 let spinOffset: number[] = [];
 let reelSyms: Sym[][] = [];
+let reelsStopped = 0;
 let flashLines: number[] = [];
 let flashT = 0;
 let petals: {x:number;y:number;vx:number;vy:number;r:number;a:number;c:string}[] = [];
@@ -50,7 +54,11 @@ let toast = '';
 let toastT = 0;
 let bigLlama: {x:number;y:number;s:number;life:number} | null = null;
 
-// bonus smash
+// Chancla expand
+let expandReel = -1;
+let expandProg = 0;
+let expandWilds: boolean[] = []; // per-col marked wild for eval
+
 type Pinata = { x:number;y:number;s:number;vx:number;vy:number;kind:string;hp:number;shake:number;gone:boolean };
 let bonusPins: Pinata[] = [];
 let bonusMult = 1;
@@ -60,6 +68,16 @@ let bonusTotal = 0;
 let chanclaAngle = 0;
 let pointer = { x: 0, y: 0, down: false };
 let smashFx: {x:number;y:number;t:number;mult:number}[] = [];
+
+// Pick-a-Piñata
+type PickItem = { x:number;y:number;kind:string;revealed:boolean;value:number;label:string };
+let pickItems: PickItem[] = [];
+let pickPicksLeft = 3;
+let pickTotal = 0;
+
+// Abuela Chanclazo
+let abuelaProg = 0;
+let abuelaCells: {c:number;r:number}[] = [];
 
 const canvas = $('game') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
@@ -73,14 +91,16 @@ function setHud() {
   if (lastWin > 0) { wp.style.display = ''; $('win').textContent = String(lastWin); }
   else wp.style.display = 'none';
   if (mode === 'bonus' || mode === 'blast') {
-    fp.style.display = '';
-    fp.querySelector('small')!.textContent = 'Bonus';
+    fp.style.display = ''; fp.querySelector('small')!.textContent = 'Bonus';
     $('free').textContent = `×${bonusMult}`;
+  } else if (mode === 'pick') {
+    fp.style.display = ''; fp.querySelector('small')!.textContent = 'Picks';
+    $('free').textContent = String(pickPicksLeft);
   } else if (freeSpins > 0) {
-    fp.style.display = '';
-    fp.querySelector('small')!.textContent = 'Free spins';
+    fp.style.display = ''; fp.querySelector('small')!.textContent = 'Free spins';
     $('free').textContent = `${freeSpins} ×${freeMult}`;
   } else fp.style.display = 'none';
+  const mute = $('mute'); mute.textContent = A.isMuted() ? '🔇' : '🔊';
 }
 
 function weighted(): Sym {
@@ -91,14 +111,20 @@ function weighted(): Sym {
 }
 function fillReel(n = 40): Sym[] { return Array.from({ length: n }, () => weighted()); }
 
-function evalWin(g: Sym[][]): { payout: number; lines: number[]; scatters: number } {
+function countScatters(g: Sym[][]) {
+  let n = 0;
+  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) if (g[c][r] === 'pinata') n++;
+  return n;
+}
+
+function evalWin(g: Sym[][], wildCols: boolean[] = []): { payout: number; lines: number[]; scatters: number } {
   let payout = 0;
   const hit: number[] = [];
   const unit = bet() / 10;
+  const at = (c: number, r: number): Sym => (wildCols[c] ? 'pinata' : g[c][r]);
   for (let li = 0; li < LINES.length; li++) {
     const line = LINES[li];
-    const seq: Sym[] = line.map((row, col) => g[col][row]);
-    // wilds (pinata) substitute for anything except counting as scatter separately
+    const seq: Sym[] = line.map((row, col) => at(col, row));
     let base: Sym | null = null;
     for (const s of seq) { if (s !== 'pinata') { base = s; break; } }
     if (!base) base = 'pinata';
@@ -108,14 +134,11 @@ function evalWin(g: Sym[][]): { payout: number; lines: number[]; scatters: numbe
       else break;
     }
     if (count >= 3) {
-      const table = PAY[base];
-      const pay = table[count - 3] * unit;
-      payout += pay;
+      payout += PAY[base][count - 3] * unit;
       hit.push(li);
     }
   }
-  let scatters = 0;
-  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) if (g[c][r] === 'pinata') scatters++;
+  const scatters = countScatters(g);
   if (scatters >= 3) payout += PAY.pinata[Math.min(2, scatters - 3)] * unit * 2;
   return { payout, lines: hit, scatters };
 }
@@ -136,149 +159,234 @@ function spawnConfetti(n: number, x: number, y: number) {
     confetti.push({
       x, y, vx: (Math.random() - .5) * 14, vy: -4 - Math.random() * 10,
       w: 4 + Math.random() * 6, h: 3 + Math.random() * 4,
-      rot: Math.random() * 6, vr: (Math.random() - .5) * .4,
-      c: C[i % C.length],
+      rot: Math.random() * 6, vr: (Math.random() - .5) * .4, c: C[i % C.length],
     });
   }
 }
 
 function startSpin(forceGrid?: Sym[][]) {
   if (mode !== 'idle') return;
-  wakeAudio();
+  A.unlock(); wakeAudio();
   const cost = freeSpins > 0 ? 0 : bet();
   if (credits < cost) { toast = 'Out of free credits — tap + to top up'; toastT = 2; return; }
   if (freeSpins === 0) credits -= cost;
   else freeSpins--;
-  lastWin = 0;
-  flashLines = [];
-  mode = 'spinning';
-  spinT = 0;
-  stopAt = Array.from({ length: COLS }, (_, i) => 0.7 + i * 0.35 + Math.random() * 0.15);
+  lastWin = 0; flashLines = []; expandReel = -1; expandWilds = Array(COLS).fill(false);
+  mode = 'spinning'; spinT = 0; reelsStopped = 0;
+  stopAt = Array.from({ length: COLS }, (_, i) => 0.65 + i * 0.32 + Math.random() * 0.12);
   spinOffset = Array.from({ length: COLS }, () => 0);
   reelSyms = Array.from({ length: COLS }, () => fillReel(50));
-  // plant final symbols at the end of each reel strip
-  if (forceGrid) grid = forceGrid;
-  else {
-    grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
-  }
-  for (let c = 0; c < COLS; c++) {
-    for (let r = 0; r < ROWS; r++) reelSyms[c][r] = grid[c][r];
-  }
+  grid = forceGrid ?? Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
+  for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++) reelSyms[c][r] = grid[c][r];
+  A.startSpinLoop();
   setHud();
 }
 
-function finishSpin() {
-  mode = 'resolve';
-  const { payout, lines, scatters } = evalWin(grid);
+function afterFeaturesThenPay() {
+  const { payout, lines, scatters } = evalWin(grid, expandWilds);
   const inFree = freeMult > 1;
   const total = Math.round(payout * (inFree ? freeMult : 1));
   lastWin = total;
   credits += total;
   flashLines = lines;
-  flashT = 1.6;
+  flashT = 1.8;
   if (total > 0) {
-    spawnConfetti(40, W / 2, H * .4);
-    spawnPetals(30);
-    toast = total >= bet() * 20 ? `BIG WIN ${total}!` : `+${total}`;
+    spawnConfetti(Math.min(80, 20 + total / 5), W / 2, H * .4);
+    spawnPetals(24);
+    A.creditRoll(Math.min(12, 4 + Math.floor(total / bet())));
+    if (total >= bet() * 25) { A.winBig(); toast = `BIG WIN ${total}!`; }
+    else if (total >= bet() * 8) { A.winMedium(); toast = `+${total}`; }
+    else { A.winSmall(); toast = `+${total}`; }
     toastT = 1.8;
   }
+  // scatter dings already played during stop; award free spins
   const award = FREE_SPINS_ON_SCATTER[Math.min(scatters, 5)];
   if (award > 0) {
     freeSpins += award;
     freeMult = freeMult <= 1 ? 2 : Math.min(5, freeMult + 1);
     toast = `${award} FREE SPINS · ×${freeMult}`;
     toastT = 2.4;
+    A.freeSpinsFanfare();
     spawnConfetti(80, W / 2, H * .35);
   }
   setHud();
-  // bonus trigger: 4+ scatters, or random during free spins with a wild on screen
-  const wildOn = scatters >= 1;
-  const triggerBonus = scatters >= 4 || (freeSpins > 0 && wildOn && Math.random() < 0.35) || (scatters === 3 && Math.random() < 0.5);
+  mode = 'resolve';
+
+  const wantPick = scatters === 2 && Math.random() < 0.32;
+  const wantSmash = scatters >= 4 || (scatters === 3 && Math.random() < 0.26) || (freeSpins > 0 && scatters >= 1 && Math.random() < 0.18);
+
   setTimeout(() => {
-    if (triggerBonus) enterBonus();
-    else {
-      mode = 'idle';
-      if (freeSpins > 0) setTimeout(() => startSpin(), 600);
-      else {
-        freeMult = 1;
-        if (credits <= 0) {
-          credits = START_CREDITS;
-          toast = 'Free credits refilled';
-          toastT = 2;
-        }
-        setHud();
-      }
-    }
-  }, total > 0 ? 1400 : 500);
+    if (wantPick) enterPick();
+    else if (wantSmash) enterBonus();
+    else finishToIdle();
+  }, total > 0 ? 1300 : 450);
+}
+
+function finishToIdle() {
+  mode = 'idle';
+  if (freeSpins > 0) setTimeout(() => startSpin(), 550);
+  else {
+    freeMult = 1;
+    if (credits <= 0) { credits = START_CREDITS; toast = 'Free credits refilled'; toastT = 2; }
+    setHud();
+  }
+}
+
+function maybeStartFeatures() {
+  // Abuela's Chanclazo ~1.8%
+  if (Math.random() < 0.015) { startAbuela(); return; }
+  // Chancla expand: reel with a chancla expands as wild (~7% if any chancla)
+  const candidates: number[] = [];
+  for (let c = 0; c < COLS; c++) if (grid[c].some(s => s === 'chancla')) candidates.push(c);
+  if (candidates.length && Math.random() < 0.065) {
+    startExpand(candidates[Math.floor(Math.random() * candidates.length)]);
+    return;
+  }
+  afterFeaturesThenPay();
+}
+
+function startExpand(col: number) {
+  mode = 'expand';
+  expandReel = col;
+  expandProg = 0;
+  expandWilds = Array(COLS).fill(false);
+  expandWilds[col] = true;
+  toast = 'CHANCLA WILD!';
+  toastT = 1.6;
+  A.expandWhoosh();
+  // fill reel visually with chancla; treat as wild in eval
+  for (let r = 0; r < ROWS; r++) grid[col][r] = 'chancla';
+}
+
+function startAbuela() {
+  mode = 'abuela';
+  abuelaProg = 0;
+  abuelaCells = [];
+  const n = 5 + Math.floor(Math.random() * 4);
+  const used = new Set<string>();
+  while (abuelaCells.length < n) {
+    const c = Math.floor(Math.random() * COLS), r = Math.floor(Math.random() * ROWS);
+    const k = c + ',' + r;
+    if (used.has(k)) continue;
+    used.add(k); abuelaCells.push({ c, r });
+  }
+  toast = "ABUELA'S CHANCLAZO!";
+  toastT = 1.8;
+  A.abuelaStomp();
+}
+
+function enterPick() {
+  mode = 'pick';
+  pickPicksLeft = 3;
+  pickTotal = 0;
+  pickItems = [];
+  A.pickFanfare();
+  toast = 'PICK A PIÑATA!';
+  toastT = 2;
+  const prizes = [
+    { value: bet() * 2, label: `${bet() * 2}` },
+    { value: bet() * 3, label: `${bet() * 3}` },
+    { value: bet() * 5, label: `${bet() * 5}` },
+    { value: bet() * 8, label: `${bet() * 8}` },
+    { value: bet() * 12, label: `${bet() * 12}` },
+    { value: 0, label: '×2' }, // multiplier on pick total applied at end specially
+  ];
+  // shuffle
+  for (let i = prizes.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [prizes[i], prizes[j]] = [prizes[j], prizes[i]]; }
+  const cols = 3, rows = 2;
+  for (let i = 0; i < 6; i++) {
+    const cx = ((i % cols) + 0.5) / cols;
+    const cy = (Math.floor(i / cols) + 0.55) / rows;
+    const p = prizes[i];
+    pickItems.push({
+      x: W * (0.12 + cx * 0.76), y: H * (0.28 + cy * 0.42),
+      kind: pinataVars[i % pinataVars.length],
+      revealed: false,
+      value: p.value,
+      label: p.label,
+    });
+  }
+  // encode ×2 as value:-1
+  for (const it of pickItems) if (it.label === '×2') it.value = -1;
+  setHud();
+}
+
+function pickAt(x: number, y: number) {
+  if (mode !== 'pick' || pickPicksLeft <= 0) return;
+  let best: PickItem | null = null; let bestD = 1e9;
+  for (const it of pickItems) {
+    if (it.revealed) continue;
+    const d = Math.hypot(it.x - x, it.y - y);
+    if (d < 70 && d < bestD) { best = it; bestD = d; }
+  }
+  if (!best) return;
+  best.revealed = true;
+  pickPicksLeft--;
+  A.pickReveal(); A.pinataPop();
+  spawnConfetti(20, best.x, best.y);
+  if (best.value < 0) {
+    pickTotal = Math.max(pickTotal, bet()) * 2;
+    toast = 'Multiplier ×2!';
+  } else {
+    pickTotal += best.value;
+    toast = `+${best.value}`;
+  }
+  toastT = 1.2;
+  setHud();
+  if (pickPicksLeft <= 0) {
+    setTimeout(() => {
+      credits += pickTotal;
+      lastWin = pickTotal;
+      A.creditRoll(10); A.winMedium();
+      toast = `Pick bonus +${pickTotal}`;
+      toastT = 2;
+      setHud();
+      const sc = countScatters(grid);
+      if (sc >= 4 || (sc === 3 && Math.random() < 0.26)) enterBonus();
+      else finishToIdle();
+    }, 700);
+  }
 }
 
 function enterBonus() {
   mode = 'bonus';
-  bonusMult = 1;
-  bonusHits = 0;
-  bonusTotal = 0;
-  bonusTimer = 12; // seconds
-  smashFx = [];
-  const kinds = pinataVars;
+  bonusMult = 1; bonusHits = 0; bonusTotal = 0; bonusTimer = 12; smashFx = [];
+  A.smashFanfare();
   bonusPins = [];
   const n = 7 + Math.floor(Math.random() * 4);
   for (let i = 0; i < n; i++) {
     bonusPins.push({
-      x: W * (0.15 + Math.random() * 0.7),
-      y: H * (0.25 + Math.random() * 0.45),
-      s: 70 + Math.random() * 50,
-      vx: (Math.random() - .5) * 1.2,
-      vy: (Math.random() - .5) * .8,
-      kind: kinds[i % kinds.length],
-      hp: 1,
-      shake: 0,
-      gone: false,
+      x: W * (0.15 + Math.random() * 0.7), y: H * (0.25 + Math.random() * 0.45),
+      s: 70 + Math.random() * 50, vx: (Math.random() - .5) * 1.2, vy: (Math.random() - .5) * .8,
+      kind: pinataVars[i % pinataVars.length], hp: 1, shake: 0, gone: false,
     });
   }
-  // one big llama in the middle as the finale target (takes 3 hits)
-  bonusPins.push({
-    x: W / 2, y: H * 0.42, s: 140,
-    vx: 0, vy: 0, kind: 'pinata_llama', hp: 3, shake: 0, gone: false,
-  });
-  toast = 'SMASH THE PIÑATAS!';
-  toastT = 2;
-  setHud();
+  bonusPins.push({ x: W / 2, y: H * 0.42, s: 140, vx: 0, vy: 0, kind: 'pinata_llama', hp: 3, shake: 0, gone: false });
+  toast = 'SMASH THE PIÑATAS!'; toastT = 2; setHud();
 }
 
 function smashAt(x: number, y: number) {
   if (mode !== 'bonus') return;
   chanclaAngle = -1.2;
-  // find nearest pinata
-  let best: Pinata | null = null;
-  let bestD = 1e9;
+  A.chanclaWhack();
+  let best: Pinata | null = null; let bestD = 1e9;
   for (const p of bonusPins) {
     if (p.gone) continue;
     const d = Math.hypot(p.x - x, p.y - y);
     if (d < p.s * 0.55 && d < bestD) { best = p; bestD = d; }
   }
-  if (!best) {
-    spawnPetals(4, x, y);
-    return;
-  }
-  best.hp--;
-  best.shake = 1;
-  spawnConfetti(18, best.x, best.y);
-  spawnPetals(10, best.x, best.y);
+  if (!best) { spawnPetals(4, x, y); return; }
+  best.hp--; best.shake = 1;
+  A.pinataPop();
+  spawnConfetti(18, best.x, best.y); spawnPetals(10, best.x, best.y);
   bonusHits++;
-  const gain = bet() * (best.hp <= 0 ? 2 : 1);
-  bonusMult = Math.min(20, bonusMult + (best.kind === 'pinata_llama' ? 1 : 0.5));
-  // round mult to .5 steps
-  bonusMult = Math.round(bonusMult * 2) / 2;
-  const add = Math.round(gain * bonusMult);
+  bonusMult = Math.min(20, Math.round((bonusMult + (best.kind === 'pinata_llama' ? 1 : 0.5)) * 2) / 2);
+  const add = Math.round(bet() * (best.hp <= 0 ? 2 : 1) * bonusMult);
   bonusTotal += add;
   smashFx.push({ x: best.x, y: best.y - best.s * 0.4, t: 1, mult: bonusMult });
   if (best.hp <= 0) {
     best.gone = true;
-    if (best.s >= 130) {
-      // big llama — trigger explosion blast
-      startBlast(best.x, best.y);
-      return;
-    }
+    if (best.s >= 130) { startBlast(best.x, best.y); return; }
   }
   setHud();
 }
@@ -286,23 +394,18 @@ function smashAt(x: number, y: number) {
 function startBlast(x: number, y: number) {
   mode = 'blast';
   bigLlama = { x, y, s: 1, life: 1.8 };
-  spawnConfetti(160, x, y);
-  spawnPetals(80, x, y);
+  A.llamaBoom();
+  spawnConfetti(160, x, y); spawnPetals(80, x, y);
   for (const p of bonusPins) if (!p.gone) { p.gone = true; spawnConfetti(20, p.x, p.y); }
-  const blastPay = Math.round(bet() * 15 * bonusMult);
-  bonusTotal += blastPay;
-  toast = `LLAMA BLAST ×${bonusMult}!`;
-  toastT = 2.2;
+  bonusTotal += Math.round(bet() * 15 * bonusMult);
+  toast = `LLAMA BLAST ×${bonusMult}!`; toastT = 2.2;
   setTimeout(endBonus, 1800);
 }
 
 function endBonus() {
-  credits += bonusTotal;
-  lastWin = bonusTotal;
-  toast = bonusTotal > 0 ? `Bonus +${bonusTotal}` : 'Bonus over';
-  toastT = 2;
-  mode = 'idle';
-  setHud();
+  credits += bonusTotal; lastWin = bonusTotal;
+  toast = bonusTotal > 0 ? `Bonus +${bonusTotal}` : 'Bonus over'; toastT = 2;
+  mode = 'idle'; setHud();
   if (freeSpins > 0) setTimeout(() => startSpin(), 700);
 }
 
@@ -314,55 +417,33 @@ function fit() {
 }
 addEventListener('resize', fit);
 
-// layout helpers — machine fills available area under HUD
 function machineBox() {
-  const top = 56 + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)')) || 0);
-  const bot = 28;
-  const pad = 12;
+  const top = 52;
+  const bot = 22;
+  const pad = 8;
   const availW = W - pad * 2;
   const availH = H - top - bot - pad;
-  // prefer 5:3-ish but clamp to screen
-  let mw = availW, mh = mw * 0.72;
-  if (mh > availH) { mh = availH; mw = mh / 0.72; }
-  // landscape: wider machine
-  if (W > H) {
-    mh = Math.min(availH, availW * 0.5);
-    mw = Math.min(availW, mh / 0.55);
+  // taller cabinet for 4 rows
+  let mh = availH, mw = mh / 0.95;
+  if (mw > availW) { mw = availW; mh = mw * 0.95; }
+  if (W > H) { // landscape: use width, keep height
+    mw = Math.min(availW, availH * 1.55);
+    mh = Math.min(availH, mw * 0.72);
   }
-  const x = (W - mw) / 2;
-  const y = top + (availH - mh) / 2;
-  return { x, y, w: mw, h: mh };
+  return { x: (W - mw) / 2, y: top + (availH - mh) / 2, w: mw, h: mh };
 }
 
 function cellGeom(box: {x:number;y:number;w:number;h:number}) {
-  const pad = box.w * 0.04;
-  const reelGap = box.w * 0.012;
+  const titleH = Math.max(28, box.h * 0.09);
+  const btnH = Math.max(40, box.h * 0.13);
+  const pad = box.w * 0.03;
+  const reelGap = box.w * 0.01;
+  const areaH = box.h - titleH - btnH - pad;
   const rw = (box.w - pad * 2 - reelGap * (COLS - 1)) / COLS;
-  const rh = (box.h - pad * 2 - box.h * 0.18) / ROWS; // leave bottom for spin btn
+  const rh = areaH / ROWS;
   const ox = box.x + pad;
-  const oy = box.y + pad;
-  return { pad, reelGap, rw, rh, ox, oy, btnH: box.h * 0.16 };
-}
-
-function drawSym(sym: Sym, x: number, y: number, s: number) {
-  const key = sym === 'pinata' ? 'pinata' : sym;
-  const im = imgs[key];
-  ctx.save();
-  // tile backing
-  const r = s * 0.12;
-  ctx.fillStyle = 'rgba(0,0,0,.35)';
-  roundRect(x - s/2, y - s/2, s, s, r);
-  ctx.fill();
-  if (im && im.complete) {
-    const max = s * 0.86;
-    const sc = Math.min(max / im.width, max / im.height);
-    const iw = im.width * sc, ih = im.height * sc;
-    ctx.drawImage(im, x - iw/2, y - ih/2, iw, ih);
-  } else {
-    ctx.fillStyle = '#ffd23f';
-    ctx.fillRect(x - s/3, y - s/3, s*2/3, s*2/3);
-  }
-  ctx.restore();
+  const oy = box.y + titleH;
+  return { pad, reelGap, rw, rh, ox, oy, titleH, btnH };
 }
 
 function roundRect(x: number, y: number, w: number, h: number, r: number) {
@@ -375,77 +456,95 @@ function roundRect(x: number, y: number, w: number, h: number, r: number) {
   ctx.closePath();
 }
 
+function drawSym(sym: Sym, x: number, y: number, s: number, wildGlow = false) {
+  const im = imgs[sym === 'pinata' ? 'pinata' : sym];
+  ctx.save();
+  const r = s * 0.12;
+  ctx.fillStyle = wildGlow ? 'rgba(255,210,63,.35)' : 'rgba(0,0,0,.35)';
+  roundRect(x - s / 2, y - s / 2, s, s, r); ctx.fill();
+  if (wildGlow) { ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2; roundRect(x - s / 2, y - s / 2, s, s, r); ctx.stroke(); }
+  if (im && im.complete) {
+    const max = s * 0.86;
+    const sc = Math.min(max / im.width, max / im.height);
+    const iw = im.width * sc, ih = im.height * sc;
+    ctx.drawImage(im, x - iw / 2, y - ih / 2, iw, ih);
+  }
+  ctx.restore();
+}
+
+function drawBtn(x: number, y: number, w: number, h: number, label: string, primary = false) {
+  ctx.save();
+  if (primary) {
+    const g = ctx.createLinearGradient(x, y, x, y + h);
+    g.addColorStop(0, '#ffd84a'); g.addColorStop(1, '#e8590c');
+    ctx.fillStyle = g;
+  } else ctx.fillStyle = '#2a1548';
+  roundRect(x, y, w, h, 12); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; roundRect(x, y, w, h, 12); ctx.stroke();
+  ctx.fillStyle = primary ? '#2a0a00' : '#ffd23f';
+  ctx.font = `900 ${Math.max(13, h * 0.38)}px system-ui`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + w / 2, y + h / 2 + 1);
+  ctx.restore();
+}
+
 function drawMachine(dt: number) {
   const box = machineBox();
   const g = cellGeom(box);
-
-  // carnival cabinet
   ctx.save();
   const grd = ctx.createLinearGradient(box.x, box.y, box.x, box.y + box.h);
   grd.addColorStop(0, '#5c1a8a'); grd.addColorStop(1, '#1a0a2e');
-  ctx.fillStyle = grd;
-  roundRect(box.x, box.y, box.w, box.h, 18);
-  ctx.fill();
-  ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 4;
-  roundRect(box.x, box.y, box.w, box.h, 18); ctx.stroke();
+  ctx.fillStyle = grd; roundRect(box.x, box.y, box.w, box.h, 16); ctx.fill();
+  ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 4; roundRect(box.x, box.y, box.w, box.h, 16); ctx.stroke();
 
-  // title plate
   ctx.fillStyle = '#ffd23f';
-  ctx.font = `900 ${Math.max(14, box.w * 0.045)}px system-ui`;
+  ctx.font = `900 ${Math.max(13, box.w * 0.04)}px system-ui`;
   ctx.textAlign = 'center';
-  ctx.fillText('PIÑATA SLOTS', box.x + box.w/2, box.y + g.pad * 0.55);
-  ctx.font = `${Math.max(10, box.w * 0.025)}px Georgia`;
+  ctx.fillText('PIÑATA SLOTS', box.x + box.w / 2, box.y + g.titleH * 0.42);
+  ctx.font = `${Math.max(9, box.w * 0.022)}px Georgia`;
   ctx.fillStyle = 'rgba(243,233,210,.75)';
-  ctx.fillText('(working title) · free play', box.x + box.w/2, box.y + g.pad * 0.95);
+  ctx.fillText('(working title) · free play · 5×4', box.x + box.w / 2, box.y + g.titleH * 0.78);
 
-  // reels window
-  const winY = g.oy + g.pad * 0.6;
+  const winY = g.oy;
   const winH = g.rh * ROWS;
   ctx.save();
-  roundRect(g.ox - 4, winY - 4, COLS * g.rw + (COLS-1)*g.reelGap + 8, winH + 8, 10);
+  roundRect(g.ox - 3, winY - 3, COLS * g.rw + (COLS - 1) * g.reelGap + 6, winH + 6, 8);
   ctx.clip();
   ctx.fillStyle = '#0d0618';
-  ctx.fillRect(g.ox - 4, winY - 4, COLS * g.rw + (COLS-1)*g.reelGap + 8, winH + 8);
+  ctx.fillRect(g.ox - 3, winY - 3, COLS * g.rw + (COLS - 1) * g.reelGap + 6, winH + 6);
 
   for (let c = 0; c < COLS; c++) {
     const cx = g.ox + c * (g.rw + g.reelGap);
     const spinning = mode === 'spinning' && spinT < stopAt[c];
     if (spinning) {
-      const speed = 28 + c * 4;
-      spinOffset[c] += speed * dt * g.rh;
+      spinOffset[c] += (26 + c * 3) * dt * g.rh;
       const cell = g.rh;
       const off = spinOffset[c] % cell;
       for (let k = -1; k <= ROWS; k++) {
         const idx = ((Math.floor(spinOffset[c] / cell) + k) % reelSyms[c].length + reelSyms[c].length) % reelSyms[c].length;
-        const sym = reelSyms[c][idx];
-        const cy = winY + (k + 0.5) * cell - off;
-        drawSym(sym, cx + g.rw/2, cy, Math.min(g.rw, g.rh) * 0.92);
+        drawSym(reelSyms[c][idx], cx + g.rw / 2, winY + (k + 0.5) * cell - off, Math.min(g.rw, g.rh) * 0.9);
       }
     } else {
       for (let r = 0; r < ROWS; r++) {
-        const cy = winY + (r + 0.5) * g.rh;
-        drawSym(grid[c][r], cx + g.rw/2, cy, Math.min(g.rw, g.rh) * 0.92);
+        const wild = expandWilds[c] || (mode === 'expand' && c === expandReel && r <= expandProg * ROWS);
+        drawSym(grid[c][r], cx + g.rw / 2, winY + (r + 0.5) * g.rh, Math.min(g.rw, g.rh) * 0.9, wild);
       }
     }
-    // reel separators
-    ctx.strokeStyle = 'rgba(255,210,63,.25)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,210,63,.22)'; ctx.lineWidth = 1;
     ctx.strokeRect(cx, winY, g.rw, winH);
   }
   ctx.restore();
 
-  // payline flash
   if (flashT > 0 && flashLines.length) {
     flashT -= dt;
     ctx.save();
     ctx.globalAlpha = 0.4 + 0.4 * Math.sin(flashT * 20);
-    ctx.strokeStyle = '#7CFC00';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#7CFC00'; ctx.lineWidth = 3;
     for (const li of flashLines) {
       const line = LINES[li];
       ctx.beginPath();
       for (let c = 0; c < COLS; c++) {
-        const cx = g.ox + c * (g.rw + g.reelGap) + g.rw/2;
+        const cx = g.ox + c * (g.rw + g.reelGap) + g.rw / 2;
         const cy = winY + (line[c] + 0.5) * g.rh;
         if (c === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
       }
@@ -454,80 +553,49 @@ function drawMachine(dt: number) {
     ctx.restore();
   }
 
-  // controls row
-  const btnY = box.y + box.h - g.btnH - 6;
-  const btnH = g.btnH - 4;
-  const bw = box.w * 0.18;
-  // bet -
-  drawBtn(box.x + box.w * 0.08, btnY, bw, btnH, '−', () => {});
-  // spin
-  const spinW = box.w * 0.36;
+  const btnY = box.y + box.h - g.btnH;
+  const bw = box.w * 0.16;
+  const spinW = box.w * 0.38;
   const spinLabel = freeSpins > 0 ? `FREE (${freeSpins})` : mode === 'spinning' ? '…' : 'SPIN';
-  drawBtn(box.x + box.w/2 - spinW/2, btnY, spinW, btnH, spinLabel, () => {}, true);
-  // bet +
-  drawBtn(box.x + box.w * 0.74, btnY, bw, btnH, '+', () => {});
-
+  drawBtn(box.x + box.w * 0.08, btnY + 2, bw, g.btnH - 6, '−');
+  drawBtn(box.x + box.w / 2 - spinW / 2, btnY + 2, spinW, g.btnH - 6, spinLabel, true);
+  drawBtn(box.x + box.w * 0.76, btnY + 2, bw, g.btnH - 6, '+');
   ctx.restore();
-  return { box, g, btnY, btnH, bw, spinW };
-}
-
-function drawBtn(x: number, y: number, w: number, h: number, label: string, _fn: () => void, primary = false) {
-  ctx.save();
-  if (primary) {
-    const g = ctx.createLinearGradient(x, y, x, y + h);
-    g.addColorStop(0, '#ffd84a'); g.addColorStop(1, '#e8590c');
-    ctx.fillStyle = g;
-  } else {
-    ctx.fillStyle = '#2a1548';
-  }
-  roundRect(x, y, w, h, 12); ctx.fill();
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; roundRect(x, y, w, h, 12); ctx.stroke();
-  ctx.fillStyle = primary ? '#2a0a00' : '#ffd23f';
-  ctx.font = `900 ${Math.max(14, h * 0.4)}px system-ui`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(label, x + w/2, y + h/2 + 1);
-  ctx.restore();
+  return { box, g };
 }
 
 function hitControls(x: number, y: number) {
   const box = machineBox();
   const g = cellGeom(box);
-  const btnY = box.y + box.h - g.btnH - 6;
-  const btnH = g.btnH - 4;
-  const bw = box.w * 0.18;
-  const spinW = box.w * 0.36;
-  const inR = (bx: number, by: number, bw: number, bh: number) => x >= bx && x <= bx+bw && y >= by && y <= by+bh;
-  if (inR(box.x + box.w * 0.08, btnY, bw, btnH)) {
+  const btnY = box.y + box.h - g.btnH;
+  const bw = box.w * 0.16;
+  const spinW = box.w * 0.38;
+  const bh = g.btnH - 6;
+  const inR = (bx: number, by: number, bw: number, bh: number) => x >= bx && x <= bx + bw && y >= by && y <= by + bh;
+  if (inR(box.x + box.w * 0.08, btnY + 2, bw, bh)) {
     if (mode === 'idle' && freeSpins === 0) { betIdx = (betIdx + BETS.length - 1) % BETS.length; setHud(); }
     return;
   }
-  if (inR(box.x + box.w * 0.74, btnY, bw, btnH)) {
+  if (inR(box.x + box.w * 0.76, btnY + 2, bw, bh)) {
     if (mode === 'idle' && freeSpins === 0) { betIdx = (betIdx + 1) % BETS.length; setHud(); }
     return;
   }
-  if (inR(box.x + box.w/2 - spinW/2, btnY, spinW, btnH)) {
-    if (mode === 'idle') startSpin();
-  }
+  if (inR(box.x + box.w / 2 - spinW / 2, btnY + 2, spinW, bh) && mode === 'idle') startSpin();
 }
 
 function drawBonus(dt: number) {
-  // dim background with floating petals already drawn
-  ctx.fillStyle = 'rgba(10,4,24,.55)';
-  ctx.fillRect(0, 0, W, H);
-
-  // banner
+  ctx.fillStyle = 'rgba(10,4,24,.55)'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#ffd23f';
-  ctx.font = `900 ${Math.max(22, W * 0.06)}px system-ui`;
+  ctx.font = `900 ${Math.max(20, W * 0.055)}px system-ui`;
   ctx.textAlign = 'center';
-  ctx.fillText('PIÑATA SMASH', W/2, 70);
-  ctx.font = `${Math.max(14, W * 0.035)}px system-ui`;
+  ctx.fillText('PIÑATA SMASH', W / 2, 68);
+  ctx.font = `${Math.max(13, W * 0.032)}px system-ui`;
   ctx.fillStyle = '#fff';
-  ctx.fillText(`Multiplier ×${bonusMult} · ${Math.ceil(bonusTimer)}s · tap to smash`, W/2, 98);
-
+  ctx.fillText(`Multiplier ×${bonusMult} · ${Math.ceil(bonusTimer)}s · tap to smash`, W / 2, 94);
   for (const p of bonusPins) {
     if (p.gone) continue;
     p.x += p.vx; p.y += p.vy;
-    if (p.x < p.s*.4 || p.x > W - p.s*.4) p.vx *= -1;
+    if (p.x < p.s * .4 || p.x > W - p.s * .4) p.vx *= -1;
     if (p.y < 120 || p.y > H - 80) p.vy *= -1;
     if (p.shake > 0) p.shake -= dt * 4;
     const im = imgs[p.kind] || imgs.pinata;
@@ -535,75 +603,96 @@ function drawBonus(dt: number) {
     if (im && im.complete) {
       const sc = p.s / Math.max(im.width, im.height);
       const iw = im.width * sc, ih = im.height * sc;
-      ctx.save();
-      ctx.translate(p.x + shakeX, p.y);
-      ctx.rotate(Math.sin(performance.now()/400 + p.x) * 0.08);
-      ctx.drawImage(im, -iw/2, -ih/2, iw, ih);
-      ctx.restore();
+      ctx.save(); ctx.translate(p.x + shakeX, p.y); ctx.rotate(Math.sin(performance.now() / 400 + p.x) * 0.08);
+      ctx.drawImage(im, -iw / 2, -ih / 2, iw, ih); ctx.restore();
     }
   }
-
-  // floating mult popups
   for (const f of smashFx) {
-    f.t -= dt;
-    f.y -= 40 * dt;
+    f.t -= dt; f.y -= 40 * dt;
     ctx.globalAlpha = Math.max(0, f.t);
     ctx.fillStyle = '#ffd23f';
-    ctx.font = `900 ${24 + (1-f.t)*10}px system-ui`;
-    ctx.textAlign = 'center';
-    ctx.fillText(`×${f.mult}`, f.x, f.y);
-    ctx.globalAlpha = 1;
+    ctx.font = `900 ${24 + (1 - f.t) * 10}px system-ui`;
+    ctx.textAlign = 'center'; ctx.fillText(`×${f.mult}`, f.x, f.y); ctx.globalAlpha = 1;
   }
   smashFx = smashFx.filter(f => f.t > 0);
-
-  // chancla cursor
   const cim = imgs.chancla;
   if (cim && cim.complete) {
-    ctx.save();
-    ctx.translate(pointer.x, pointer.y);
-    ctx.rotate(chanclaAngle);
-    const s = 64;
-    ctx.drawImage(cim, -s/2, -s/2, s, s);
-    ctx.restore();
+    ctx.save(); ctx.translate(pointer.x, pointer.y); ctx.rotate(chanclaAngle);
+    ctx.drawImage(cim, -32, -32, 64, 64); ctx.restore();
   }
   if (chanclaAngle < 0) chanclaAngle = Math.min(0, chanclaAngle + dt * 4);
-
   bonusTimer -= dt;
   if (bonusTimer <= 0 && mode === 'bonus') {
-    // time up — if big llama still there, auto-blast weakly
     const big = bonusPins.find(p => p.s >= 130 && !p.gone);
     if (big) startBlast(big.x, big.y);
-    else {
-      for (const p of bonusPins) if (!p.gone) { p.gone = true; spawnConfetti(10, p.x, p.y); }
-      endBonus();
-    }
+    else { for (const p of bonusPins) if (!p.gone) { p.gone = true; spawnConfetti(10, p.x, p.y); } endBonus(); }
   }
 }
 
 function drawBlast(dt: number) {
   if (!bigLlama) return;
-  bigLlama.life -= dt;
-  bigLlama.s += dt * 2.5;
+  bigLlama.life -= dt; bigLlama.s += dt * 2.5;
   const im = imgs.pinata_llama || imgs.pinata;
-  ctx.save();
-  ctx.translate(bigLlama.x, bigLlama.y);
-  ctx.rotate(bigLlama.life * 8);
+  ctx.save(); ctx.translate(bigLlama.x, bigLlama.y); ctx.rotate(bigLlama.life * 8);
   ctx.globalAlpha = Math.max(0, bigLlama.life / 1.8);
-  if (im && im.complete) {
-    const s = 160 * bigLlama.s;
-    ctx.drawImage(im, -s/2, -s/2, s, s);
-  }
-  // explosion rings
-  ctx.strokeStyle = '#ffd23f';
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.arc(0, 0, 80 * bigLlama.s, 0, 7);
-  ctx.stroke();
-  ctx.strokeStyle = '#ff6b6b';
-  ctx.beginPath();
-  ctx.arc(0, 0, 120 * bigLlama.s, 0, 7);
-  ctx.stroke();
+  if (im && im.complete) { const s = 160 * bigLlama.s; ctx.drawImage(im, -s / 2, -s / 2, s, s); }
+  ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0, 0, 80 * bigLlama.s, 0, 7); ctx.stroke();
+  ctx.strokeStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(0, 0, 120 * bigLlama.s, 0, 7); ctx.stroke();
   ctx.restore();
+}
+
+function drawPick() {
+  ctx.fillStyle = 'rgba(10,4,24,.7)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ffd23f';
+  ctx.font = `900 ${Math.max(20, W * 0.055)}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.fillText('PICK A PIÑATA', W / 2, 68);
+  ctx.fillStyle = '#fff';
+  ctx.font = `${Math.max(13, W * 0.032)}px system-ui`;
+  ctx.fillText(`${pickPicksLeft} picks left · total ${pickTotal}`, W / 2, 94);
+  for (const it of pickItems) {
+    const im = imgs[it.kind] || imgs.pinata;
+    if (im && im.complete && !it.revealed) {
+      const s = Math.min(100, W * 0.22);
+      ctx.drawImage(im, it.x - s / 2, it.y - s / 2, s, s);
+    } else if (it.revealed) {
+      ctx.fillStyle = 'rgba(0,0,0,.55)';
+      roundRect(it.x - 48, it.y - 28, 96, 56, 12); ctx.fill();
+      ctx.fillStyle = '#ffd23f';
+      ctx.font = '900 22px system-ui';
+      ctx.fillText(it.label, it.x, it.y + 6);
+    }
+  }
+}
+
+function drawExpand(dt: number) {
+  drawMachine(0);
+  expandProg = Math.min(1, expandProg + dt * 1.8);
+  if (expandProg >= 1) {
+    // hold a beat then pay
+    expandProg = 1;
+    if (!(drawExpand as any)._done) {
+      (drawExpand as any)._done = true;
+      setTimeout(() => { (drawExpand as any)._done = false; afterFeaturesThenPay(); }, 500);
+    }
+  }
+}
+
+function drawAbuela(dt: number) {
+  drawMachine(0);
+  abuelaProg += dt;
+  const n = Math.min(abuelaCells.length, Math.floor(abuelaProg * 8));
+  for (let i = 0; i < n; i++) {
+    const { c, r } = abuelaCells[i];
+    if (grid[c][r] !== 'abuela') {
+      grid[c][r] = 'abuela';
+      const box = machineBox(); const g = cellGeom(box);
+      spawnConfetti(8, g.ox + c * (g.rw + g.reelGap) + g.rw / 2, g.oy + (r + 0.5) * g.rh);
+    }
+  }
+  if (n >= abuelaCells.length && abuelaProg > abuelaCells.length / 8 + 0.4) {
+    afterFeaturesThenPay();
+  }
 }
 
 function drawFx(dt: number) {
@@ -618,41 +707,33 @@ function drawFx(dt: number) {
   for (const c of confetti) {
     c.vy += 18 * dt; c.x += c.vx * dt * 60; c.y += c.vy * dt * 60; c.rot += c.vr;
     ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot);
-    ctx.fillStyle = c.c; ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h);
-    ctx.restore();
+    ctx.fillStyle = c.c; ctx.fillRect(-c.w / 2, -c.h / 2, c.w, c.h); ctx.restore();
   }
   confetti = confetti.filter(c => c.y < H + 40);
   if (toastT > 0) {
     toastT -= dt;
     ctx.save();
     ctx.globalAlpha = Math.min(1, toastT * 2);
-    ctx.fillStyle = 'rgba(0,0,0,.65)';
-    ctx.font = `900 ${Math.max(18, W * 0.05)}px system-ui`;
+    ctx.font = `900 ${Math.max(16, W * 0.045)}px system-ui`;
     const m = ctx.measureText(toast);
-    const bw = m.width + 36, bh = 44;
-    roundRect(W/2 - bw/2, H * 0.18, bw, bh, 12); ctx.fill();
+    const bw = m.width + 36, bh = 42;
+    ctx.fillStyle = 'rgba(0,0,0,.65)';
+    roundRect(W / 2 - bw / 2, H * 0.16, bw, bh, 12); ctx.fill();
     ctx.fillStyle = '#ffd23f';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(toast, W/2, H * 0.18 + bh/2);
+    ctx.fillText(toast, W / 2, H * 0.16 + bh / 2);
     ctx.restore();
   }
 }
 
 function drawBg() {
-  const g = ctx.createRadialGradient(W/2, H*0.35, 20, W/2, H*0.5, Math.max(W,H)*0.7);
+  const g = ctx.createRadialGradient(W / 2, H * 0.35, 20, W / 2, H * 0.5, Math.max(W, H) * 0.7);
   g.addColorStop(0, '#4a1578'); g.addColorStop(0.5, '#1a0a2e'); g.addColorStop(1, '#0a0414');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // soft rays
-  ctx.save();
-  ctx.translate(W/2, H*0.3);
-  ctx.rotate(performance.now()/20000);
-  ctx.globalAlpha = 0.08;
+  ctx.save(); ctx.translate(W / 2, H * 0.3); ctx.rotate(performance.now() / 20000); ctx.globalAlpha = 0.08;
   for (let i = 0; i < 12; i++) {
-    ctx.fillStyle = '#ffd23f';
-    ctx.beginPath();
-    ctx.moveTo(0,0);
-    ctx.arc(0,0, Math.max(W,H), i*Math.PI/6, i*Math.PI/6 + 0.12);
-    ctx.fill();
+    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.arc(0, 0, Math.max(W, H), i * Math.PI / 6, i * Math.PI / 6 + 0.12); ctx.fill();
   }
   ctx.restore();
 }
@@ -665,28 +746,39 @@ function frame(now: number) {
 
   if (mode === 'spinning') {
     spinT += dt;
-    // stop reels one by one
     let allStopped = true;
     for (let c = 0; c < COLS; c++) {
       if (spinT < stopAt[c]) allStopped = false;
-      else {
-        // snap strip so rows 0..2 show grid
-        spinOffset[c] = 0;
+      else if (c >= reelsStopped) {
+        while (reelsStopped <= c) {
+          A.reelStop(reelsStopped);
+          if (grid[reelsStopped].some(s => s === 'pinata')) {
+            let sc = 0;
+            for (let i = 0; i <= reelsStopped; i++) for (const s of grid[i]) if (s === 'pinata') sc++;
+            A.scatterDing(sc);
+          }
+          reelsStopped++;
+        }
       }
     }
-    // once a reel's stop time passed, freeze its offset
+    // simpler scatter ding: count pinatas on stopped reels
     drawMachine(dt);
-    // override: for stopped reels show grid (drawMachine already handles mode spinning for all —
-    // switch per-reel by temporarily using settled look)
-    // Simpler: when all past stopAt, finish
-    if (allStopped) finishSpin();
+    if (allStopped) {
+      A.stopSpinLoop();
+      // ding for total scatters
+      const sc = countScatters(grid);
+      if (sc > 0) A.scatterDing(sc);
+      maybeStartFeatures();
+    }
+  } else if (mode === 'expand') {
+    drawExpand(dt);
+  } else if (mode === 'abuela') {
+    drawAbuela(dt);
+  } else if (mode === 'pick') {
+    drawPick();
   } else if (mode === 'bonus') {
-    drawMachine(0); // faded underneath? skip — full bonus
-    // actually clear and draw bonus only
-    drawBg();
     drawBonus(dt);
   } else if (mode === 'blast') {
-    drawBg();
     drawBlast(dt);
   } else {
     drawMachine(dt);
@@ -697,35 +789,46 @@ function frame(now: number) {
 
 function onPtr(e: PointerEvent, down: boolean) {
   const r = canvas.getBoundingClientRect();
-  pointer.x = (e.clientX - r.left);
-  pointer.y = (e.clientY - r.top);
-  pointer.down = down;
+  pointer.x = e.clientX - r.left; pointer.y = e.clientY - r.top; pointer.down = down;
   if (down) {
-    wakeAudio();
+    A.unlock(); wakeAudio();
     if (mode === 'bonus') smashAt(pointer.x, pointer.y);
+    else if (mode === 'pick') pickAt(pointer.x, pointer.y);
     else if (mode === 'idle' || mode === 'resolve') hitControls(pointer.x, pointer.y);
   }
 }
 canvas.addEventListener('pointerdown', e => { e.preventDefault(); onPtr(e, true); }, { passive: false });
-canvas.addEventListener('pointermove', e => { pointer.x = e.clientX - canvas.getBoundingClientRect().left; pointer.y = e.clientY - canvas.getBoundingClientRect().top; });
+canvas.addEventListener('pointermove', e => {
+  pointer.x = e.clientX - canvas.getBoundingClientRect().left;
+  pointer.y = e.clientY - canvas.getBoundingClientRect().top;
+});
 canvas.addEventListener('pointerup', e => onPtr(e, false));
 
-// test hooks
 (window as any).__slots = {
   spin: () => startSpin(),
   forceBonus: () => { if (mode === 'idle') enterBonus(); },
-  forceScatter: () => {
+  forcePick: () => { if (mode === 'idle') enterPick(); },
+  forceExpand: () => { if (mode === 'idle') { grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => 'bottle' as Sym)); grid[2][1] = 'chancla'; startExpand(2); } },
+  forceAbuela: () => { if (mode === 'idle') startAbuela(); },
+  forceMulti: () => {
+    // force a multi-line win grid
     const g: Sym[][] = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => 'bottle' as Sym));
-    g[0][1] = g[2][1] = g[4][1] = 'pinata';
+    for (let c = 0; c < COLS; c++) { g[c][0] = 'abuela'; g[c][1] = 'abuela'; g[c][2] = 'skull'; }
     startSpin(g);
   },
-  state: () => ({ credits, bet: bet(), freeSpins, freeMult, mode, lastWin, bonusMult }),
+  forceScatter: () => {
+    const g: Sym[][] = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => 'bottle' as Sym));
+    g[0][1] = g[2][2] = g[4][1] = 'pinata';
+    startSpin(g);
+  },
+  state: () => ({ credits, bet: bet(), freeSpins, freeMult, mode, lastWin, bonusMult, rows: ROWS, cols: COLS }),
   credits: (n: number) => { credits = n; setHud(); },
 };
 
 async function boot() {
   autoUnlockAudio();
-  wireMute();
+  A.unlock();
+  $('mute').onclick = (e) => { e.stopPropagation(); A.unlock(); A.setMuted(!A.isMuted()); setHud(); };
   const loads: Promise<unknown>[] = [
     loadImg('/play/t_abuela.webp').then(i => imgs.abuela = i),
     loadImg('/play/t_skull.webp').then(i => imgs.skull = i),
@@ -738,20 +841,10 @@ async function boot() {
     loadImg('/play/slots/pinata_lima.webp').then(i => imgs.pinata_lima = i),
   ];
   await Promise.all(loads);
-  // seed grid
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
-  fit();
-  setHud();
+  fit(); setHud();
   requestAnimationFrame(frame);
-
-  $('go').onclick = () => {
-    $('start').classList.add('hidden');
-    wakeAudio();
-    startSpin();
-  };
-  $('again').onclick = () => {
-    $('end').classList.add('hidden');
-    mode = 'idle';
-  };
+  $('go').onclick = () => { $('start').classList.add('hidden'); A.unlock(); wakeAudio(); startSpin(); };
+  $('again').onclick = () => { $('end').classList.add('hidden'); mode = 'idle'; };
 }
 boot();
