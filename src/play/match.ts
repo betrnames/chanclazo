@@ -3,7 +3,14 @@ import './play.css';
 import { playHit, playStrike, playCombo, playLevelUp, playGameOver, playDodge, playShield } from '../game/sound';
 import { $, loadImg, wakeAudio, wireMute, stars, autoUnlockAudio } from './common';
 
-const N = 8, TYPES = 5, MOVES = 20, GOAL = 9000;
+const N = 8, TYPES = 5;
+// Level ladder: level 1 is the original (20 moves / 9000). Later levels raise the goal and trim moves.
+const LEVELS = [
+  { moves: 20, goal: 9000 }, { moves: 20, goal: 12000 }, { moves: 19, goal: 15000 }, { moves: 18, goal: 18000 },
+  { moves: 17, goal: 21000 }, { moves: 16, goal: 24000 }, { moves: 15, goal: 27000 }, { moves: 15, goal: 32000 },
+];
+let level = Math.min(LEVELS.length, Math.max(1, parseInt(new URLSearchParams(location.search).get('level') || '1', 10) || 1));
+let MOVES = LEVELS[level - 1].moves, GOAL = LEVELS[level - 1].goal;
 // Regular tiles reuse the original art; specials: chancla = line clear, sugar skull = bomb, piñata = color clear
 const TILE_SRC = ['/play/t_abuela.webp', '/play/t_lucha.webp', '/play/t_kid.webp', '/play/t_bottle.webp', '/play/abuela_sprite.webp'];
 const TILE_BG = ['#f72585', '#d62828', '#3a86ff', '#ff9f1c', '#06d6a0'];
@@ -21,7 +28,7 @@ const ctx = cv.getContext('2d')!;
 let dpr = 1, cell = 40, bx = 0, by = 0;
 function fit() {
   dpr = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
-  cell = Math.floor(Math.min((innerWidth - 20) / N, (innerHeight - 150) / N, 78));
+  cell = Math.floor(Math.min((innerWidth - 24) / N, (innerHeight - 130) / N, 130));
   bx = (innerWidth - cell * N) / 2; by = Math.max(80, (innerHeight - cell * N) / 2 + 20);
 }
 fit(); addEventListener('resize', fit);
@@ -38,7 +45,7 @@ function findMove(): [number, number, number, number] | null {
   return null;
 }
 const beams: { r?: number; c?: number; life: number }[] = [];
-function hud() { $('moves').textContent = String(moves); $('score').textContent = String(score); $('goal').textContent = String(GOAL); }
+function hud() { $('moves').textContent = String(moves); $('score').textContent = String(score); $('goal').textContent = String(GOAL); $('level').textContent = `${level}/${LEVELS.length}`; }
 
 const rnd = () => Math.floor(Math.random() * TYPES);
 const mk = (t: number, r: number, c: number, sp: Sp = SP.none): Tile => ({ t, sp, x: c, y: r, scale: 1, id: uid++ });
@@ -149,7 +156,9 @@ function checkEnd() {
   if (score >= GOAL || moves <= 0) {
     playing = false; const win = score >= GOAL; const s = !win ? 0 : moves >= 6 ? 3 : moves >= 3 ? 2 : 1;
     win ? playLevelUp() : playGameOver();
-    $('endTitle').textContent = win ? 'You win!' : 'Out of moves!';
+    $('endTitle').textContent = win ? (level < LEVELS.length ? `Level ${level} cleared!` : 'All levels cleared!') : 'Out of moves!';
+    ($('again') as HTMLButtonElement).textContent = win && level < LEVELS.length ? `Next: level ${level + 1}` : win ? 'Play again from level 1' : 'Retry level';
+    if (win) level = level < LEVELS.length ? level + 1 : 1;
     $('endStars').textContent = stars(s);
     $('endMsg').textContent = win ? `Score ${score} with ${moves} moves to spare.` : `Score ${score}. The goal was ${GOAL}. Try making more chanclas and bombs!`;
     setTimeout(() => $('end').classList.remove('hidden'), 500);
@@ -250,6 +259,6 @@ Promise.all([...TILE_SRC.slice(0, 4).map(loadImg), loadImg('/play/t_chancla.webp
   IMG.push(...a.slice(0, 4)); [chanclaImg, skullImg, pinataImg, bgImg] = a.slice(4) as HTMLImageElement[];
   go.disabled = false; go.textContent = 'PLAY!'; newBoard(); requestAnimationFrame(frame);
 });
-const start = () => { wakeAudio(); markGameStart('match'); $('start').classList.add('hidden'); $('end').classList.add('hidden'); score = 0; moves = MOVES; hud(); newBoard(); playing = true; busy = false; };
+const start = () => { wakeAudio(); markGameStart('match'); $('start').classList.add('hidden'); $('end').classList.add('hidden'); MOVES = LEVELS[level - 1].moves; GOAL = LEVELS[level - 1].goal; score = 0; moves = MOVES; hud(); newBoard(); playing = true; busy = false; };
 go.onclick = start; $('again').onclick = start;
 (window as any).__match = { grid, trySwap, findRuns, get state() { return { score, moves, playing, busy }; }, cellPos: (r: number, c: number) => ({ x: bx + (c + 0.5) * cell, y: by + (r + 0.5) * cell }) };
