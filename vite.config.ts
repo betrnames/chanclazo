@@ -14,6 +14,7 @@ export default defineConfig({
         lore: path.resolve(__dirname, 'lore.html'),
         fling: path.resolve(__dirname, 'fling.html'),
         match: path.resolve(__dirname, 'match.html'),
+        slots: path.resolve(__dirname, 'slots.html'),
         main: path.resolve(__dirname, 'index.html'),
       },
     },

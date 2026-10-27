@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#1a0a2e" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>Piñata Slots (working title) · Chanclazo</title>
+<meta name="description" content="Free-play piñata slot machine. Spin for free credits, smash piñatas with the chancla. No real money." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Chanclazo" />
+<meta property="og:title" content="Piñata Slots (working title)" />
+<meta property="og:description" content="Free-play piñata slot machine. Spin for free credits, smash piñatas with the chancla. No real money." />
+<meta property="og:url" content="%VITE_SITE_URL%/slots" />
+<meta property="og:image" content="%VITE_SITE_URL%/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Piñata Slots (working title)" />
+<meta name="twitter:description" content="Free-play piñata slot machine. No real money." />
+<meta name="twitter:image" content="%VITE_SITE_URL%/og.png" />
+<link rel="icon" href="/cruise/logo_chancla.webp" />
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#1a0a2e;color:#f3e9d2;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
+.hud{position:absolute;left:0;right:0;top:env(safe-area-inset-top);display:flex;align-items:center;gap:8px;padding:8px 10px;pointer-events:none;z-index:5}
+.hud .pill{pointer-events:auto;background:rgba(0,0,0,.55);border:2px solid #ffd23f;border-radius:12px;padding:6px 10px;font-weight:800;font-size:13px;display:flex;flex-direction:column;line-height:1.15}
+.hud .pill small{font-size:10px;opacity:.75;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.hud a,.hud button{pointer-events:auto;background:rgba(0,0,0,.55);border:2px solid #ffd23f;border-radius:12px;color:#ffd23f;font-weight:900;padding:8px 12px;font-size:14px;text-decoration:none;cursor:pointer}
+.hud .spacer{flex:1}
+.disclaimer{position:absolute;left:0;right:0;bottom:env(safe-area-inset-bottom);text-align:center;font-size:10px;opacity:.7;padding:4px 8px;pointer-events:none;z-index:5}
+.screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,4,24,.78);z-index:10;padding:16px;overflow:auto}
+.screen.hidden{display:none}
+.card{background:linear-gradient(160deg,#3a1460,#1a0a2e);border:4px solid #ffd23f;border-radius:22px;padding:22px 20px;max-width:420px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.55)}
+.card img.logo{width:72px;height:72px}
+.card h1{margin:8px 0 6px;font-size:clamp(26px,7vw,36px);color:#ffd23f;font-weight:900;line-height:1.05}
+.card .sub{font-size:13px;opacity:.85;font-style:italic;margin:0 0 12px}
+.card p{margin:0 0 10px;font-size:15px;line-height:1.4}
+.card .keys{font-size:13px;opacity:.9;text-align:left;background:rgba(0,0,0,.35);border-radius:12px;padding:10px 12px;margin:12px 0}
+.card button{background:linear-gradient(#ffd84a,#ff9f1c);color:#2a0a00;border:3px solid #fff;border-radius:16px;font-weight:900;font-size:22px;padding:12px 28px;cursor:pointer;box-shadow:0 6px 0 #7c2d12}
+.card button:active{transform:translateY(3px);box-shadow:0 3px 0 #7c2d12}
+.card .links{margin-top:14px;font-size:13px}.card .links a{color:#ffd23f}
+</style>
+</head><body>
+<div id="app">
+  <div class="hud">
+    <a href="/" aria-label="Back to games">← Games</a>
+    <span class="pill"><small>Credits</small><span id="credits">1000</span></span>
+    <span class="pill"><small>Bet</small><span id="bet">10</span></span>
+    <span class="pill" id="winPill" style="display:none"><small>Win</small><span id="win">0</span></span>
+    <span class="pill" id="freePill" style="display:none"><small>Free spins</small><span id="free">0</span></span>
+    <span class="spacer"></span>
+    <button id="mute" aria-label="Sound on or off">🔊</button>
+  </div>
+  <canvas id="game"></canvas>
+  <div class="disclaimer">Free play only · No real money · No purchases</div>
+</div>
+<div class="screen" id="start"><div class="card">
+  <img class="logo" src="/cruise/logo_chancla.webp" alt="Chanclazo logo" />
+  <h1>Piñata Slots</h1>
+  <p class="sub">Working title · Free play</p>
+  <p>Spin the reels. Land three llama piñatas to unlock free spins. During a bonus, smash the piñatas with the chancla for multipliers.</p>
+  <div class="keys">
+    <b>Symbols:</b> Abuela, sugar skull, luchador, chancla, bottle, llama piñata (wild + scatter)<br/>
+    <b>3+ llamas:</b> Free spins with a rising multiplier<br/>
+    <b>Bonus:</b> Tap piñatas to smash them. The big llama explodes at the end.
+  </div>
+  <p style="font-size:12px;opacity:.8">Credits are pretend. Nothing here costs money, and nothing can be cashed out.</p>
+  <button id="go">PLAY FREE</button>
+  <div class="links"><a href="/">All games</a></div>
+</div></div>
+<div class="screen hidden" id="end"><div class="card">
+  <h1 id="endTitle">Nice smash!</h1>
+  <p id="endMsg"></p>
+  <button id="again">Keep spinning</button>
+  <div class="links"><a href="/">All games</a></div>
+</div></div>
+<script type="module" src="/src/play/slots.ts"></script>
+</body></html>

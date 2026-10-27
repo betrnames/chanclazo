@@ -14,6 +14,10 @@
     {
       "source": "/lore",
       "destination": "/lore.html"
+    },
+    {
+      "source": "/slots",
+      "destination": "/slots.html"
     }
   ],
   "redirects": [
@@ -60,7 +64,7 @@
   ],
   "headers": [
     {
-      "source": "/(fling|match|lore)?(.html)?",
+      "source": "/(fling|match|lore|slots)?(.html)?",
       "headers": [
         {
           "key": "Cache-Control",
