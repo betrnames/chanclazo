@@ -136,7 +136,8 @@ import GameCard from '../components/GameCard.astro';
     display:flex;
     flex-direction:column;
     padding:max(6px,env(safe-area-inset-top)) 0 0;
-    overflow:hidden;
+    overflow-x:clip;
+    overflow-y:hidden;
   }
   .hero-rail{position:relative;z-index:6;padding:0 clamp(8px,2vw,20px)}
 
@@ -145,7 +146,7 @@ import GameCard from '../components/GameCard.astro';
     z-index:4;
     flex:1;
     display:grid;
-    grid-template-columns:minmax(120px,0.9fr) minmax(0,min(46vw,500px)) minmax(120px,0.9fr);
+    grid-template-columns:minmax(100px,0.75fr) minmax(0,min(56vw,640px)) minmax(100px,0.75fr);
     grid-template-rows:1fr;
     grid-template-areas: "left focal right";
     align-items:start;
@@ -165,7 +166,7 @@ import GameCard from '../components/GameCard.astro';
     z-index:10;
     padding:0 clamp(8px,2vw,20px) 8px;
     min-width:0;
-    overflow:hidden;
+    overflow:visible;
     max-width:100%;
     align-self:start;
   }
@@ -273,7 +274,8 @@ import GameCard from '../components/GameCard.astro';
       align-items:flex-end;
       justify-content:center;
       gap:clamp(6px,2vw,14px);
-      padding:4px 12px 0;
+      padding:2px 10px 0;
+      margin-top:0;
       z-index:5;
       position:relative;
     }
@@ -288,11 +290,17 @@ import GameCard from '../components/GameCard.astro';
       grid-template-areas: "focal";
       align-items:start;
       padding:0 12px 0;
+      flex:0 0 auto; /* do NOT expand — was pushing cast to bottom of 100vh */
+      min-height:0;
     }
-    .focal{grid-area:focal;padding:4px 8px 4px;max-width:100%;overflow:hidden}
-    .chancla-slot{height:clamp(160px,44vw,220px);margin-bottom:8px}
-    .hook{margin:6px 0 10px;font-size:clamp(14px,3.8vw,18px)}
-    .cta{margin-top:4px}
+    .hero{justify-content:flex-start;min-height:0;min-height:unset}
+    .focal{grid-area:focal;padding:2px 4px 0;max-width:100%;overflow:visible}
+    .chancla-slot{height:clamp(110px,30vw,150px);margin-bottom:0}
+    .hook{margin:4px 0 6px;font-size:clamp(14px,3.8vw,18px)}
+    .cta{margin-top:2px;gap:4px}
+    .sub{margin:0}
+    .mobile-cast{padding:0 10px;margin-top:4px}
+    .fold-peek{padding:2px 16px 0;margin-top:2px}
   }
 
   @media (max-width:400px){
