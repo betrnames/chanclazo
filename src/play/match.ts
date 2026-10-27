@@ -1,3 +1,4 @@
+import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import './play.css';
 import { playHit, playStrike, playCombo, playLevelUp, playGameOver, playDodge, playShield } from '../game/sound';
 import { $, loadImg, wakeAudio, wireMute, stars, autoUnlockAudio } from './common';
@@ -74,7 +75,7 @@ function burstAt(r: number, c: number, color: string, n = 8) {
 }
 
 // Clear a set of cells, firing any specials inside (chains), then create new specials.
-function clearCells(set: Set<string>, creates: { r: number; c: number; t: number; sp: Sp }[]) {
+function clearCells(set: Set<string>, creates: { r: number; c: number; t: number; sp: Sp }[]) { if (creates.length) markBonus('match', 'special_tile');
   const queue = [...set]; const seen = new Set<string>(set);
   const add = (r: number, c: number) => { if (r < 0 || c < 0 || r >= N || c >= N) return; const k = r + ',' + c; if (!seen.has(k) && grid[r][c]) { seen.add(k); queue.push(k); } };
   while (queue.length) {
@@ -133,7 +134,7 @@ async function fireSpecialPair(r1: number, c1: number, r2: number, c2: number) {
   playStrike(); const n = clearCells(set, []); score += n * 80; hud(); await sleep(200); await gravity();
 }
 
-async function trySwap(r1: number, c1: number, r2: number, c2: number) {
+async function trySwap(r1: number, c1: number, r2: number, c2: number) { markFirstAction('match', 'swap');
   if (busy || !playing || r2 < 0 || c2 < 0 || r2 >= N || c2 >= N) return;
   busy = true; lastAct = performance.now(); swapCells(r1, c1, r2, c2); for (const tt of [grid[r1][c1], grid[r2][c2]]) if (tt) tt.sq = 1; playDodge(); await sleep(170);
   const a = grid[r2][c2]!, b = grid[r1][c1]!;
@@ -249,6 +250,6 @@ Promise.all([...TILE_SRC.slice(0, 4).map(loadImg), loadImg('/play/t_chancla.webp
   IMG.push(...a.slice(0, 4)); [chanclaImg, skullImg, pinataImg, bgImg] = a.slice(4) as HTMLImageElement[];
   go.disabled = false; go.textContent = 'PLAY!'; newBoard(); requestAnimationFrame(frame);
 });
-const start = () => { wakeAudio(); $('start').classList.add('hidden'); $('end').classList.add('hidden'); score = 0; moves = MOVES; hud(); newBoard(); playing = true; busy = false; };
+const start = () => { wakeAudio(); markGameStart('match'); $('start').classList.add('hidden'); $('end').classList.add('hidden'); score = 0; moves = MOVES; hud(); newBoard(); playing = true; busy = false; };
 go.onclick = start; $('again').onclick = start;
 (window as any).__match = { grid, trySwap, findRuns, get state() { return { score, moves, playing, busy }; }, cellPos: (r: number, c: number) => ({ x: bx + (c + 0.5) * cell, y: by + (r + 0.5) * cell }) };

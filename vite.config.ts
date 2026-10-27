@@ -3,8 +3,18 @@ import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 // https://vite.dev/config/
+function htmlEnv() {
+  const site = process.env.VITE_SITE_URL || 'https://chanclazo.com';
+  return {
+    name: 'html-env',
+    transformIndexHtml(html: string) {
+      return html.replaceAll('%VITE_SITE_URL%', site);
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), htmlEnv()],
   server: {
     host: true,
   },

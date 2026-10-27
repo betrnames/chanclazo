@@ -1,3 +1,4 @@
+import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import './play.css';
 import Matter from 'matter-js';
 import { playLevelUp, playGameOver } from '../game/sound';
@@ -244,7 +245,7 @@ cv.addEventListener('pointermove', (e) => {
   let dx = p.x - dragStart.x, dy = p.y - dragStart.y; const d = Math.hypot(dx, dy);
   if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy }; A.stretch(Math.hypot(dx, dy) / MAXPULL);
 });
-function makeShot(x: number, y: number, vx: number, vy: number) {
+function makeShot(x: number, y: number, vx: number, vy: number) { markFirstAction('fling', 'throw');
   const si = SHOT_INFO[shotType];
   const b = Bodies.circle(x, y, si.r, { density: si.density, restitution: 0.25, friction: 0.5, frictionAir: 0.004 });
   Composite.add(world, b); Body.setVelocity(b, { x: vx, y: vy }); Body.setAngularVelocity(b, 0.35); flying.push(b); return b;
@@ -256,7 +257,7 @@ const release = () => {
   armed = true; split = false; shotAt = performance.now(); shotsLeft--; throwKOs = 0; abuelaKick = 1; vib(15);
   { const pw = Math.hypot(pull.x, pull.y) / MAXPULL; A.twang(shotType === 'boot' ? pw * 0.4 : pw); A.whoosh(pw); } pull = { x: 0, y: 0 }; hud();
 };
-function doSplit() {
+function doSplit() { markBonus('fling', 'triple_split');
   const s = flying[0]; if (!s) return; split = true; A.split(); vib(10);
   const v = s.velocity, sp = Math.hypot(v.x, v.y), ang = Math.atan2(v.y, v.x);
   for (const da of [-0.2, 0.2]) makeShot(s.position.x, s.position.y, Math.cos(ang + da) * sp, Math.sin(ang + da) * sp);
@@ -438,6 +439,7 @@ let started = false, countdown: number | null = null;
 function safe(label: string, fn: () => void) { try { fn(); } catch (err) { report(`${label}: ${(err as Error)?.message || err}`); } }
 function startGame() {
   if (started) return; started = true;
+  markGameStart('fling');
   if (countdown !== null) { clearInterval(countdown); countdown = null; }
   safe('ui', () => { startScreen.classList.add('hidden'); startScreen.style.display = 'none'; });
   playing = true; last = performance.now();

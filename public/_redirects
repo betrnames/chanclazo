@@ -1,0 +1,13 @@
+# Cloudflare Pages — ported from vercel.json (pretty URLs + legacy game redirects)
+/fling          /fling.html          200
+/match          /match.html          200
+/lore           /lore.html           200
+/slots          /slots.html          200
+/demos          /                    302
+/demos.html     /                    302
+/survival       /                    302
+/survival.html  /                    302
+/strike         /                    302
+/strike.html    /                    302
+/cruise         /                    302
+/cruise.html    /                    302

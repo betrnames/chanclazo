@@ -1,0 +1,22 @@
+/
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/fling
+  Cache-Control: no-cache, no-store, must-revalidate
+/match
+  Cache-Control: no-cache, no-store, must-revalidate
+/slots
+  Cache-Control: no-cache, no-store, must-revalidate
+/lore
+  Cache-Control: no-cache, no-store, must-revalidate
+/fling.html
+  Cache-Control: no-cache, no-store, must-revalidate
+/match.html
+  Cache-Control: no-cache, no-store, must-revalidate
+/slots.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/og.png
+  Cache-Control: public, max-age=3600
+  Content-Type: image/png

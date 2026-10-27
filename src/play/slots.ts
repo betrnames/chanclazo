@@ -1,3 +1,4 @@
+import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import { $, loadImg, autoUnlockAudio, wakeAudio } from './common';
 import * as A from './slotsAudio';
 
@@ -35,6 +36,7 @@ const imgs: Record<string, HTMLImageElement> = {};
 const pinataVars = ['pinata_llama', 'pinata_rosa', 'pinata_azul', 'pinata_lima'];
 
 let credits = START_CREDITS;
+let startedOnce = false;
 let betIdx = 1;
 let lastWin = 0;
 let freeSpins = 0;
@@ -167,6 +169,8 @@ function spawnConfetti(n: number, x: number, y: number) {
 function startSpin(forceGrid?: Sym[][]) {
   if (mode !== 'idle') return;
   A.unlock(); wakeAudio();
+  if (!startedOnce) { startedOnce = true; markGameStart('slots'); }
+  markFirstAction('slots', 'spin');
   const cost = freeSpins > 0 ? 0 : bet();
   if (credits < cost) { toast = 'Out of free credits — tap + to top up'; toastT = 2; return; }
   if (freeSpins === 0) credits -= cost;
@@ -246,6 +250,7 @@ function maybeStartFeatures() {
 }
 
 function startExpand(col: number) {
+  markBonus('slots', 'chancla_wild');
   mode = 'expand';
   expandReel = col;
   expandProg = 0;
@@ -259,6 +264,7 @@ function startExpand(col: number) {
 }
 
 function startAbuela() {
+  markBonus('slots', 'abuela_chanclazo');
   mode = 'abuela';
   abuelaProg = 0;
   abuelaCells = [];
@@ -276,6 +282,7 @@ function startAbuela() {
 }
 
 function enterPick() {
+  markBonus('slots', 'pick_pinata');
   mode = 'pick';
   pickPicksLeft = 3;
   pickTotal = 0;
@@ -349,6 +356,7 @@ function pickAt(x: number, y: number) {
 }
 
 function enterBonus() {
+  markBonus('slots', 'pinata_smash');
   mode = 'bonus';
   bonusMult = 1; bonusHits = 0; bonusTotal = 0; bonusTimer = 12; smashFx = [];
   A.smashFanfare();
