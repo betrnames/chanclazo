@@ -3,8 +3,8 @@ import { $, loadImg, autoUnlockAudio, wakeAudio } from './common';
 import * as A from './slotsAudio';
 
 // ── Free-play only. Credits never buy or cash anything. ─────────────────────
-const START_CREDITS = 1000;
-const BETS = [5, 10, 20, 50];
+const START_CREDITS = 3000;
+const BETS = [1, 5, 10, 25, 50, 100];
 const COLS = 5;
 const ROWS = 4;
 // Tuned for ~2% free-spin triggers and ~96% RTP (see sim). Index = scatter count.
@@ -37,7 +37,7 @@ const pinataVars = ['pinata_llama', 'pinata_rosa', 'pinata_azul', 'pinata_lima']
 
 let credits = START_CREDITS;
 let startedOnce = false;
-let betIdx = 1;
+let betIdx = 2;
 let lastWin = 0;
 let freeSpins = 0;
 let freeMult = 1;
