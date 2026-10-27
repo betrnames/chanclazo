@@ -10,9 +10,12 @@ const letters = ['C','h','a','n','c','l','a','z','o'];
 <style>
   .letters{
     margin:0;line-height:.95;letter-spacing:1px;text-transform:uppercase;
-    display:flex;flex-wrap:nowrap;justify-content:center;max-width:100%;
+    display:flex;flex-wrap:nowrap;justify-content:center;
+    width:100%;max-width:100%;
+    white-space:nowrap;
+    overflow:visible;
   }
-  @media (max-width:420px){.letters{flex-wrap:wrap}}
+  .letters span{flex:none}
   .letters span{
     display:inline-block;
     animation:wob 2.2s ease-in-out infinite;
@@ -24,7 +27,7 @@ const letters = ['C','h','a','n','c','l','a','z','o'];
   }
 
   /* (1) Original Impact wordmark + arcade outline (from live main) */
-  .opt-1 .letters{font-family:Impact,"Arial Black",sans-serif;font-size:clamp(52px,14vw,140px)}
+  .opt-1 .letters{font-family:Impact,"Arial Black",sans-serif;font-size:clamp(36px,7.2vw,84px)}
   .opt-1 .letters span{
     color:#f3e9d2;
     -webkit-text-stroke:clamp(1px,.2vw,3px) #2a0a00;
@@ -33,7 +36,7 @@ const letters = ['C','h','a','n','c','l','a','z','o'];
   }
 
   /* (2) Lotería / folk-poster — Lilita One */
-  .opt-2 .letters{font-family:LilitaOne,Impact,sans-serif;font-size:clamp(48px,13vw,128px);letter-spacing:.02em}
+  .opt-2 .letters{font-family:LilitaOne,Impact,sans-serif;font-size:clamp(34px,6.8vw,80px);letter-spacing:.02em}
   .opt-2 .letters span{
     color:#fff8e7;
     -webkit-text-stroke:clamp(2px,.35vw,5px) #2a0a00;
@@ -42,7 +45,7 @@ const letters = ['C','h','a','n','c','l','a','z','o'];
   }
 
   /* (3) Rótulo / sign-painter — Frijole, marigold + pink */
-  .opt-3 .letters{font-family:Frijole,EmblemaOne,Impact,sans-serif;font-size:clamp(40px,11vw,110px);letter-spacing:.04em}
+  .opt-3 .letters{font-family:Frijole,EmblemaOne,Impact,sans-serif;font-size:clamp(26px,5.8vw,68px);letter-spacing:.02em}
   .opt-3 .letters span{
     color:#ffd43b;
     -webkit-text-stroke:clamp(2px,.3vw,4px) #2a0a00;

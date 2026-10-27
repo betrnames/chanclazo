@@ -14,22 +14,18 @@ import GameCard from '../components/GameCard.astro';
     <Petals />
     <div class="hero-rail">
       <PapelPicado />
-      <!-- Llama swings from the picado line — hero character, prominent -->
-      <div class="llama-swing" data-reveal>
-        <Character kind="llama" class="llama-hero" alt="Llama piñata swinging from the papel picado" />
-      </div>
     </div>
 
     <div class="hero-stage">
-      <!-- Left edge: abuela winding up, cropped, pointing energy toward CTA -->
-      <div class="layer left" aria-hidden="false">
+      <div class="layer left desk-only">
         <Character kind="abuela" class="abuela-windup" />
       </div>
 
-      <!-- Focal column: title → chancla → hook → PLAY NOW -->
       <div class="focal">
+        <div class="chancla-slot">
+          <ChanclaAnimation />
+        </div>
         <MarqueeTitle />
-        <ChanclaAnimation />
         <p class="hook">When words fail, the Chanclazo speaks.</p>
         <div class="cta">
           <PlayNow href="#games" />
@@ -37,11 +33,25 @@ import GameCard from '../components/GameCard.astro';
         </div>
       </div>
 
-      <!-- Right edge: heads peeking, framing toward center/CTA -->
-      <div class="layer right">
-        <Character kind="lucha" class="peek-lucha" />
-        <Character kind="calaca" class="peek-calaca" />
+      <div class="layer right desk-only">
+        <div class="llama-swing" data-reveal>
+          <Character kind="llama" class="llama-hero" alt="Llama piñata swinging from the papel picado" />
+        </div>
+        <div class="heads">
+          <Character kind="lucha" class="peek-lucha" />
+          <Character kind="calaca" class="peek-calaca" />
+        </div>
       </div>
+    </div>
+
+    <!-- Mobile: full-face cast BELOW CTA (never under title, never headless crop) -->
+    <div class="mobile-cast" aria-label="Characters">
+      <Character kind="abuela" class="m-abuela" />
+      <div class="llama-swing m-llama" data-reveal>
+        <Character kind="llama" class="llama-hero" alt="Llama piñata" />
+      </div>
+      <Character kind="lucha" class="m-lucha" />
+      <Character kind="calaca" class="m-calaca" />
     </div>
 
     <div class="fold-peek" aria-hidden="true">
@@ -49,7 +59,6 @@ import GameCard from '../components/GameCard.astro';
       <div class="peek-bar"></div>
     </div>
 
-    <!-- Title option switcher (preview only) -->
     <nav class="title-switch" aria-label="Title style options">
       <a href="/?title=1" class="on" title="Original wordmark">1</a>
       <a href="/?title=2" title="Lotería poster">2</a>
@@ -117,7 +126,6 @@ import GameCard from '../components/GameCard.astro';
 </Base>
 
 <style>
-  /* Spacing scale + solid marigold hero */
   .hero{
     --hero-bg:#ff8c1a;
     position:relative;
@@ -132,73 +140,99 @@ import GameCard from '../components/GameCard.astro';
   }
   .hero-rail{position:relative;z-index:6;padding:0 clamp(8px,2vw,20px)}
 
-  /* Llama: hangs from picado at UPPER-LEFT — does NOT cover title */
+  .hero-stage{
+    position:relative;
+    z-index:4;
+    flex:1;
+    display:grid;
+    grid-template-columns:minmax(120px,0.9fr) minmax(0,min(46vw,500px)) minmax(120px,0.9fr);
+    grid-template-rows:1fr;
+    grid-template-areas: "left focal right";
+    align-items:start;
+    gap:clamp(8px,2vw,20px);
+    padding:clamp(8px,2vw,20px) clamp(12px,3vw,28px) clamp(8px,2vh,20px);
+    min-height:0;
+  }
+
+  /* Focal stack — reserved vertical slots; chancla never shares a row with text */
+  .focal{
+    grid-area:focal;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:0;
+    z-index:10;
+    padding:0 clamp(8px,2vw,20px) 8px;
+    min-width:0;
+    overflow:hidden;
+    max-width:100%;
+    align-self:start;
+  }
+  .chancla-slot{
+    /* Layout box tall enough for spinny scale(1.15)+rotate visual extent
+       (transforms do not expand layout — pad so title starts clear below). */
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:clamp(220px,24vw,270px);
+    margin:0 0 8px;
+    padding:0;
+    overflow:visible;
+    flex:none;
+  }
+  .hook{
+    margin:8px 0 12px;
+    font-size:clamp(15px,3.2vw,22px);
+    font-style:italic;font-weight:600;max-width:18em;
+    color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.45);
+    position:relative;z-index:2;
+  }
+  .cta{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:11}
+  .sub{margin:0;font-family:Impact,sans-serif;font-size:clamp(10px,2vw,13px);letter-spacing:.28em;text-transform:uppercase;opacity:.85}
+
+  .layer{position:relative;height:100%;min-height:0;pointer-events:none;z-index:2;display:flex}
+  .layer.left{
+    grid-area:left;
+    align-self:stretch;
+    flex-direction:column;
+    justify-content:flex-end;
+    align-items:flex-start;
+    margin-left:clamp(-16px,-1.5vw,0);
+    margin-bottom:0;
+    overflow:visible;
+  }
+  .layer.left :global(.abuela-windup){width:clamp(140px,17vw,210px)}
+  .layer.left :global(.abuela-windup img){width:100%;height:auto;display:block}
+
+  .layer.right{
+    grid-area:right;
+    align-self:stretch;
+    flex-direction:column;
+    justify-content:flex-end;
+    align-items:center;
+    gap:clamp(8px,1.2vw,14px);
+    padding-bottom:0;
+    overflow:visible;
+    margin:0;
+  }
+  .layer.right .llama-swing{width:clamp(110px,16vw,180px);margin:0 0 6px}
+  .layer.right .heads{display:flex;flex-direction:row;align-items:flex-end;justify-content:center;gap:clamp(8px,1.2vw,14px);margin:0}
+  :global(.peek-lucha){width:clamp(90px,12vw,150px);transform:rotate(8deg)}
+  :global(.peek-calaca){width:clamp(84px,11vw,140px);transform:rotate(-5deg)}
+  :global(.peek-lucha.on){transform:rotate(8deg) translateY(0)}
+  :global(.peek-calaca.on){transform:rotate(-5deg) translateY(0)}
+
   .llama-swing{
-    position:absolute;
-    top:clamp(20px,4.5vw,36px);
-    left:clamp(4px,2vw,24px);
-    width:clamp(88px,18vw,150px);
-    z-index:7;
     transform-origin:top center;
     animation:swing 3.2s ease-in-out infinite;
-    pointer-events:none;
   }
   .llama-swing :global(.char){width:100%}
   @keyframes swing{
     0%,100%{transform:rotate(-10deg)}
     50%{transform:rotate(10deg)}
   }
-
-  .hero-stage{
-    position:relative;
-    z-index:4;
-    flex:1;
-    display:grid;
-    grid-template-columns:minmax(72px,1fr) minmax(0,560px) minmax(72px,1fr);
-    align-items:center;
-    gap:0;
-    padding:clamp(8px,2vw,20px) clamp(8px,2vw,24px) 0;
-    min-height:0;
-  }
-
-   .focal{
-    grid-column:2;
-    display:flex;flex-direction:column;align-items:center;text-align:center;
-    gap:2px;
-    z-index:10;
-    padding:0 4px var(--space-3);
-  }
-  .hook{
-    margin:6px 0 10px;
-    font-size:clamp(15px,3.2vw,22px);
-    font-style:italic;font-weight:600;max-width:18em;
-    color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.45);
-  }
-  .cta{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:4px}
-  .sub{margin:0;font-family:Impact,sans-serif;font-size:clamp(10px,2vw,13px);letter-spacing:.28em;text-transform:uppercase;opacity:.85}
-
-  /* Side layers: absolute-ish framing, cropped into edges, behind focal */
-  .layer{position:relative;height:100%;min-height:180px;pointer-events:none;z-index:2}
-  .layer.left{
-    grid-column:1;align-self:end;
-    display:flex;justify-content:flex-start;align-items:flex-end;
-    margin-left:clamp(-48px,-5vw,-8px);
-    margin-bottom:clamp(24px,6vh,72px);
-    transform:rotate(-5deg);transform-origin:bottom left;
-  }
-  .layer.right{
-    grid-column:3;align-self:center;
-    display:flex;flex-direction:column;align-items:flex-end;gap:clamp(10px,2vw,24px);
-    margin-right:clamp(-36px,-4vw,-4px);
-    padding-bottom:10%;
-  }
-  .abuela-windup{width:clamp(150px,26vw,300px)}
-  .peek-lucha{width:clamp(78px,13vw,148px)}
-  .peek-calaca{width:clamp(68px,11vw,128px)}
-  .layer.right :global(.peek-lucha.on){transform:rotate(9deg) translateY(0)}
-  .layer.right :global(.peek-calaca.on){transform:rotate(-5deg) translateY(0)}
-  .layer.right :global(.peek-lucha){transform:rotate(9deg)}
-  .layer.right :global(.peek-calaca){transform:rotate(-5deg)}
 
   .fold-peek{
     z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;
@@ -208,7 +242,6 @@ import GameCard from '../components/GameCard.astro';
     width:min(100%,440px);height:20px;background:var(--cream);
     border-radius:14px 14px 0 0;box-shadow:0 -4px 0 rgba(42,10,0,.08);
   }
-
   .title-switch{
     position:absolute;top:max(8px,env(safe-area-inset-top));right:10px;z-index:30;
     display:flex;gap:6px;
@@ -217,41 +250,61 @@ import GameCard from '../components/GameCard.astro';
     width:36px;height:36px;display:grid;place-items:center;
     border:2px solid var(--ink);border-radius:8px;
     background:rgba(255,244,224,.9);font-family:Impact,sans-serif;
-    text-decoration:none;font-size:14px;min-width:var(--tap);min-height:var(--tap);
+    text-decoration:none;font-size:14px;min-width:44px;min-height:44px;
   }
   .title-switch a.on{background:#ffd43b;box-shadow:2px 2px 0 var(--ink)}
 
-  /* Mobile: overlay side characters so focal stack stays above-the-fold */
-  @media (max-width:720px){
+  @media (max-width:1024px){
+    .hero-stage{grid-template-columns:minmax(90px,.85fr) minmax(0,1.15fr) minmax(90px,.85fr)}
+    .layer.left :global(.abuela-windup){width:clamp(120px,18vw,180px)}
+    .layer.right .llama-swing{width:clamp(96px,15vw,150px)}
+    :global(.peek-lucha){width:clamp(80px,12vw,120px)}
+    :global(.peek-calaca){width:clamp(72px,11vw,110px)}
+  }
+
+  .mobile-cast{display:none}
+  .desk-only{display:flex}
+
+  /* Mobile: smaller FULL-BODY abuela from bottom-left (face visible), never headless */
+  @media (max-width:768px){
+    .desk-only{display:none!important}
+    .mobile-cast{
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+      gap:clamp(6px,2vw,14px);
+      padding:4px 12px 0;
+      z-index:5;
+      position:relative;
+    }
+    .mobile-cast :global(.m-abuela){width:clamp(88px,28vw,120px);flex:none}
+    .mobile-cast :global(.m-abuela img){width:100%;height:auto}
+    .mobile-cast .m-llama, .mobile-cast :global(.m-llama){width:clamp(64px,20vw,92px);flex:none;animation:swing 3.2s ease-in-out infinite;transform-origin:top center}
+    .mobile-cast :global(.m-lucha){width:clamp(56px,16vw,78px);flex:none;transform:rotate(8deg)}
+    .mobile-cast :global(.m-calaca){width:clamp(50px,15vw,70px);flex:none;transform:rotate(-4deg)}
     .hero-stage{
       grid-template-columns:1fr;
-      grid-template-rows:1fr;
-      padding-top:4px;
+      grid-template-rows:auto;
+      grid-template-areas: "focal";
+      align-items:start;
+      padding:0 12px 0;
     }
-    .focal{grid-column:1;padding-bottom:8px}
-    .layer.left,.layer.right{
-      position:absolute;bottom:8%;height:auto;min-height:0;margin:0;z-index:3;
-    }
-    .layer.left{left:0;bottom:4%;margin-left:-18px}
-    .layer.right{right:0;bottom:6%;margin-right:-12px;padding-bottom:0}
-    .abuela-windup{width:clamp(88px,30vw,120px);opacity:.95}
-    .peek-lucha{width:clamp(58px,19vw,88px)}
-    .peek-calaca{width:clamp(50px,17vw,76px)}
-    .llama-swing{width:clamp(64px,20vw,92px);left:4px}
-    /* corner peeks only — leave title→chancla→PLAY clear */
-    .layer.left{bottom:0;left:-20px;max-height:30%;overflow:hidden}
-    .layer.right{bottom:0;right:-14px;max-height:34%;overflow:hidden}
-    .focal{padding-bottom:12px}
-    .cta{position:relative;z-index:11}
-    /* Ensure CTA in thumb zone — upper-mid */
-    .hook{margin:4px 0 8px;font-size:clamp(14px,3.8vw,18px)}
+    .focal{grid-area:focal;padding:4px 8px 4px;max-width:100%;overflow:hidden}
+    .chancla-slot{height:clamp(160px,44vw,220px);margin-bottom:8px}
+    .hook{margin:6px 0 10px;font-size:clamp(14px,3.8vw,18px)}
+    .cta{margin-top:4px}
+  }
+
+  @media (max-width:400px){
+    .mobile-cast :global(.m-abuela){width:clamp(84px,30vw,110px)}
   }
 
   @media (orientation:landscape) and (max-height:480px){
-    .llama-swing{width:64px}
     .fold-peek{display:none}
-    .abuela-windup{width:18vw}
-    .peek-lucha,.peek-calaca{width:10vw}
+    .abuela-windup{width:22vw}
+    .llama-swing{width:14vw}
+    .peek-lucha,.peek-calaca{width:11vw}
+    
   }
 
   .fin{text-align:center;padding:12vh 18px 6vh;background:var(--cream);color:var(--ink)}
