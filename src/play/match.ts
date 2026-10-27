@@ -1,5 +1,6 @@
 import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import './play.css';
+import { showLeaderboard } from './leaderboard';
 import { playHit, playStrike, playCombo, playLevelUp, playGameOver, playDodge, playShield } from '../game/sound';
 import { $, loadImg, wakeAudio, wireMute, stars, autoUnlockAudio } from './common';
 
@@ -161,6 +162,7 @@ function checkEnd() {
     if (win) level = level < LEVELS.length ? level + 1 : 1;
     $('endStars').textContent = stars(s);
     $('endMsg').textContent = win ? `Score ${score} with ${moves} moves to spare.` : `Score ${score}. The goal was ${GOAL}. Try making more chanclas and bombs!`;
+    showLeaderboard('match', 'Chanclazo Match', score, win ? level - 1 || LEVELS.length : level, '/match');
     setTimeout(() => $('end').classList.remove('hidden'), 500);
   }
 }

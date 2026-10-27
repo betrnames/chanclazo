@@ -1,5 +1,6 @@
 import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import './play.css';
+import { showLeaderboard } from './leaderboard';
 import Matter from 'matter-js';
 import { playLevelUp, playGameOver } from '../game/sound';
 import { $, loadImg, wakeAudio, report } from './common';
@@ -285,6 +286,7 @@ function finish(win: boolean) {
   next.onclick = (e) => { e.stopPropagation(); if (!win) build(level); else if (canNext) build(level + 1); else openMap(); };
   ($('retry') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); e.stopPropagation(); build(level); };
   ($('toMap') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); e.stopPropagation(); openMap(); };
+  showLeaderboard('fling', 'Chancla Strike', score, level + 1, '/fling');
   setTimeout(() => $('end').classList.remove('hidden'), win ? 300 : 600);
 }
 function checkFlow() {
