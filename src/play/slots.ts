@@ -465,6 +465,35 @@ function marigold(x: number, y: number, r: number) {
 
 const NICHES: [string, string][] = [['abuela', 'CHANCLAZO'], ['lucha', 'CHANCLA WILD'], ['calaca', 'PIÑATA SMASH']];
 
+// Lit face sprite (cached per size): rim highlight + radial light/shade, composited onto the face's own alpha.
+const faceCache = new Map<string, HTMLCanvasElement>();
+function litFace(im: HTMLImageElement, w: number, h: number) {
+  const k = `${im.src}|${Math.round(w)}|${Math.round(h)}`; let c = faceCache.get(k); if (c) return c;
+  const pad = 6; c = document.createElement('canvas'); c.width = Math.round(w + pad * 2); c.height = Math.round(h + pad * 2);
+  const x = c.getContext('2d')!;
+  // rim: warm silhouette offset up-left
+  const sil = document.createElement('canvas'); sil.width = c.width; sil.height = c.height; const sx = sil.getContext('2d')!;
+  sx.drawImage(im, pad, pad, w, h); sx.globalCompositeOperation = 'source-in'; sx.fillStyle = '#fff1b8'; sx.fillRect(0, 0, sil.width, sil.height);
+  x.drawImage(sil, -2.5, -2.5);
+  x.drawImage(im, pad, pad, w, h);
+  x.globalCompositeOperation = 'source-atop';
+  const lg = x.createRadialGradient(pad + w * 0.32, pad + h * 0.25, 2, pad + w * 0.5, pad + h * 0.55, Math.max(w, h) * 0.75);
+  lg.addColorStop(0, 'rgba(255,255,255,.38)'); lg.addColorStop(0.45, 'rgba(255,255,255,0)'); lg.addColorStop(1, 'rgba(60,20,90,.38)');
+  x.fillStyle = lg; x.fillRect(0, 0, c.width, c.height);
+  faceCache.set(k, c); return c;
+}
+function draw3DFace(im: HTMLImageElement, cx: number, cy: number, w: number, h: number, i: number) {
+  const t = performance.now() / 1000 + i * 1.3;
+  const c = litFace(im, w, h);
+  ctx.save();
+  ctx.translate(cx, cy + Math.sin(t * 1.6) * 2);
+  ctx.rotate(Math.sin(t * 1.1) * 0.04);
+  ctx.scale(0.95 + 0.05 * Math.cos(t * 0.9), 1); // subtle yaw (perspective turn)
+  ctx.shadowColor = 'rgba(58,20,80,.55)'; ctx.shadowBlur = 10; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 6;
+  ctx.drawImage(c, -c.width / 2, -c.height / 2);
+  ctx.restore();
+}
+
 function drawCabinet(box: {x:number;y:number;w:number;h:number}, g: ReturnType<typeof cellGeom>) {
   const STONE = '#7b4fb5', STONE_D = '#5a3590', STONE_L = '#9d74d6';
   const frameTop = box.y + g.nicheH;
@@ -480,10 +509,16 @@ function drawCabinet(box: {x:number;y:number;w:number;h:number}, g: ReturnType<t
     ctx.beginPath(); ctx.moveTo(ix, frameTop + 2); ctx.lineTo(ix, ny + nw * 0.5); ctx.arc(ix + iw / 2, ny + nw * 0.5, iw / 2, Math.PI, 0); ctx.lineTo(ix + iw, frameTop + 2); ctx.closePath(); ctx.fill();
     const im = imgs[NICHES[i][0] + '_face'];
     if (im && im.complete && im.width) {
+      // 3D medallion backing inside the arch
+      const mr = iw * 0.46, mx = nx + nw / 2, my = frameTop - g.nicheH * 0.46;
+      const mg = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.35, mr * 0.1, mx, my, mr);
+      mg.addColorStop(0, '#d9b8ff'); mg.addColorStop(0.6, '#8a5cc8'); mg.addColorStop(1, '#4a2a78');
+      ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = Math.max(2, mr * 0.06); ctx.stroke();
       // Same visible head height in every niche, centered in the arch, capped by arch width.
       let h2 = Math.min(g.nicheH * 0.9, nw * 0.62 * 1.15), hw = im.width * (h2 / im.height);
       if (hw > iw * 0.92) { hw = iw * 0.92; h2 = im.height * (hw / im.width); }
-      ctx.drawImage(im, nx + nw / 2 - hw / 2, frameTop - h2 + 2, hw, h2);
+      draw3DFace(im, nx + nw / 2, frameTop - h2 / 2 + 2, hw, h2, i);
     }
   }
   // carved frame body
@@ -806,8 +841,10 @@ function drawFx(dt: number) {
 
 function drawBg() {
   // sky
-  ctx.fillStyle = '#8fd3f4'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#ffe28a'; ctx.beginPath(); ctx.arc(W * 0.85, H * 0.12, Math.min(W, H) * 0.07, 0, Math.PI * 2); ctx.fill();
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#ffc15e'); sky.addColorStop(0.35, '#ff8a5c'); sky.addColorStop(0.7, '#e2497a'); sky.addColorStop(1, '#8e44c9');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fff1b8'; ctx.beginPath(); ctx.arc(W * 0.85, H * 0.12, Math.min(W, H) * 0.07, 0, Math.PI * 2); ctx.fill();
   // warm buildings
   const cols = ['#f4a261', '#e76f51', '#ffcf56', '#f28482', '#2ec4b6', '#f7a21b'];
   const bw = Math.max(70, W / 9);
@@ -829,7 +866,7 @@ function drawBg() {
       const y = yy + Math.sin(((x + fw / 2) / W) * Math.PI) * amp;
       ctx.fillStyle = flags[(k + (yy > H * 0.05 ? 3 : 0)) % flags.length];
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + fw, y); ctx.lineTo(x + fw, y + fw * 0.9); ctx.lineTo(x + fw / 2, y + fw * 1.15); ctx.lineTo(x, y + fw * 0.9); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#8fd3f4'; ctx.beginPath(); ctx.arc(x + fw / 2, y + fw * 0.45, fw * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffc15e'; ctx.beginPath(); ctx.arc(x + fw / 2, y + fw * 0.45, fw * 0.14, 0, Math.PI * 2); ctx.fill();
     }
   }
 }
