@@ -10,7 +10,14 @@ const games = [
 <Base title="Chanclazo: Choose your game">
 <main class="choose">
   <div class="rail" aria-hidden="true"><PapelPicado /></div>
-  <header><a class="back" href="/">← Home</a><h1>Choose your game</h1></header>
+  <header>
+    <a class="navbtn homebtn" id="navHome" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 11.2 12 3.5l9 7.7" fill="none" stroke="#3b1a5c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.6v-5.6h3.8v5.6h4.6V10" fill="none" stroke="#3b1a5c" stroke-width="2.6" stroke-linejoin="round"/></svg></a>
+    <button class="navbtn menubtn" id="navMenu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navPanel" hidden><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="#3b1a5c" stroke-width="2.8" stroke-linecap="round"/></svg></button>
+    <nav class="navpanel" id="navPanel" aria-label="Site menu" hidden>
+      <a href="/">Home</a><a href="/slots?start=1">Piñata Slots</a><a href="/match?start=1">Chanclazo Match</a><a href="/fling?start=1">Chancla Strike</a>
+      <button type="button" id="navMusic">Music: on</button>
+    </nav>
+    <h1>Choose your game</h1></header>
   <div class="car" role="region" aria-roledescription="carousel" aria-label="Games">
     <button class="arrow prev" type="button" aria-label="Previous game">‹</button>
     <div class="track" id="track" tabindex="0">
@@ -45,7 +52,12 @@ const games = [
     background:radial-gradient(ellipse at 50% 35%,#3d1760 0%,#1f0a30 45%,#0b0301 100%);overflow:hidden}
   .rail{opacity:.9}
   header{position:relative;text-align:center;padding:4px 14px 0}
-  .back{position:absolute;left:14px;top:6px;color:#3b1a5c;background:#ffd23f;border:3px solid #3b1a5c;border-radius:12px;padding:3px 12px;text-decoration:none;font-size:16px}
+  .navbtn{position:absolute;left:12px;top:4px;z-index:30;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:linear-gradient(180deg,#fff2a8,#ffd23f 50%,#f4a000);border:3px solid #3b1a5c;border-radius:14px;box-shadow:0 4px 0 #3b1a5c;cursor:pointer;padding:0}
+  .navbtn:focus-visible,.navpanel a:focus-visible,.navpanel button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+  .navbtn[hidden],.navpanel[hidden]{display:none}
+  .navpanel{position:absolute;left:12px;top:60px;z-index:30;display:flex;flex-direction:column;min-width:220px;background:#24092f;border:3px solid #ffd23f;border-radius:16px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,.6);text-align:left}
+  .navpanel a,.navpanel button{display:block;min-height:44px;line-height:44px;padding:0 14px;border-radius:10px;color:#ffe9c2;text-decoration:none;font:400 20px LilitaOne,system-ui,sans-serif;background:none;border:0;text-align:left;cursor:pointer}
+  .navpanel a:hover,.navpanel button:hover{background:#3d1760;color:#ffd23f}
   h1{margin:0;font-weight:400;font-size:clamp(26px,4vw,44px);color:#ffd23f;-webkit-text-stroke:5px #3b1a5c;paint-order:stroke fill;text-shadow:0 4px 0 #3b1a5c,0 0 22px rgba(255,190,60,.4)}
   .car{position:relative;flex:1;display:flex;align-items:center;min-height:0}
   .track{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;height:100%;outline:none;cursor:grab}
@@ -72,10 +84,23 @@ const games = [
   .dots button{width:12px;height:12px;border-radius:50%;border:2px solid #ffd23f;background:transparent;padding:0;cursor:pointer}
   .dots button[aria-selected="true"]{background:#ffd23f;width:28px;border-radius:8px}
   .fine{margin:0 0 max(12px,env(safe-area-inset-bottom));text-align:center;font-family:system-ui,sans-serif;font-size:12px;color:#c9b39a}
-  @media (max-width:640px){.arrow{display:none}.back{position:static;display:inline-block;margin-bottom:4px}}
+  @media (max-width:640px){.arrow{display:none}header{padding-top:8px}}
   @media (prefers-reduced-motion:reduce){.art img,.glow{animation:none}.track{scroll-behavior:auto}}
 </style>
 <script>
+  // Nav variant for Gabe to pick on preview: ?nav=home (default) or ?nav=menu
+  {
+    const menu = new URLSearchParams(location.search).get('nav') === 'menu';
+    const home = document.getElementById('navHome')!, btn = document.getElementById('navMenu') as HTMLButtonElement, panel = document.getElementById('navPanel')!;
+    const mus = document.getElementById('lmusic') as HTMLButtonElement, navMusic = document.getElementById('navMusic') as HTMLButtonElement;
+    if (menu) { home.hidden = true; btn.hidden = false; }
+    const syncMusic = () => (navMusic.textContent = /off/i.test(mus.textContent || '') ? 'Music: off' : 'Music: on');
+    const open = (o: boolean) => { panel.hidden = !o; btn.setAttribute('aria-expanded', String(o)); btn.setAttribute('aria-label', o ? 'Close menu' : 'Open menu'); if (o) { syncMusic(); (panel.querySelector('a') as HTMLElement).focus(); } };
+    btn.addEventListener('click', (e) => { e.stopPropagation(); open(panel.hidden); });
+    navMusic.addEventListener('click', (e) => { e.stopPropagation(); mus.click(); syncMusic(); });
+    addEventListener('click', (e) => { if (!panel.hidden && !panel.contains(e.target as Node)) open(false); });
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) { open(false); btn.focus(); } }, true);
+  }
   import { initLanderMusic } from '../../src/play/music';
   initLanderMusic(document.getElementById('lmusic') as HTMLButtonElement);
   const track = document.getElementById('track')!;
