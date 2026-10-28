@@ -1,6 +1,7 @@
 import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import { $, loadImg, autoUnlockAudio, wakeAudio } from './common';
 import * as A from './slotsAudio';
+import { initAudioControls } from './music';
 
 // ── Free-play only. Credits never buy or cash anything. ─────────────────────
 const START_CREDITS = 3000;
@@ -102,7 +103,7 @@ function setHud() {
     fp.style.display = ''; fp.querySelector('small')!.textContent = 'Free spins';
     $('free').textContent = `${freeSpins} ×${freeMult}`;
   } else fp.style.display = 'none';
-  const mute = $('mute'); mute.textContent = A.isMuted() ? '🔇' : '🔊';
+  
 }
 
 function weighted(): Sym {
@@ -924,7 +925,7 @@ canvas.addEventListener('pointerup', e => onPtr(e, false));
 async function boot() {
   autoUnlockAudio();
   A.unlock();
-  $('mute').onclick = (e) => { e.stopPropagation(); A.unlock(); A.setMuted(!A.isMuted()); setHud(); };
+  initAudioControls('slots', (m) => { A.setMuted(m); });
   const loads: Promise<unknown>[] = [
     loadImg('/play/t_abuela.webp').then(i => imgs.abuela = i),
     loadImg('/lp/calaca_face.webp').then(i => imgs.calaca_face = i),
@@ -946,8 +947,6 @@ async function boot() {
   $('go').onclick = () => { $('start').classList.add('hidden'); A.unlock(); wakeAudio(); };
   $('rulesBtn').onclick = () => $('rules').classList.remove('hidden');
   $('rulesClose').onclick = () => $('rules').classList.add('hidden');
-  const syncSound = () => { $('soundBtn').textContent = A.isMuted() ? 'Sound: off' : 'Sound: on'; };
-  $('soundBtn').onclick = () => { A.unlock(); A.setMuted(!A.isMuted()); setHud(); syncSound(); }; syncSound();
   $('again').onclick = () => { $('end').classList.add('hidden'); mode = 'idle'; };
 }
 boot();

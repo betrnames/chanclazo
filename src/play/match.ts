@@ -1,6 +1,8 @@
 import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import './play.css';
 import { showLeaderboard } from './leaderboard';
+import { initAudioControls, tapBlip } from './music';
+import { setMuted as setSfxMuted } from '../game/sound';
 import { playHit, playStrike, playCombo, playLevelUp, playGameOver, playDodge, playShield } from '../game/sound';
 import { $, loadImg, wakeAudio, wireMute, stars, autoUnlockAudio } from './common';
 
@@ -150,7 +152,7 @@ async function trySwap(r1: number, c1: number, r2: number, c2: number) { markFir
   if (a.sp === SP.color || b.sp === SP.color) { moves--; hud(); await fireSpecialPair(r2, c2, r1, c1); await resolve(); }
   else if (a.sp && b.sp) { moves--; hud(); const set = new Set([r1 + ',' + c1, r2 + ',' + c2]); clearCells(set, []); await sleep(200); await gravity(); await resolve(); }
   else if (findRuns().length) { moves--; hud(); await resolve([r2, c2], [r1, c1]); }
-  else { swapCells(r1, c1, r2, c2); await sleep(170); }
+  else { swapCells(r1, c1, r2, c2); tapBlip(220); await sleep(170); }
   busy = false; checkEnd();
 }
 function checkEnd() {
@@ -172,7 +174,7 @@ function checkEnd() {
 let down: { r: number; c: number; x: number; y: number } | null = null;
 cv.addEventListener('pointerdown', (e) => {
   lastAct = performance.now(); const c = Math.floor((e.clientX - bx) / cell), r = Math.floor((e.clientY - by) / cell);
-  if (r < 0 || c < 0 || r >= N || c >= N) return; down = { r, c, x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId);
+  if (r < 0 || c < 0 || r >= N || c >= N) return; down = { r, c, x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); tapBlip();
 });
 cv.addEventListener('pointermove', (e) => {
   if (!down) return; const dx = e.clientX - down.x, dy = e.clientY - down.y;
@@ -262,7 +264,7 @@ function frame(now: number) {
   requestAnimationFrame(frame);
 }
 
-autoUnlockAudio(); wireMute(); hud();
+autoUnlockAudio(); void wireMute; initAudioControls('match', setSfxMuted); hud();
 const go = $('go') as HTMLButtonElement; go.disabled = true; go.textContent = 'Loading…';
 Promise.all([...TILE_SRC.slice(0, 4).map(loadImg), loadImg('/play/t_chancla.webp'), loadImg('/play/t_skull.webp'), loadImg('/play/t_pinata.webp'), loadImg('/play/night_bg.webp')]).then((a) => {
   IMG.push(...a.slice(0, 4)); [chanclaImg, skullImg, pinataImg, bgImg] = a.slice(4) as HTMLImageElement[];

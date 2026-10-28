@@ -1,6 +1,7 @@
 import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import './play.css';
 import { showLeaderboard } from './leaderboard';
+import { initAudioControls } from './music';
 import Matter from 'matter-js';
 import { playLevelUp, playGameOver } from '../game/sound';
 import { $, loadImg, wakeAudio, report } from './common';
@@ -446,7 +447,7 @@ function startGame() {
   safe('ui', () => { startScreen.classList.add('hidden'); startScreen.style.display = 'none'; });
   playing = true; last = performance.now();
   safe('level', () => { if (totalStars() === 0) build(0); else openMap(); });
-  safe('audio', () => { wakeAudio(); A.unlock(); A.startMusic(); });
+  safe('audio', () => { wakeAudio(); A.unlock(); });
   safe('fullscreen', () => {
     const el = document.documentElement as any; const req = el.requestFullscreen;
     if (typeof req === 'function' && !document.fullscreenElement) { const pr = req.call(el); if (pr && typeof pr.then === 'function') pr.then(() => { const lk = (screen.orientation as any)?.lock?.('landscape'); if (lk?.catch) lk.catch(() => {}); }, () => {}); }
@@ -473,7 +474,7 @@ setInterval(maybeCountdown, 500);
 Promise.all(Object.entries(names).map(([k, v]) => loadImg(v).then((im) => { IMG[k] = im; if (k === 'chancla') { TINT.boot = tintImg(im, '#3b2210', 0.62); TINT.triple = tintImg(im, '#29c4e0', 0.5); } }).catch(() => report(`image failed: ${v}`))));
 document.getElementById('a2hsX')?.addEventListener('click', () => { a2hsOff = true; try { localStorage.setItem('chanclazo_a2hs_off', '1'); } catch { /* ignore */ } updateA2hs(); });
 if (/[?&]debug=1/.test(location.search)) setInterval(() => { const a = (window as any).__flingAudio; report(`audio ${a.state} · session ${a.session} · gain ${a.gain === null ? '-' : a.gain.toFixed(2)} · muted ${a.muted} · sounds ${a.played}`); }, 2000);
-safe('wireMute', () => A.wireMute($('mute') as HTMLButtonElement));
+safe('wireMute', () => { A.wireMute($('mute') as HTMLButtonElement); initAudioControls('fling', (m) => A.setMuted(m)); });
 build(0);
 onLayout(); scheduleLayout();
 requestAnimationFrame(frame);
