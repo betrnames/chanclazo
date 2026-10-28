@@ -59,7 +59,7 @@ import Base from '../layouts/Base.astro';
     const desk = a === ART.d, home = document.querySelector('.home') as HTMLElement;
     // Desktop: never crop the top (chancla band) - scale so the whole art height fits (small dark margin), cover the width;
     // on very wide screens the sides are filled with mirrored copies of the same art (no filters/tints).
-    const k = desk ? Math.min(Math.max(vw / a.w, vh / a.h), vh / (a.h * 1.1)) : (vw / vh < 9 / 16 ? Math.min : Math.max)(vw / a.w, vh / a.h);
+    const k = desk ? Math.min(Math.max(vw / a.w, vh / a.h), vh / (a.h * (vw / vh > 2 ? 1.2 : 1.1))) : (vw / vh < 9 / 16 ? Math.min : Math.max)(vw / a.w, vh / a.h);
     const ox = (vw - a.w * k) / 2, oy = (vh - a.h * k) / 2;
     home.classList.toggle('dfit', desk);
     const img = document.querySelector('.hero img') as HTMLImageElement, mirs = [document.getElementById('mirL') as HTMLImageElement, document.getElementById('mirR') as HTMLImageElement];
