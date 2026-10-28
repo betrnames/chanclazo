@@ -61,8 +61,8 @@ export function initAudioControls(game: keyof typeof VARIANTS, setSfxMuted: (m: 
   const mus = document.createElement('button'); mus.id = 'music'; mus.type = 'button';
   if (sfx) { sfx.className = (sfx.className + ' audio-btn').trim(); mus.className = sfx.className; sfx.parentElement!.insertBefore(mus, sfx); }
   const draw = () => {
-    mus.textContent = musicOn() ? '🎵 Music' : '🎵 Off'; mus.setAttribute('aria-pressed', String(musicOn())); mus.setAttribute('aria-label', 'Music on or off');
-    if (sfx) { sfx.textContent = sfxOn() ? '🔊 SFX' : '🔇 SFX'; sfx.setAttribute('aria-pressed', String(sfxOn())); sfx.setAttribute('aria-label', 'Sound effects on or off'); }
+    mus.innerHTML = musicOn() ? '🎵<span class="albl"> Music</span>' : '🎵<span class="albl"> Off</span><s class="aoff"></s>'; mus.setAttribute('aria-pressed', String(musicOn())); mus.setAttribute('aria-label', 'Music on or off');
+    if (sfx) { sfx.innerHTML = sfxOn() ? '🔊<span class="albl"> SFX</span>' : '🔇<span class="albl"> SFX</span>'; sfx.setAttribute('aria-pressed', String(sfxOn())); sfx.setAttribute('aria-label', 'Sound effects on or off'); }
     document.querySelectorAll<HTMLElement>('[data-audio="music"]').forEach((b) => (b.textContent = musicOn() ? 'Music: on' : 'Music: off'));
     document.querySelectorAll<HTMLElement>('[data-audio="sfx"]').forEach((b) => (b.textContent = sfxOn() ? 'SFX: on' : 'SFX: off'));
   };
@@ -73,7 +73,7 @@ export function initAudioControls(game: keyof typeof VARIANTS, setSfxMuted: (m: 
   document.querySelectorAll<HTMLElement>('[data-audio="music"]').forEach((b) => (b.onclick = toggleMusic));
   document.querySelectorAll<HTMLElement>('[data-audio="sfx"]').forEach((b) => (b.onclick = toggleSfx));
   const css = document.createElement('style');
-  css.textContent = `button.audio-btn{width:auto!important;border-radius:12px!important;padding:6px 10px!important;font-size:13px!important;font-weight:800;white-space:nowrap}`;
+  css.textContent = `button.audio-btn{width:auto!important;border-radius:12px!important;padding:6px 10px!important;font-size:13px!important;font-weight:800;white-space:nowrap;position:relative}@media (max-width:520px){button.audio-btn .albl{display:none}button.audio-btn{padding:6px 8px!important}}button.audio-btn .aoff{position:absolute;left:20%;right:20%;top:50%;border-top:2px solid #ff5a36;transform:rotate(-35deg)}`;
   document.head.appendChild(css);
   draw();
   const first = () => { start(); removeEventListener('pointerdown', first, true); removeEventListener('keydown', first, true); };
