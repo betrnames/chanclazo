@@ -437,7 +437,9 @@ function frameBody(now: number) {
 }
 
 // ── Start flow (iOS-safe) ────────────────────────────────────────────────────
+const DIRECT = /[?&]start=1/.test(location.search);
 const go = $('go') as HTMLButtonElement; const startScreen = $('start');
+if (DIRECT) { startScreen.classList.add('hidden'); startScreen.style.display = 'none'; }
 let started = false, countdown: number | null = null;
 function safe(label: string, fn: () => void) { try { fn(); } catch (err) { report(`${label}: ${(err as Error)?.message || err}`); } }
 function startGame() {
@@ -446,7 +448,10 @@ function startGame() {
   if (countdown !== null) { clearInterval(countdown); countdown = null; }
   safe('ui', () => { startScreen.classList.add('hidden'); startScreen.style.display = 'none'; });
   playing = true; last = performance.now();
-  safe('level', () => { if (totalStars() === 0) build(0); else openMap(); });
+  safe('level', () => {
+    if (DIRECT) { let i = 0; for (let k = 0; k < LEVELS.length; k++) if (unlocked(k)) { i = k; if (!(save.stars[k] > 0)) break; } build(i); } // from /choose: straight into the next unplayed level
+    else if (totalStars() === 0) build(0); else openMap();
+  });
   safe('audio', () => { wakeAudio(); A.unlock(); });
   safe('fullscreen', () => {
     const el = document.documentElement as any; const req = el.requestFullscreen;
@@ -477,6 +482,7 @@ if (/[?&]debug=1/.test(location.search)) setInterval(() => { const a = (window a
 safe('wireMute', () => { A.wireMute($('mute') as HTMLButtonElement); initAudioControls('fling', (m) => A.setMuted(m)); });
 build(0);
 onLayout(); scheduleLayout();
+if (DIRECT) setTimeout(startGame, 0); // rotate-to-landscape prompt still shows on portrait phones
 requestAnimationFrame(frame);
 (window as any).__fling = {
   engine, world, meta, LEVELS, build, openMap, boom: (b: Matter.Body) => { armed = true; damage(b, 99); },

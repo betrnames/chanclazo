@@ -2,9 +2,9 @@
 import Base from '../layouts/Base.astro';
 import PapelPicado from '../components/PapelPicado.astro';
 const games = [
-  { game: 'slots', href: '/slots', name: 'Piñata Slots', line: 'Spin the 5×4 reels, smash piñatas, win free spins.', img: '/play/t_pinata.webp', alt: 'The llama piñata', cls: 'llama', c: '#e2197a' },
-  { game: 'match', href: '/match', name: 'Chanclazo Match', line: 'Swap, match and smash your way through 8 levels.', img: '/play/luchador_sprite.webp', alt: 'The luchador', cls: 'lucha', c: '#18b5b0' },
-  { game: 'fling', href: '/fling', name: 'Chancla Strike', line: 'Fling the chancla and topple the villains.', img: '/play/abuela_sprite.webp', alt: 'The abuela', cls: 'abuela', c: '#f7a21b' },
+  { game: 'slots', href: '/slots?start=1', name: 'Piñata Slots', line: 'Spin the 5×4 reels, smash piñatas, win free spins.', img: '/play/t_pinata.webp', alt: 'The llama piñata', cls: 'llama', c: '#e2197a' },
+  { game: 'match', href: '/match?start=1', name: 'Chanclazo Match', line: 'Swap, match and smash your way through 8 levels.', img: '/play/luchador_sprite.webp', alt: 'The luchador', cls: 'lucha', c: '#18b5b0' },
+  { game: 'fling', href: '/fling?start=1', name: 'Chancla Strike', line: 'Fling the chancla and topple the villains.', img: '/play/abuela_sprite.webp', alt: 'The abuela', cls: 'abuela', c: '#f7a21b' },
 ];
 ---
 <Base title="Chanclazo: Choose your game">
@@ -52,7 +52,7 @@ const games = [
   .track::-webkit-scrollbar{display:none}
   .track.drag{cursor:grabbing;scroll-snap-type:none;scroll-behavior:auto}
   .slide{flex:0 0 100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;padding:12px 16px;box-sizing:border-box}
-  .card{width:min(460px,86vw);text-align:center;border-radius:28px;padding:18px 20px 22px;box-sizing:border-box;
+  .card{cursor:pointer;width:min(460px,86vw);text-align:center;border-radius:28px;padding:18px 20px 22px;box-sizing:border-box;
     background:radial-gradient(ellipse at 50% 30%,#4a1f6e,#24092f 70%);border:4px solid var(--c);
     box-shadow:0 0 0 4px #14050f,0 0 40px color-mix(in srgb,var(--c) 45%,transparent),0 18px 40px rgba(0,0,0,.6)}
   .art{position:relative;height:clamp(200px,38svh,340px);display:flex;align-items:flex-end;justify-content:center}
@@ -95,6 +95,7 @@ const games = [
   addEventListener('pointermove', (e) => { if (!down) return; const dx = e.clientX - sx; if (Math.abs(dx) > 5) moved = true; track.scrollLeft = sl - dx; });
   addEventListener('pointerup', (e) => { if (!down) return; down = false; track.classList.remove('drag'); const dx = e.clientX - sx, base = Math.round(sl / track.clientWidth); go(base + (dx < -60 ? 1 : dx > 60 ? -1 : 0)); });
   track.addEventListener('click', (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); } }, true);
+  document.querySelectorAll<HTMLElement>('.card').forEach((c) => c.addEventListener('click', (e) => { if (moved || (e.target as HTMLElement).closest('a')) return; (c.querySelector('a.play') as HTMLAnchorElement).click(); }));
   document.querySelectorAll<HTMLAnchorElement>('a[data-game]').forEach((a) => a.addEventListener('click', () => {
     const w = window as any; if (w.gtag) w.gtag('event', 'landing_card_click', { game: a.dataset.game, source: 'carousel' });
   }));

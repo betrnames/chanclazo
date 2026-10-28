@@ -272,5 +272,6 @@ Promise.all([...TILE_SRC.slice(0, 4).map(loadImg), loadImg('/play/t_chancla.webp
 });
 const start = () => { wakeAudio(); markGameStart('match'); $('start').classList.add('hidden'); $('end').classList.add('hidden'); MOVES = LEVELS[level - 1].moves; GOAL = LEVELS[level - 1].goal; score = 0; moves = MOVES; hud(); newBoard(); playing = true; busy = false; };
 go.onclick = start; $('again').onclick = start;
+if (/[?&]start=1/.test(location.search)) { $('start').classList.add('hidden'); start(); } // from /choose: straight to the board
 (window as any).__match = { grid, trySwap, findRuns, get state() { return { score, moves, playing, busy }; }, cellPos: (r: number, c: number) => ({ x: bx + (c + 0.5) * cell, y: by + (r + 0.5) * cell }) };
 void skullImg; // kept loaded for future use
