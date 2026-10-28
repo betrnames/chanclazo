@@ -45,10 +45,15 @@ const sparks = Array.from({ length: 18 }, (_, i) => ({ l: (i * 37) % 100, t: (i 
       ))}
     </div>
 
-    <a class="play" href="#games" id="playNow">PLAY NOW</a>
+    <button class="play" type="button" id="playNow" aria-haspopup="dialog" aria-controls="games">PLAY NOW</button>
+    <div class="coins" aria-hidden="true">{Array.from({length:7},(_,i)=><i style={`--i:${i}`}></i>)}</div>
   </section>
 
-  <section class="games" id="games">
+  <section class="picker" id="games" role="dialog" aria-modal="true" aria-label="Choose a game" hidden>
+   <div class="panel">
+    <button class="close" type="button" id="closePick" aria-label="Close">×</button>
+    <h2 class="pick-title">CHOOSE YOUR GAME</h2>
+    <div class="games">
     {games.map((g) => (
       <a class="card" href={g.href} style={`--c:${g.c}`}>
         <span class="thumb"><img src={g.img} alt="" loading="lazy" /></span>
@@ -56,6 +61,8 @@ const sparks = Array.from({ length: 18 }, (_, i) => ({ l: (i * 37) % 100, t: (i 
         <span class="go">PLAY</span>
       </a>
     ))}
+    </div>
+   </div>
   </section>
   <footer>Free play only · No real money · <a href="/lore">Lore</a></footer>
 </main>
@@ -106,7 +113,7 @@ const sparks = Array.from({ length: 18 }, (_, i) => ({ l: (i * 37) % 100, t: (i 
   @keyframes pulse{0%,100%{opacity:.75;transform:translate(-50%,-50%) scale(.95)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
   @keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-6px) rotate(1deg)}}
 
-  .play{position:relative;z-index:5;margin-top:clamp(10px,2vh,22px);font-size:clamp(26px,4.4vmin,42px);color:#fff;text-decoration:none;background:linear-gradient(180deg,#3fd9d2,#18b5b0 55%,#0f8f8a);border:4px solid #3b1a5c;border-radius:999px;padding:12px 46px;box-shadow:0 7px 0 #3b1a5c,0 14px 24px rgba(58,20,80,.45),inset 0 3px 0 rgba(255,255,255,.45);text-shadow:0 2px 0 #0b5f5c;animation:pp 1.4s ease-in-out infinite}
+  .play{cursor:pointer;font-family:inherit;position:relative;z-index:5;margin-top:clamp(10px,2vh,22px);font-size:clamp(26px,4.4vmin,42px);color:#fff;text-decoration:none;background:linear-gradient(180deg,#3fd9d2,#18b5b0 55%,#0f8f8a);border:4px solid #3b1a5c;border-radius:999px;padding:12px 46px;box-shadow:0 7px 0 #3b1a5c,0 14px 24px rgba(58,20,80,.45),inset 0 3px 0 rgba(255,255,255,.45);text-shadow:0 2px 0 #0b5f5c;animation:pp 1.4s ease-in-out infinite}
   @keyframes pp{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 
   .games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:1100px;margin:0 auto;padding:28px 18px 18px;background:linear-gradient(180deg,#8e44c9,#6a2fa0)}
@@ -115,6 +122,17 @@ const sparks = Array.from({ length: 18 }, (_, i) => ({ l: (i * 37) % 100, t: (i 
   .thumb{aspect-ratio:16/10;overflow:hidden;background:#3b1a5c}.thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .txt{padding:10px 14px 4px;display:flex;flex-direction:column;gap:2px}.txt b{font-size:24px;font-weight:400}.txt small{font-family:system-ui,sans-serif;font-size:14px;opacity:.95}
   .go{margin:8px 14px 14px;align-self:flex-start;background:#ffd23f;color:#3b1a5c;border-radius:999px;padding:6px 22px;font-size:20px;box-shadow:0 4px 0 #3b1a5c}
+  .picker{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(59,26,92,.72);backdrop-filter:blur(3px)}
+  .picker[hidden]{display:none}
+  .panel{position:relative;width:min(1000px,100%);max-height:92svh;overflow:auto;background:linear-gradient(180deg,#8e44c9,#6a2fa0);border:5px solid #ffd23f;border-radius:26px;box-shadow:0 12px 0 #3b1a5c,0 30px 60px rgba(30,10,50,.6);animation:popin .25s ease-out}
+  @keyframes popin{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+  .pick-title{margin:18px 0 0;text-align:center;font-weight:400;font-size:clamp(26px,4.5vmin,44px);color:#ffd23f;-webkit-text-stroke:5px #3b1a5c;paint-order:stroke fill;text-shadow:0 4px 0 #3b1a5c}
+  .panel .games{background:none}
+  .close{position:absolute;right:12px;top:10px;width:44px;height:44px;border-radius:50%;border:3px solid #3b1a5c;background:#ffd23f;color:#3b1a5c;font-size:28px;line-height:1;cursor:pointer;font-family:system-ui}
+  .coins i{position:absolute;z-index:2;width:clamp(22px,3.4vmin,40px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6c2,#ffd23f 40%,#e0a100 75%,#a86b00);border:2px solid #8a5a00;box-shadow:inset 0 0 0 4px rgba(255,255,255,.25),0 6px 10px rgba(58,20,80,.4);left:calc(6% + var(--i) * 14.5%);top:calc(30% + (var(--i) * 37 % 5) * 9%);animation:coin calc(2.2s + var(--i) * .3s) ease-in-out infinite;animation-delay:calc(var(--i) * -.5s)}
+  @keyframes coin{0%,100%{transform:translateY(0) rotateY(0)}50%{transform:translateY(-14px) rotateY(180deg)}}
+  .title{isolation:isolate}
+  .title::before{content:'CHANCLAZO';position:absolute;inset:0;transform:translate(7px,9px);color:#e2197a;-webkit-text-stroke:clamp(5px,1.1vmin,10px) #3b1a5c;paint-order:stroke fill;z-index:-1;animation:bob 3.2s ease-in-out infinite}
   footer{text-align:center;padding:16px 16px max(22px,env(safe-area-inset-bottom));font-family:system-ui,sans-serif;font-size:13px;background:#6a2fa0;color:#ffe9c2}
   footer a{color:#ffd23f}
   @media (max-width:760px){
@@ -132,8 +150,16 @@ const sparks = Array.from({ length: 18 }, (_, i) => ({ l: (i * 37) % 100, t: (i 
     const x = (e.clientX / innerWidth - 0.5) * 2, y = (e.clientY / innerHeight - 0.5) * 2;
     stage.querySelectorAll<HTMLElement>('.ch').forEach((el) => { el.style.setProperty('--px', String(x)); el.style.setProperty('--py', String(y)); });
   });
+  const picker = document.getElementById('games')!;
+  const open = () => { picker.hidden = false; (picker.querySelector('.card') as HTMLElement)?.focus(); };
+  const close = () => { picker.hidden = true; document.getElementById('playNow')?.focus(); };
   document.getElementById('playNow')?.addEventListener('click', () => {
     const w = window as any;
     if (w.gtag) { w.gtag('event', 'hero_play_click', { game: 'home' }); w.gtag('event', 'landing_card_click', { game: 'hero_play' }); }
+    open();
   });
+  document.getElementById('closePick')?.addEventListener('click', close);
+  picker.addEventListener('click', (e) => { if (e.target === picker) close(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !picker.hidden) close(); });
+  if (location.hash === '#games') open();
 </script>
