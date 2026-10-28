@@ -54,3 +54,6 @@ export function showLeaderboard(game: string, gameName: string, score: number, l
     render(g ?? saveLocal(game, entry), !!g);
   };
 }
+
+/** Remove the leaderboard / X handle / Share on X box (used on mid-run level-clear screens). */
+export function hideLeaderboard() { document.querySelector('#end .card .lb')?.remove(); }

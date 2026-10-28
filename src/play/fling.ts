@@ -1,6 +1,6 @@
 import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import './play.css';
-import { showLeaderboard } from './leaderboard';
+import { showLeaderboard, hideLeaderboard } from './leaderboard';
 import { initAudioControls } from './music';
 import Matter from 'matter-js';
 import { playLevelUp, playGameOver } from '../game/sound';
@@ -287,7 +287,8 @@ function finish(win: boolean) {
   next.onclick = (e) => { e.stopPropagation(); if (!win) build(level); else if (canNext) build(level + 1); else openMap(); };
   ($('retry') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); e.stopPropagation(); build(level); };
   ($('toMap') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); e.stopPropagation(); openMap(); };
-  showLeaderboard('fling', 'Chancla Strike', score, level + 1, '/fling');
+  // X handle + Share on X only on game over (out of chanclas) or after clearing the final level.
+  if (!win || last) showLeaderboard('fling', 'Chancla Strike', score, level + 1, '/fling'); else hideLeaderboard();
   setTimeout(() => $('end').classList.remove('hidden'), win ? 300 : 600);
 }
 function checkFlow() {
@@ -489,5 +490,6 @@ requestAnimationFrame(frame);
   snapshot: () => Composite.allBodies(world).filter((b) => meta.has(b.id) && !meta.get(b.id)!.dead && meta.get(b.id)!.kind !== 'ghost').map((b) => ({ id: b.id, x: b.position.x, y: b.position.y, a: b.angle })),
   fire: (px: number, py: number, type?: ShotType) => { if (type) shotType = type; aiming = true; pull = { x: px, y: py }; release(); },
   split: () => doSplit(),
+  finish: (win: boolean) => { ended = false; finish(win); },
   get state() { return { level, score, shotsLeft, ended, villains: villainsLeft(), alive: [...meta.values()].filter((m) => !m.dead).length, shotType }; },
 };

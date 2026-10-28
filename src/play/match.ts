@@ -1,6 +1,6 @@
 import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import './play.css';
-import { showLeaderboard } from './leaderboard';
+import { showLeaderboard, hideLeaderboard } from './leaderboard';
 import { initAudioControls, tapBlip } from './music';
 import { setMuted as setSfxMuted } from '../game/sound';
 import { playHit, playStrike, playCombo, playLevelUp, playGameOver, playDodge, playShield } from '../game/sound';
@@ -162,10 +162,11 @@ function checkEnd() {
     win ? playLevelUp() : playGameOver();
     $('endTitle').textContent = win ? (level < LEVELS.length ? `Level ${level} cleared!` : 'All levels cleared!') : 'Out of moves!';
     ($('again') as HTMLButtonElement).textContent = win && level < LEVELS.length ? `Next: level ${level + 1}` : win ? 'Play again from level 1' : 'Retry level';
+    const final = !win || level === LEVELS.length;
     if (win) level = level < LEVELS.length ? level + 1 : 1;
     $('endStars').textContent = stars(s);
     $('endMsg').textContent = win ? `Score ${score} with ${moves} moves to spare.` : `Score ${score}. The goal was ${GOAL}. Try making more chanclas and bombs!`;
-    showLeaderboard('match', 'Chanclazo Match', score, win ? level - 1 || LEVELS.length : level, '/match');
+    if (final) showLeaderboard('match', 'Chanclazo Match', score, win ? LEVELS.length : level, '/match'); else hideLeaderboard();
     setTimeout(() => $('end').classList.remove('hidden'), 500);
   }
 }
@@ -273,5 +274,5 @@ Promise.all([...TILE_SRC.slice(0, 4).map(loadImg), loadImg('/play/t_chancla.webp
 const start = () => { wakeAudio(); markGameStart('match'); $('start').classList.add('hidden'); $('end').classList.add('hidden'); MOVES = LEVELS[level - 1].moves; GOAL = LEVELS[level - 1].goal; score = 0; moves = MOVES; hud(); newBoard(); playing = true; busy = false; };
 go.onclick = start; $('again').onclick = start;
 if (/[?&]start=1/.test(location.search)) { $('start').classList.add('hidden'); start(); } // from /choose: straight to the board
-(window as any).__match = { grid, trySwap, findRuns, get state() { return { score, moves, playing, busy }; }, cellPos: (r: number, c: number) => ({ x: bx + (c + 0.5) * cell, y: by + (r + 0.5) * cell }) };
+(window as any).__match = { end: (win: boolean) => { playing = true; score = win ? GOAL : 0; moves = win ? 5 : 0; checkEnd(); }, grid, trySwap, findRuns, get state() { return { score, moves, playing, busy }; }, cellPos: (r: number, c: number) => ({ x: bx + (c + 0.5) * cell, y: by + (r + 0.5) * cell }) };
 void skullImg; // kept loaded for future use
