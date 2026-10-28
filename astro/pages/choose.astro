@@ -2,9 +2,9 @@
 import Base from '../layouts/Base.astro';
 import PapelPicado from '../components/PapelPicado.astro';
 const pins = [
-  { game: 'slots', href: '/slots', name: 'Piñata Slots', place: 'The Piñata Plaza', thumb: '/lp/thumb_slots.webp', spr: '/play/t_pinata.webp', c: '#e2197a', d: [17, 60], m: [30, 20] },
-  { game: 'match', href: '/match', name: 'Chanclazo Match', place: 'Calaca Courtyard', thumb: '/lp/thumb_match.webp', spr: '/play/t_skull.webp', c: '#18b5b0', d: [50, 36], m: [70, 50] },
-  { game: 'fling', href: '/fling', name: 'Chancla Strike', place: "Abuela's Altar", thumb: '/lp/thumb_fling.webp', spr: '/play/abuela_sprite.webp', c: '#f7a21b', d: [83, 60], m: [32, 80] },
+  { game: 'slots', href: '/slots', name: 'Piñata Slots', place: 'The Piñata Plaza', thumb: '/lp/thumb_slots.webp', spr: '/play/t_pinata.webp', c: '#e2197a', d: [17, 60], m: [44, 17] },
+  { game: 'match', href: '/match', name: 'Chanclazo Match', place: 'Calaca Courtyard', thumb: '/lp/thumb_match.webp', spr: '/play/t_skull.webp', c: '#18b5b0', d: [50, 36], m: [56, 49] },
+  { game: 'fling', href: '/fling', name: 'Chancla Strike', place: "Abuela's Altar", thumb: '/lp/thumb_fling.webp', spr: '/play/abuela_sprite.webp', c: '#f7a21b', d: [83, 60], m: [44, 80] },
 ];
 const stars = Array.from({ length: 40 }, (_, i) => ({ x: (i * 41) % 100, y: (i * 23) % 38, s: 1 + (i % 3), d: -(i * 0.31) }));
 const houses = [
@@ -33,7 +33,7 @@ const candles = [[8, 88], [24, 80], [44, 90], [61, 84], [76, 92], [93, 86]];
       <path d="M 17 66 C 28 80, 38 30, 50 42 S 72 78, 83 66" />
     </svg>
     <svg class="path m" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M 30 24 C 50 30, 76 36, 70 54 S 20 66, 32 84" />
+      <path d="M 44 22 C 70 28, 70 40, 56 53 S 30 70, 44 84" />
     </svg>
     {candles.map(([x, y]) => <i class="candle" style={`left:${x}%;top:${y}%`} aria-hidden="true"><b></b></i>)}
     {pins.map((p, i) => (
@@ -96,7 +96,8 @@ const candles = [[8, 88], [24, 80], [44, 90], [61, 84], [76, 92], [93, 86]];
   @media (max-aspect-ratio: 1/1){
     .map{min-height:1180px;margin:8px 8px 0}
     .path.d{display:none}.path.m{display:block}
-    .pin{left:var(--mx);top:var(--my);width:min(64vw,250px)}
+    .pin{left:var(--mx);top:var(--my);width:min(58vw,240px)}
+    .medal .spr{right:-18%;height:60%}
     .back{position:static;display:inline-block;margin-bottom:6px}
     .top{text-align:center}
   }
