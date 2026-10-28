@@ -28,7 +28,7 @@ import Base from '../layouts/Base.astro';
   @media (max-aspect-ratio: 1/1){.hero img{--fy:50%}}
   /* phones narrower than 9:16: fit width so the title is never cropped; the art's own dark bands blend into the page color */
   @media (max-aspect-ratio: 9/16){.hero img{object-fit:contain}}
-  .herogrp{display:none;position:absolute;z-index:1;pointer-events:none}
+  .herogrp{display:none;position:absolute;z-index:3;pointer-events:none} /* characters + title: never filtered/blended/overlaid */
   .fly{position:absolute;left:0;top:0;width:var(--s,150px);height:var(--s,150px);transform:translate(calc(var(--x,-999px) - 50%),calc(var(--y,-999px) - 50%));pointer-events:none;z-index:2}
   .fly img{position:absolute;inset:0;width:100%;height:100%}
   .fly .burst{filter:drop-shadow(0 0 14px rgba(255,190,40,.75));animation:burst 2.4s ease-in-out infinite}

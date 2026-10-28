@@ -43,24 +43,15 @@ export default function LorePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#110d07', color: '#fff', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Background image */}
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 0,
-        backgroundImage: 'url(/livingroom.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        pointerEvents: 'none',
-      }} />
-      {/* Dark brown overlay — sits above image */}
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1,
-        background: 'rgba(17, 13, 7, 0.78)',
-        pointerEvents: 'none',
-      }} />
+      {/* Static Chancla Strike night-cemetery background (non-scrolling layer; no parallax, no background-attachment) */}
+      <style>{`.lore-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:url(/lore/cemetery_landscape.webp) center/cover no-repeat}
+@media (max-aspect-ratio:1/1){.lore-bg{background-image:url(/lore/cemetery_portrait.webp)}}
+.lore-dim{position:fixed;inset:0;z-index:1;pointer-events:none;background:rgba(0,0,0,.55)}
+.lore-fade{position:fixed;left:0;right:0;bottom:0;height:32vh;z-index:1;pointer-events:none;background:linear-gradient(to bottom,rgba(12,4,24,0),rgba(12,4,24,.85))}`}</style>
+      <div className="lore-bg" aria-hidden="true" />
+      {/* Neutral dim for text readability + bottom night fade (both sit under the content, z-index 1) */}
+      <div className="lore-dim" aria-hidden="true" />
+      <div className="lore-fade" aria-hidden="true" />
 
       {/* Top accent bar */}
       <div style={{ height: '3px', background: 'linear-gradient(90deg, #C2410C, #F97316, #C2410C)', position: 'relative', zIndex: 2 }} />
