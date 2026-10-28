@@ -34,10 +34,12 @@ const games = [
     {games.map((g, i) => <button type="button" role="tab" aria-label={g.name} data-i={i}></button>)}
   </div>
   <p class="fine">Free play only · No real money</p>
+<button id="lmusic" class="lmusic" type="button" aria-label="Music on or off">♪ Music</button>
 </main>
 </Base>
 
 <style>
+  .lmusic{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;z-index:20;font:600 12px system-ui,sans-serif;color:#ffe9c2;background:rgba(20,5,15,.55);border:1px solid rgba(255,210,63,.5);border-radius:999px;padding:5px 10px;cursor:pointer}
   :global(html),:global(body){margin:0;background:#0b0301}
   .choose{min-height:100svh;display:flex;flex-direction:column;font-family:LilitaOne,system-ui,sans-serif;color:#fff;
     background:radial-gradient(ellipse at 50% 35%,#3d1760 0%,#1f0a30 45%,#0b0301 100%);overflow:hidden}
@@ -74,6 +76,8 @@ const games = [
   @media (prefers-reduced-motion:reduce){.art img,.glow{animation:none}.track{scroll-behavior:auto}}
 </style>
 <script>
+  import { initLanderMusic } from '../../src/play/music';
+  initLanderMusic(document.getElementById('lmusic') as HTMLButtonElement);
   const track = document.getElementById('track')!;
   const slides = [...track.querySelectorAll<HTMLElement>('.slide')];
   const dots = [...document.querySelectorAll<HTMLButtonElement>('.dots button')];

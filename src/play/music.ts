@@ -6,8 +6,8 @@ const put = (k: string, v: boolean) => { try { localStorage.setItem(k, v ? '1' :
 export const musicOn = () => get(MK);
 export const sfxOn = () => get(SK);
 
-type Variant = { bpm: number; key: number; seed: number };
-const VARIANTS: Record<string, Variant> = { slots: { bpm: 150, key: 0, seed: 1 }, match: { bpm: 138, key: 5, seed: 2 }, fling: { bpm: 162, key: 7, seed: 3 } };
+type Variant = { bpm: number; key: number; seed: number; soft?: boolean };
+const VARIANTS: Record<string, Variant> = { slots: { bpm: 150, key: 0, seed: 1 }, match: { bpm: 138, key: 5, seed: 2 }, fling: { bpm: 162, key: 7, seed: 3 }, lander: { bpm: 92, key: 3, seed: 5, soft: true } };
 let ctx: AudioContext | null = null, out: GainNode, started = false, timer = 0, nextT = 0, step = 0, v: Variant = VARIANTS.slots;
 const hz = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 // I - IV - V7 - I progression (major), root offsets from key, 4 bars each loop of 16 bars with a turnaround.
@@ -27,7 +27,8 @@ function schedule() {
   while (nextT < ctx.currentTime + 0.25) {
     const bar = Math.floor(step / 3) % PROG.length, beat = step % 3, root = 48 + v.key + PROG[bar];
     const chord = PROG[bar] === 7 ? [0, 4, 7, 10] : [0, 4, 7];
-    if (beat === 0) note(nextT, hz(root - 12 + (bar % 2 ? 7 : 0)), spb * 0.9, 0.5, 'triangle'); // oom (alternating bass)
+    if (beat === 0) note(nextT, hz(root - 12 + (bar % 2 ? 7 : 0)), spb * 0.9, v.soft ? 0.35 : 0.5, 'triangle'); // oom (alternating bass)
+    else if (v.soft) { if (beat === 1) for (const c of chord.slice(0, 3)) note(nextT, hz(root + 12 + c), spb * 1.6, 0.06, 'triangle'); } // gentle sustained guitar-like strum
     else for (const c of chord.slice(0, 3)) note(nextT, hz(root + 12 + c), spb * 0.35, 0.12, 'square'); // pah
     const d = MEL[(bar + v.seed * 4) % MEL.length][beat];
     if (d >= 0) { const sc = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19]; note(nextT, hz(60 + v.key + sc[d]), spb * 0.8, 0.28, 'sine'); note(nextT, hz(72 + v.key + sc[d]), spb * 0.3, 0.06, 'sine'); }
@@ -37,7 +38,7 @@ function schedule() {
 function start() {
   if (started || !musicOn()) return;
   try { ctx = ctx || new (window.AudioContext || (window as any).webkitAudioContext)(); } catch { return; }
-  out = out || (() => { const g = ctx!.createGain(); g.gain.value = 0.07; g.connect(ctx!.destination); return g; })(); // low, under the SFX
+  out = out || (() => { const g = ctx!.createGain(); g.gain.value = v.soft ? 0.045 : 0.07; g.connect(ctx!.destination); return g; })(); // low, under the SFX
   ctx.resume(); started = true; nextT = ctx.currentTime + 0.1; timer = window.setInterval(schedule, 100);
 }
 function stop() { started = false; clearInterval(timer); ctx?.suspend(); }
@@ -80,4 +81,17 @@ export function initAudioControls(game: keyof typeof VARIANTS, setSfxMuted: (m: 
   addEventListener('pointerdown', first, true); addEventListener('keydown', first, true);
   document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) { clearInterval(timer); ctx.suspend(); } else if (started && musicOn()) { ctx.resume(); nextT = ctx.currentTime + 0.1; clearInterval(timer); timer = window.setInterval(schedule, 100); } });
   (window as any).__audio = { get music() { return musicOn(); }, get sfx() { return sfxOn(); }, get playing() { return started && ctx?.state === 'running'; } };
+}
+
+/** Lander / chooser: soft, slow loop with a small Music toggle button (shares the saved music setting). */
+export function initLanderMusic(btn: HTMLButtonElement) {
+  v = VARIANTS.lander;
+  const draw = () => { btn.textContent = musicOn() ? '♪ Music on' : '♪ Music off'; btn.setAttribute('aria-pressed', String(musicOn())); };
+  btn.onclick = (e) => { e.stopPropagation(); put(MK, !musicOn()); if (musicOn()) start(); else stop(); draw(); };
+  draw();
+  const evs = ['pointerdown', 'keydown', 'touchstart', 'wheel'];
+  const first = (e: Event) => { if (e.target === btn) return; start(); if (started) evs.forEach((n) => removeEventListener(n, first, true)); };
+  evs.forEach((n) => addEventListener(n, first, { capture: true, passive: true } as any));
+  document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) { clearInterval(timer); ctx.suspend(); } else if (started && musicOn()) { ctx.resume(); nextT = ctx.currentTime + 0.1; clearInterval(timer); timer = window.setInterval(schedule, 100); } });
+  (window as any).__audio = { get music() { return musicOn(); }, get playing() { return started && ctx?.state === 'running'; } };
 }
