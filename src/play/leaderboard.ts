@@ -15,14 +15,14 @@ async function fetchGlobal(g: string): Promise<Entry[] | null> {
 }
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-const css = `.lb{margin:12px 0;text-align:left;background:#7a1f4f;border-radius:12px;padding:10px 12px;font-size:13px}
+const css = `.lb{box-sizing:border-box;width:100%;margin:12px 0;text-align:left;background:#7a1f4f;border-radius:12px;padding:10px 12px;font-size:13px}
 .lb h3{margin:0 0 6px;font-size:15px;color:#ffd23f;display:flex;justify-content:space-between;align-items:baseline}
 .lb h3 small{font-size:10px;opacity:.75;font-weight:700;color:#f3e9d2}
-.lb .row{display:flex;gap:6px;margin-bottom:8px}.lb .tag{display:flex;flex:1;align-items:center;background:#fff;border-radius:10px;color:#2a0a00;font-weight:800;padding:0 8px}
+.lb .row{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}.lb .tag{display:flex;width:100%;box-sizing:border-box;min-height:42px;align-items:center;background:#fff;border-radius:10px;color:#2a0a00;font-weight:800;padding:0 8px}
 .lb input{flex:1;min-width:0;border:0;outline:0;font:inherit;font-weight:800;padding:8px 2px;background:transparent;color:#2a0a00}
-.lb button.save{font-size:14px!important;padding:8px 12px!important;box-shadow:none!important;border-width:2px!important}
+.lb button.save{display:block;width:100%!important;max-width:none!important;margin:0!important;box-sizing:border-box;font-size:14px!important;padding:8px 12px!important;box-shadow:none!important;border-width:2px!important}
 .lb ol{margin:0;padding-left:22px;max-height:150px;overflow:auto}.lb li{padding:2px 0}.lb li b{float:right}
-.lb .err{color:#ff8fa3;font-size:12px;min-height:14px}.lb a.x{display:inline-block;margin-top:8px;background:#3b1a5c;color:#fff;border:2px solid #fff;border-radius:12px;padding:7px 12px;font-weight:900;text-decoration:none}`;
+.lb .err{color:#ff8fa3;font-size:12px;min-height:14px}.lb a.x{display:block;width:100%;box-sizing:border-box;text-align:center;margin-top:8px;background:#3b1a5c;color:#fff;border:2px solid #fff;border-radius:12px;padding:7px 12px;font-weight:900;text-decoration:none}`;
 
 export function showLeaderboard(game: string, gameName: string, score: number, level: number, path: string) {
   if (!document.getElementById('lb-css')) { const s = document.createElement('style'); s.id = 'lb-css'; s.textContent = css; document.head.appendChild(s); }

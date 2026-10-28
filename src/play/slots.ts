@@ -500,9 +500,7 @@ function draw3DFace(im: HTMLImageElement, cx: number, cy: number, w: number, h: 
   const t = performance.now() / 1000 + i * 1.3;
   const c = litFace(im, w, h);
   ctx.save();
-  ctx.translate(cx, cy + Math.sin(t * 1.6) * 2);
-  ctx.rotate(Math.sin(t * 1.1) * 0.04);
-  ctx.scale(0.95 + 0.05 * Math.cos(t * 0.9), 1); // subtle yaw (perspective turn)
+  void t; ctx.translate(cx, cy); // static heads (no bob/tilt/yaw)
   ctx.shadowColor = 'rgba(58,20,80,.55)'; ctx.shadowBlur = 10; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 6;
   ctx.drawImage(c, -c.width / 2, -c.height / 2);
   ctx.restore();
