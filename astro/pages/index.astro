@@ -9,7 +9,8 @@ import Base from '../layouts/Base.astro';
       width="1500" height="2667" fetchpriority="high"
       alt="Chanclazo: the abuela, the llama piñata and the luchador cheer under a glowing chancla in a Day of the Dead hall. When words fail, the Chanclazo speaks!" />
   </picture>
-  <div class="fly" id="fly" aria-hidden="true"><i class="burst"></i><img src="/cruise/logo_chancla.webp" alt="" /></div>
+  <div class="fly" id="fly" aria-hidden="true"><img class="burst" src="/lp/chancla_burst.webp" alt="" /><img class="gold" src="/lp/chancla_gold.webp" alt="" /></div>
+  <img class="ears" id="ears" src="/lp/ears_m.webp" alt="" aria-hidden="true" />
   <div class="cta">
     <a class="play" href="/choose" id="playNow">PLAY NOW</a>
     <p class="fine">Free play only · No real money · <a href="/lore">Lore</a></p>
@@ -25,14 +26,13 @@ import Base from '../layouts/Base.astro';
   .hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% var(--fy,50%)}
   @media (max-aspect-ratio: 1/1){.hero img{--fy:50%}}
   .fly{position:absolute;left:0;top:0;width:var(--s,150px);height:var(--s,150px);transform:translate(calc(var(--x,-999px) - 50%),calc(var(--y,-999px) - 50%));pointer-events:none;z-index:2}
-  .fly .burst{position:absolute;inset:14%;background:conic-gradient(from 0deg,#ffd23f 0 4%,transparent 4% 8.5%,#ffb21a 8.5% 12%,transparent 12% 16.6%,#ffd23f 16.6% 20.5%,transparent 20.5% 25%,#ffb21a 25% 29%,transparent 29% 33.3%,#ffd23f 33.3% 37.5%,transparent 37.5% 41.6%,#ffb21a 41.6% 45.5%,transparent 45.5% 50%,#ffd23f 50% 54%,transparent 54% 58.3%,#ffb21a 58.3% 62.5%,transparent 62.5% 66.6%,#ffd23f 66.6% 70.5%,transparent 70.5% 75%,#ffb21a 75% 79%,transparent 79% 83.3%,#ffd23f 83.3% 87.5%,transparent 87.5% 91.6%,#ffb21a 91.6% 95.5%,transparent 95.5%);
-    -webkit-mask:radial-gradient(circle,#000 18%,rgba(0,0,0,.85) 32%,transparent 66%);mask:radial-gradient(circle,#000 18%,rgba(0,0,0,.85) 32%,transparent 66%);filter:drop-shadow(0 0 18px rgba(255,180,40,.9));opacity:.6;border-radius:50%;animation:burst 2.4s ease-in-out infinite,spinb 18s linear infinite}
-  .fly .burst::after{content:'';position:absolute;inset:22%;border-radius:50%;background:radial-gradient(circle,rgba(255,240,170,.95),rgba(255,190,50,.6) 45%,transparent 72%)}
-  .fly img{position:relative;width:100%;height:100%;filter:drop-shadow(0 0 3px #3b1a05) drop-shadow(0 6px 10px rgba(0,0,0,.5));animation:flip 3.2s ease-in-out infinite;transform-origin:50% 55%}
-  @keyframes burst{0%,100%{opacity:.85;scale:.92}50%{opacity:1;scale:1.06}}
-  @keyframes spinb{to{rotate:360deg}}
-  @keyframes flip{0%{transform:translateY(0) rotate(-8deg)}25%{transform:translateY(-10%) rotate(6deg)}45%{transform:translateY(-14%) rotate(368deg) scale(1.04)}70%{transform:translateY(-4%) rotate(356deg)}100%{transform:translateY(0) rotate(352deg)}}
-  @media (prefers-reduced-motion:reduce){.fly img,.fly .burst{animation:none}}
+  .ears{position:absolute;left:0;top:0;z-index:3;pointer-events:none}
+  .fly img{position:absolute;inset:0;width:100%;height:100%}
+  .fly .burst{filter:drop-shadow(0 0 14px rgba(255,190,40,.75));animation:burst 2.4s ease-in-out infinite}
+  .fly .gold{filter:drop-shadow(0 6px 8px rgba(0,0,0,.45));animation:flip 3.2s ease-in-out infinite;transform-origin:50% 52%}
+  @keyframes burst{0%,100%{opacity:.9;transform:scale(.94) rotate(-4deg)}50%{opacity:1;transform:scale(1.06) rotate(4deg)}}
+    @keyframes flip{0%{transform:translateY(0) rotate(-8deg)}25%{transform:translateY(-10%) rotate(6deg)}45%{transform:translateY(-14%) rotate(368deg) scale(1.04)}70%{transform:translateY(-4%) rotate(356deg)}100%{transform:translateY(0) rotate(352deg)}}
+  @media (prefers-reduced-motion:reduce){.fly .gold,.fly .burst{animation:none}}
   .cta{position:absolute;left:0;right:0;bottom:max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px}
   .play{font-size:clamp(26px,3vw,40px);color:#3b1a5c;text-decoration:none;letter-spacing:.02em;
     background:linear-gradient(180deg,#fff2a8 0%,#ffd23f 45%,#f4a000 100%);border:4px solid #3b1a5c;border-radius:999px;padding:10px 54px;
@@ -46,7 +46,7 @@ import Base from '../layouts/Base.astro';
 </style>
 <script>
   // Keep the chancla locked to its spot in the art under object-fit: cover (image coords -> screen).
-  const ART = { d: { w: 1500, h: 844, x: 745, y: 205, s: 300 }, m: { w: 1500, h: 2667, x: 725, y: 830, s: 620 } };
+  const ART = { d: { w: 1500, h: 844, x: 752, y: 200, s: 290, e: [686, 228, 91, 77], src: '/lp/ears_d.webp' }, m: { w: 1500, h: 2667, x: 740, y: 822, s: 600, e: [644, 878, 168, 127], src: '/lp/ears_m.webp' } };
   const fly = document.getElementById('fly')!;
   const place = () => {
     const a = matchMedia('(min-aspect-ratio: 1/1)').matches ? ART.d : ART.m;
@@ -54,6 +54,8 @@ import Base from '../layouts/Base.astro';
     const k = Math.max(vw / a.w, vh / a.h), ox = (vw - a.w * k) / 2, oy = (vh - a.h * k) / 2;
     const size = Math.min(a.s * k, 360); // cap: source sprite is 160px; avoid heavy upscaling on huge screens
     fly.style.setProperty('--x', `${ox + a.x * k}px`); fly.style.setProperty('--y', `${oy + a.y * k}px`); fly.style.setProperty('--s', `${size}px`);
+    const ears = document.getElementById('ears') as HTMLImageElement; if (!ears.src.endsWith(a.src)) ears.src = a.src;
+    Object.assign(ears.style, { left: `${ox + a.e[0] * k}px`, top: `${oy + a.e[1] * k}px`, width: `${a.e[2] * k}px`, height: `${a.e[3] * k}px` });
   };
   place(); addEventListener('resize', place);
   import { initLanderMusic } from '../../src/play/music';
