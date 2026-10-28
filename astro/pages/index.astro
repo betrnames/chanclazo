@@ -9,6 +9,7 @@ import Base from '../layouts/Base.astro';
       width="1500" height="2667" fetchpriority="high"
       alt="Chanclazo: the abuela, the llama piñata and the luchador cheer under a glowing chancla in a Day of the Dead hall. When words fail, the Chanclazo speaks!" />
   </picture>
+  <img class="mir" id="mirL" alt="" aria-hidden="true" /><img class="mir" id="mirR" alt="" aria-hidden="true" />
   <div class="fly" id="fly" aria-hidden="true"><img class="burst" src="/lp/chancla_burst.webp" alt="" /><img class="gold" src="/lp/chancla_gold.webp" alt="" /></div>
   <div class="cta">
     <p class="tag">When words fail, the chanclazo speaks!</p>
@@ -27,6 +28,8 @@ import Base from '../layouts/Base.astro';
   @media (max-aspect-ratio: 1/1){.hero img{--fy:50%}}
   /* phones narrower than 9:16: fit width so the title is never cropped; the art's own dark bands blend into the page color */
   @media (max-aspect-ratio: 9/16){.hero img{object-fit:contain}}
+  .home.dfit .hero img{object-fit:fill}
+  .mir{display:none;position:absolute;object-fit:fill;transform:scaleX(-1);pointer-events:none}
   .fly{position:absolute;left:0;top:0;width:var(--s,150px);height:var(--s,150px);transform:translate(calc(var(--x,-999px) - 50%),calc(var(--y,-999px) - 50%));pointer-events:none;z-index:2}
   .fly img{position:absolute;inset:0;width:100%;height:100%}
   .fly .burst{filter:drop-shadow(0 0 14px rgba(255,190,40,.75));animation:burst 2.4s ease-in-out infinite}
@@ -48,16 +51,26 @@ import Base from '../layouts/Base.astro';
 </style>
 <script>
   // Keep the chancla locked to its spot in the art under object-fit: cover (image coords -> screen).
-  const ART = { d: { w: 1500, h: 844, x: 752, y: 62, s: 235 }, m: { w: 1500, h: 2667, x: 750, y: 560, s: 520 } };
+  const ART = { d: { w: 1500, h: 844, x: 752, y: 60, s: 215 }, m: { w: 1500, h: 2667, x: 750, y: 560, s: 520 } };
   const fly = document.getElementById('fly')!;
   const place = () => {
     const a = matchMedia('(min-aspect-ratio: 1/1)').matches ? ART.d : ART.m;
     const vw = innerWidth, vh = (document.querySelector('.home') as HTMLElement).clientHeight;
-    const k = (vw / vh < 9 / 16 ? Math.min : Math.max)(vw / a.w, vh / a.h), ox = (vw - a.w * k) / 2, oy = (vh - a.h * k) / 2;
+    const desk = a === ART.d, home = document.querySelector('.home') as HTMLElement;
+    // Desktop: never crop the top (chancla band) - scale so the whole art height fits (small dark margin), cover the width;
+    // on very wide screens the sides are filled with mirrored copies of the same art (no filters/tints).
+    const k = desk ? Math.min(Math.max(vw / a.w, vh / a.h), vh / (a.h * 1.1)) : (vw / vh < 9 / 16 ? Math.min : Math.max)(vw / a.w, vh / a.h);
+    const ox = (vw - a.w * k) / 2, oy = (vh - a.h * k) / 2;
+    home.classList.toggle('dfit', desk);
+    const img = document.querySelector('.hero img') as HTMLImageElement, mirs = [document.getElementById('mirL') as HTMLImageElement, document.getElementById('mirR') as HTMLImageElement];
+    if (desk) {
+      Object.assign(img.style, { inset: 'auto', left: `${ox}px`, top: `${oy}px`, width: `${a.w * k}px`, height: `${a.h * k}px` });
+      mirs.forEach((m, i) => { if (ox > 0.5) { const src = img.currentSrc || img.src; if (m.src !== src) m.src = src; Object.assign(m.style, { display: 'block', top: `${oy}px`, height: `${a.h * k}px`, width: `${a.w * k}px`, left: `${i === 0 ? ox - a.w * k : ox + a.w * k}px` }); } else m.style.display = 'none'; });
+    } else { img.removeAttribute('style'); mirs.forEach((m) => (m.style.display = 'none')); }
     const size = Math.min(a.s * k, 360); // cap: source sprite is 160px; avoid heavy upscaling on huge screens
     fly.style.setProperty('--x', `${ox + a.x * k}px`); fly.style.setProperty('--y', `${oy + a.y * k}px`); fly.style.setProperty('--s', `${size}px`);
   };
-  place(); addEventListener('resize', place);
+  place(); addEventListener('resize', place); (document.querySelector('.hero img') as HTMLImageElement).addEventListener('load', place);
   import { initLanderMusic } from '../../src/play/music';
   initLanderMusic(document.getElementById('lmusic') as HTMLButtonElement);
   document.getElementById('playNow')?.addEventListener('click', () => {
