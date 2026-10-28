@@ -1,83 +1,40 @@
 ---
 import Base from '../layouts/Base.astro';
-import PapelPicado from '../components/PapelPicado.astro';
-const skulls = [
-  { x: 6, y: 14, s: 46, d: 0 }, { x: 88, y: 10, s: 38, d: -1.4 }, { x: 4, y: 58, s: 34, d: -2.6 },
-  { x: 91, y: 52, s: 44, d: -0.8 }, { x: 12, y: 86, s: 30, d: -3.2 }, { x: 84, y: 84, s: 36, d: -2 },
-];
 ---
 <Base>
 <main class="home">
-  <div class="backdrop" aria-hidden="true">
-    <div class="blur"></div>
-    <div class="rail"><PapelPicado /></div>
-  </div>
-  <div class="skulls" aria-hidden="true">
-    {skulls.map((k) => <img src="/play/t_skull.webp" alt="" style={`left:${k.x}%;top:${k.y}%;--s:${k.s}px;animation-delay:${k.d}s`} />)}
-  </div>
-  <section class="hero">
-    <div class="art-wrap">
-      <picture>
-        <source media="(min-aspect-ratio: 1/1)" srcset="/lp/keyart-wide-1080.webp 2880w, /lp/keyart-wide-1620.webp 4320w" sizes="calc((100svh - 112px) * 2.6667)" />
-        <img class="art" src="/lp/keyart-1125.webp"
-          srcset="/lp/keyart-750.webp 750w, /lp/keyart-1125.webp 1125w, /lp/keyart-1500.webp 1500w"
-          sizes="100vw" width="1500" height="2250" fetchpriority="high"
-          alt="Chanclazo: the abuela, the llama piñata and the luchador cheer under a glowing chancla. When words fail, the Chanclazo speaks!" />
-      </picture>
-      <img class="chancla-fx" src="/lp/keyart-chancla.webp" alt="" aria-hidden="true" />
-    </div>
+  <picture class="hero">
+    <source media="(min-aspect-ratio: 1/1)" srcset="/lp/lander-desktop-960.webp 960w, /lp/lander-desktop-1500.webp 1500w" sizes="100vw" />
+    <img src="/lp/lander-mobile-1125.webp" srcset="/lp/lander-mobile-750.webp 750w, /lp/lander-mobile-1125.webp 1125w, /lp/lander-mobile-1500.webp 1500w" sizes="100vw"
+      width="1500" height="2667" fetchpriority="high"
+      alt="Chanclazo: the abuela, the llama piñata and the luchador cheer under a glowing chancla in a Day of the Dead hall. When words fail, the Chanclazo speaks!" />
+  </picture>
+  <div class="cta">
     <a class="play" href="/choose" id="playNow">PLAY NOW</a>
-  </section>
-  <footer>Free play only · No real money · <a href="/lore">Lore</a></footer>
+    <p class="fine">Free play only · No real money · <a href="/lore">Lore</a></p>
+  </div>
 </main>
 </Base>
 
 <style>
-  :global(html),:global(body){margin:0;background:#120818}
-  .home{position:relative;min-height:100svh;font-family:LilitaOne,system-ui,sans-serif;color:#fff;overflow-x:hidden;isolation:isolate}
-  .backdrop{position:fixed;inset:0;z-index:-1;background:radial-gradient(ellipse at 50% 30%,#4a1f6e 0%,#2a0f45 45%,#120818 100%)}
-  .blur{position:absolute;inset:-40px;background:url(/lp/keyart-750.webp) center/cover;filter:blur(38px) saturate(1.2) brightness(.55);opacity:.85}
-  .blur::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 85%,rgba(255,138,40,.25),rgba(255,138,40,0) 55%),linear-gradient(90deg,rgba(18,8,24,.6),rgba(18,8,24,0) 35%,rgba(18,8,24,0) 65%,rgba(18,8,24,.6))}
-  .rail{position:absolute;left:0;right:0;top:0;opacity:.9}
-  .hero{display:flex;flex-direction:column;align-items:center;padding:0 0 14px}
-  .art{display:block;width:100vw;height:auto;max-width:100%}
-  .play{margin-top:-4px;font-size:clamp(28px,7vw,44px);color:#3b1a5c;text-decoration:none;letter-spacing:.02em;
-    background:linear-gradient(180deg,#fff2a8 0%,#ffd23f 45%,#f4a000 100%);border:4px solid #3b1a5c;border-radius:999px;padding:12px 52px;
-    box-shadow:0 7px 0 #3b1a5c,0 0 28px rgba(255,200,60,.65),inset 0 3px 0 rgba(255,255,255,.7);text-shadow:0 2px 0 rgba(255,255,255,.6);animation:pp 1.5s ease-in-out infinite;position:relative;overflow:hidden}
+  :global(html),:global(body){margin:0;background:#0b0301;overflow:hidden}
+  .home{position:relative;height:100svh;width:100vw;overflow:hidden;font-family:LilitaOne,system-ui,sans-serif}
+  .hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
+  .cta{position:absolute;left:0;right:0;bottom:max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px}
+  .play{font-size:clamp(26px,3vw,40px);color:#3b1a5c;text-decoration:none;letter-spacing:.02em;
+    background:linear-gradient(180deg,#fff2a8 0%,#ffd23f 45%,#f4a000 100%);border:4px solid #3b1a5c;border-radius:999px;padding:10px 54px;
+    box-shadow:0 7px 0 #3b1a5c,0 0 28px rgba(255,200,60,.6),inset 0 3px 0 rgba(255,255,255,.7);text-shadow:0 2px 0 rgba(255,255,255,.6);animation:pp 1.5s ease-in-out infinite;position:relative;overflow:hidden}
   .play::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.7) 45%,transparent 55%);background-size:300% 100%;animation:shine 3.5s ease-in-out infinite}
   @keyframes pp{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
   @keyframes shine{0%,60%{background-position:120% 0}100%{background-position:-120% 0}}
-  .skulls img{position:fixed;width:var(--s);height:auto;opacity:.55;filter:drop-shadow(0 0 10px rgba(255,210,120,.5));animation:hover 6s ease-in-out infinite;z-index:0;pointer-events:none}
-  @keyframes hover{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-16px) rotate(6deg)}}
-  footer{text-align:center;padding:8px 16px max(16px,env(safe-area-inset-bottom));font-family:system-ui,sans-serif;font-size:13px;color:#ffe9c2}
-  footer a{color:#ffd23f}
-  .art-wrap{position:relative;width:100vw;aspect-ratio:1500/2250}
-  .art-wrap .art{width:100%;height:100%}
-  .chancla-fx{position:absolute;left:19%;top:-.18%;width:61.333%;height:auto;transform-origin:50% 50%;animation:chancla 3.2s ease-in-out infinite;pointer-events:none}
-  @keyframes chancla{
-    0%,100%{transform:translateY(0) rotate(-4deg) scale(1);filter:drop-shadow(0 0 6px rgba(255,200,60,.35)) brightness(1)}
-    50%{transform:translateY(-10px) rotate(4deg) scale(1.05);filter:drop-shadow(0 0 22px rgba(255,200,60,.75)) brightness(1.12)}
+  .fine{margin:0;font-family:system-ui,sans-serif;font-size:12px;color:#c9b39a}
+  .fine a{color:#ffd23f}
+  /* Phones: the portrait art's scene is roughly square; show it whole (no side crop) and let its dark bands meet the page color */
+  @media (max-aspect-ratio: 1/1){
+    .hero img{object-fit:contain;object-position:50% 42%}
   }
-  /* Desktop / landscape: full width. The art is pre-extended with the game's own night backdrop. */
-  @media (min-aspect-ratio: 1/1){
-    :global(html),:global(body){background:#140816}
-    .backdrop{display:none}
-    .hero{overflow:hidden;padding-bottom:10px}
-    .art-wrap{width:auto;height:calc(100svh - 112px);aspect-ratio:6000/2250;flex:none;left:0}
-    .chancla-fx{left:42.25%;width:15.333%}
-    .play{margin-top:-6px;font-size:32px;padding:10px 52px}
-    .skulls img{opacity:.6}
-  }
-  /* Phones: keep skulls off the characters (only near the edges, smaller) */
-  @media (max-aspect-ratio: 3/4){
-    .skulls img{width:calc(var(--s) * .6);opacity:.45}
-    /* fill the portrait viewport: art takes all height left after the button + footer */
-    .hero{min-height:calc(100svh - 40px);justify-content:center;gap:6px}
-
-  }
-  @media (prefers-reduced-motion:reduce){.skulls img,.play,.play::after,.chancla-fx{animation:none}}
+  @media (prefers-reduced-motion:reduce){.play,.play::after{animation:none}}
 </style>
-
 <script>
   document.getElementById('playNow')?.addEventListener('click', () => {
     const w = window as any;
