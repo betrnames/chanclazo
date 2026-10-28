@@ -21,7 +21,7 @@ type Sp = (typeof SP)[keyof typeof SP];
 interface Tile { t: number; sp: Sp; x: number; y: number; scale: number; id: number; sq?: number; land?: number; fall?: boolean; glare?: number }
 let uid = 1;
 const grid: (Tile | null)[][] = [];
-const IMG: HTMLImageElement[] = []; let chanclaImg: HTMLImageElement, skullImg: HTMLImageElement, pinataImg: HTMLImageElement, bgImg: HTMLImageElement;
+const IMG: HTMLImageElement[] = []; let chanclaImg: HTMLImageElement, skullImg: HTMLImageElement | undefined, pinataImg: HTMLImageElement, bgImg: HTMLImageElement;
 // tile 4 uses the full-body abuela sprite? keep faces only: swap to a marigold drawn in code
 const MARIGOLD = 4;
 
