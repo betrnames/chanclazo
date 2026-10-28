@@ -1,3 +1,4 @@
+import { showLeaderboard } from './leaderboard';
 import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import { $, loadImg, autoUnlockAudio, wakeAudio } from './common';
 import * as A from './slotsAudio';
@@ -36,7 +37,16 @@ type Mode = 'idle' | 'spinning' | 'resolve' | 'expand' | 'abuela' | 'pick' | 'bo
 const imgs: Record<string, HTMLImageElement> = {};
 const pinataVars = ['pinata_llama', 'pinata_rosa', 'pinata_azul', 'pinata_lima'];
 
-let credits = START_CREDITS;
+let credits = START_CREDITS, peak = START_CREDITS;
+/** Session end (out of free credits): the only place Share on X appears in Slots. */
+function endSession() {
+  mode = 'idle';
+  $('endTitle').textContent = 'Out of free credits!';
+  $('endMsg').textContent = `Your best balance this session: ${peak.toLocaleString()} credits.`;
+  $('again').textContent = 'Play again (refill 3,000)';
+  showLeaderboard('slots', 'Piñata Slots', peak, 1, '/slots');
+  $('end').classList.remove('hidden');
+}
 let startedOnce = false;
 let betIdx = 2;
 let lastWin = 0;
@@ -88,6 +98,7 @@ let W = 0, H = 0, dpr = 1;
 
 function bet() { return BETS[betIdx]; }
 function setHud() {
+  if (credits > peak) peak = credits;
   $('credits').textContent = String(credits);
   $('bet').textContent = String(bet());
   const wp = $('winPill'); const fp = $('freePill');
@@ -232,7 +243,7 @@ function finishToIdle() {
   if (freeSpins > 0) setTimeout(() => startSpin(), 550);
   else {
     freeMult = 1;
-    if (credits <= 0) { credits = START_CREDITS; toast = 'Free credits refilled'; toastT = 2; }
+    if (credits <= 0) { endSession(); return; }
     setHud();
   }
 }
@@ -512,12 +523,6 @@ function drawCabinet(box: {x:number;y:number;w:number;h:number}, g: ReturnType<t
     ctx.beginPath(); ctx.moveTo(ix, frameTop + 2); ctx.lineTo(ix, ny + nw * 0.5); ctx.arc(ix + iw / 2, ny + nw * 0.5, iw / 2, Math.PI, 0); ctx.lineTo(ix + iw, frameTop + 2); ctx.closePath(); ctx.fill();
     const im = imgs[NICHES[i][0] + '_face'];
     if (im && im.complete && im.width) {
-      // 3D medallion backing inside the arch
-      const mr = iw * 0.46, mx = nx + nw / 2, my = frameTop - g.nicheH * 0.46;
-      const mg = ctx.createRadialGradient(mx - mr * 0.3, my - mr * 0.35, mr * 0.1, mx, my, mr);
-      mg.addColorStop(0, '#d9b8ff'); mg.addColorStop(0.6, '#8a5cc8'); mg.addColorStop(1, '#4a2a78');
-      ctx.fillStyle = mg; ctx.beginPath(); ctx.arc(mx, my, mr, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = Math.max(2, mr * 0.06); ctx.stroke();
       // Same visible head height in every niche, centered in the arch, capped by arch width.
       let h2 = Math.min(g.nicheH * 0.9, nw * 0.62 * 1.15), hw = im.width * (h2 / im.height);
       if (hw > iw * 0.92) { hw = iw * 0.92; h2 = im.height * (hw / im.width); }
@@ -960,6 +965,7 @@ canvas.addEventListener('pointerup', e => onPtr(e, false));
   },
   state: () => ({ credits, bet: bet(), freeSpins, freeMult, mode, lastWin, bonusMult, rows: ROWS, cols: COLS }),
   credits: (n: number) => { credits = n; setHud(); },
+  end: () => endSession(),
 };
 
 async function boot() {
@@ -984,6 +990,6 @@ async function boot() {
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
   fit(); setHud();
   requestAnimationFrame(frame);
-  $('again').onclick = () => { $('end').classList.add('hidden'); mode = 'idle'; };
+  $('again').onclick = () => { $('end').classList.add('hidden'); mode = 'idle'; credits = START_CREDITS; peak = START_CREDITS; setHud(); };
 }
 boot();
