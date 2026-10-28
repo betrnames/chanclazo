@@ -64,8 +64,8 @@ import Base from '../layouts/Base.astro';
     home.classList.toggle('dfit', desk);
     const img = document.querySelector('.hero img') as HTMLImageElement, mirs = [document.getElementById('mirL') as HTMLImageElement, document.getElementById('mirR') as HTMLImageElement];
     if (desk) {
-      Object.assign(img.style, { inset: 'auto', left: `${ox}px`, top: `${oy}px`, width: `${a.w * k}px`, height: `${a.h * k}px` });
-      mirs.forEach((m, i) => { if (ox > 0.5) { const src = img.currentSrc || img.src; if (m.src !== src) m.src = src; Object.assign(m.style, { display: 'block', top: `${oy}px`, height: `${a.h * k}px`, width: `${a.w * k}px`, left: `${i === 0 ? ox - a.w * k : ox + a.w * k}px` }); } else m.style.display = 'none'; });
+      Object.assign(img.style, { maxWidth: 'none', inset: 'auto', left: `${ox}px`, top: `${oy}px`, width: `${a.w * k}px`, height: `${a.h * k}px` });
+      mirs.forEach((m, i) => { if (ox > 0.5) { const src = img.currentSrc || img.src; if (m.src !== src) m.src = src; Object.assign(m.style, { maxWidth: 'none', display: 'block', top: `${oy}px`, height: `${a.h * k}px`, width: `${a.w * k}px`, left: `${i === 0 ? ox - a.w * k : ox + a.w * k}px` }); } else m.style.display = 'none'; });
     } else { img.removeAttribute('style'); mirs.forEach((m) => (m.style.display = 'none')); }
     const size = Math.min(a.s * k, 360); // cap: source sprite is 160px; avoid heavy upscaling on huge screens
     fly.style.setProperty('--x', `${ox + a.x * k}px`); fly.style.setProperty('--y', `${oy + a.y * k}px`); fly.style.setProperty('--s', `${size}px`);
