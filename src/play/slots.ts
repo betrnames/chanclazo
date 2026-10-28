@@ -477,10 +477,12 @@ function drawCabinet(box: {x:number;y:number;w:number;h:number}, g: ReturnType<t
     ctx.fillStyle = STONE;
     const iw = nw * 0.8, ix = nx + (nw - iw) / 2;
     ctx.beginPath(); ctx.moveTo(ix, frameTop + 2); ctx.lineTo(ix, ny + nw * 0.5); ctx.arc(ix + iw / 2, ny + nw * 0.5, iw / 2, Math.PI, 0); ctx.lineTo(ix + iw, frameTop + 2); ctx.closePath(); ctx.fill();
-    const im = imgs[NICHES[i][0] + '_head'];
+    const im = imgs[NICHES[i][0] + '_face'];
     if (im && im.complete && im.width) {
-      const hh = g.nicheH * 1.05, hw = Math.min(iw * 1.05, im.width * (hh / im.height)), h2 = im.height * (hw / im.width);
-      ctx.drawImage(im, nx + nw / 2 - hw / 2, frameTop + g.plaqueH * 0.15 - h2, hw, h2);
+      // Same visible head height in every niche, centered in the arch, capped by arch width.
+      let h2 = Math.min(g.nicheH * 0.9, nw * 0.62 * 1.15), hw = im.width * (h2 / im.height);
+      if (hw > iw * 0.92) { hw = iw * 0.92; h2 = im.height * (hw / im.width); }
+      ctx.drawImage(im, nx + nw / 2 - hw / 2, frameTop - h2 + 2, hw, h2);
     }
   }
   // carved frame body
@@ -925,9 +927,9 @@ async function boot() {
   $('mute').onclick = (e) => { e.stopPropagation(); A.unlock(); A.setMuted(!A.isMuted()); setHud(); };
   const loads: Promise<unknown>[] = [
     loadImg('/play/t_abuela.webp').then(i => imgs.abuela = i),
-    loadImg('/lp/calaca_head.webp').then(i => imgs.calaca_head = i),
-    loadImg('/lp/abuela_head.webp').then(i => imgs.abuela_head = i),
-    loadImg('/lp/lucha_head.webp').then(i => imgs.lucha_head = i),
+    loadImg('/lp/calaca_face.webp').then(i => imgs.calaca_face = i),
+    loadImg('/lp/abuela_face.webp').then(i => imgs.abuela_face = i),
+    loadImg('/lp/lucha_face.webp').then(i => imgs.lucha_face = i),
     loadImg('/play/t_skull.webp').then(i => imgs.skull = i),
     loadImg('/play/t_lucha.webp').then(i => imgs.lucha = i),
     loadImg('/play/t_chancla.webp').then(i => imgs.chancla = i),

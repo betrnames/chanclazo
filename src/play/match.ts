@@ -14,8 +14,8 @@ let level = Math.min(LEVELS.length, Math.max(1, parseInt(new URLSearchParams(loc
 let MOVES = LEVELS[level - 1].moves, GOAL = LEVELS[level - 1].goal;
 // Regular tiles reuse the original art; specials: chancla = line clear, sugar skull = bomb, piñata = color clear
 const TILE_SRC = ['/play/t_abuela.webp', '/play/t_lucha.webp', '/play/t_skull.webp', '/play/t_bottle.webp', '/play/abuela_sprite.webp'];
-// Solid folk-art tile colors: abuela marigold, luchador turquoise, sugar skull magenta, bottle violet, marigold flower lime.
-const TILE_BG = ['#f7a21b', '#18b5b0', '#e2197a', '#7b3fbf', '#8cc63f'];
+// Solid folk-art tile colors: abuela marigold, luchador turquoise, sugar skull magenta, bottle red-orange, marigold flower lime.
+const TILE_BG = ['#f7a21b', '#18b5b0', '#e2197a', '#ff5a36', '#8cc63f'];
 const SP = { none: 0, lineH: 1, lineV: 2, bomb: 3, color: 4 } as const;
 type Sp = (typeof SP)[keyof typeof SP];
 interface Tile { t: number; sp: Sp; x: number; y: number; scale: number; id: number; sq?: number; land?: number; fall?: boolean; glare?: number }
@@ -230,7 +230,13 @@ function frame(now: number) {
       ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.beginPath();
       if (tl.sp === SP.lineH) { ctx.moveTo(x - s / 2 + 4, y - s * 0.32); ctx.lineTo(x + s / 2 - 4, y - s * 0.32); } else { ctx.moveTo(x - s * 0.32, y - s / 2 + 4); ctx.lineTo(x - s * 0.32, y + s / 2 - 4); }
       ctx.stroke();
-    } else if (tl.sp === SP.bomb) { ctx.shadowColor = '#ff4d6d'; ctx.shadowBlur = 14 + Math.sin(T * 8) * 5; fitImg(skullImg, x + s * 0.2, y + s * 0.2, s * (0.55 + Math.sin(T * 6) * 0.05)); ctx.shadowBlur = 0; }
+    } else if (tl.sp === SP.bomb) { // round fuse bomb badge (drawn), distinct from the sugar skull tile
+      const bxx = x + s * 0.22, byy = y + s * 0.22, br = s * (0.2 + Math.sin(T * 6) * 0.015);
+      ctx.fillStyle = '#3b1a5c'; ctx.beginPath(); ctx.arc(bxx, byy, br, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(bxx - br * 0.35, byy - br * 0.35, br * 0.25, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(bxx + br * 0.5, byy - br * 0.8); ctx.quadraticCurveTo(bxx + br, byy - br * 1.5, bxx + br * 1.3, byy - br * 1.3); ctx.stroke();
+      ctx.fillStyle = Math.sin(T * 20) > 0 ? '#ff5a36' : '#ffd23f'; ctx.beginPath(); ctx.arc(bxx + br * 1.3, byy - br * 1.3, br * 0.32, 0, Math.PI * 2); ctx.fill(); }
     if (tl.sp) { ctx.globalAlpha = 0.25 + Math.sin(T * 4 + tl.id) * 0.15; ctx.strokeStyle = tl.sp === SP.bomb ? '#ff4d6d' : '#ffd166'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x - s / 2, y - s / 2, s, s, s * 0.26); ctx.stroke(); ctx.globalAlpha = 1; }
     if (tl.glare !== undefined) { // diagonal shimmer sweep
       const g = (performance.now() - tl.glare) / 650; if (g > 1) tl.glare = undefined; else if (g > 0) {
@@ -265,3 +271,4 @@ Promise.all([...TILE_SRC.slice(0, 4).map(loadImg), loadImg('/play/t_chancla.webp
 const start = () => { wakeAudio(); markGameStart('match'); $('start').classList.add('hidden'); $('end').classList.add('hidden'); MOVES = LEVELS[level - 1].moves; GOAL = LEVELS[level - 1].goal; score = 0; moves = MOVES; hud(); newBoard(); playing = true; busy = false; };
 go.onclick = start; $('again').onclick = start;
 (window as any).__match = { grid, trySwap, findRuns, get state() { return { score, moves, playing, busy }; }, cellPos: (r: number, c: number) => ({ x: bx + (c + 0.5) * cell, y: by + (r + 0.5) * cell }) };
+void skullImg; // kept loaded for future use

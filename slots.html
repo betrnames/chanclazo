@@ -43,10 +43,15 @@ canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
 .card button:active{transform:translateY(3px);box-shadow:0 3px 0 #7c2d12}
 .card .links{margin-top:14px;font-size:13px}.card .links a{color:#ffd23f}
 @font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
-.screen.title{background:rgba(143,211,244,.35);flex-direction:column;justify-content:center;gap:8px;text-align:center;padding:56px 16px 16px}
+.screen.title{background:rgba(143,211,244,.82);flex-direction:column;justify-content:center;gap:8px;text-align:center;padding:56px 16px 16px}
 .tt-heads{display:flex;align-items:flex-end;justify-content:center;gap:2vmin}
 .tt-heads img{width:clamp(56px,min(14vmin,11vh),120px);filter:drop-shadow(0 4px 0 #5a2a00)}
 .tt-heads img.pin{width:clamp(110px,min(30vmin,24vh),260px);transform-origin:50% 0;animation:swing 2.6s ease-in-out infinite;order:0}
+.tt-ch{position:absolute;height:clamp(64px,min(16vmin,15vh),150px);width:auto;filter:drop-shadow(0 4px 0 #5a2a00);pointer-events:none}
+.tt-ab{left:3vw;bottom:6vh;transform:rotate(-8deg)}
+.tt-lu{left:4vw;top:22vh;transform:rotate(-6deg)}
+.tt-ca{right:4vw;top:34vh;transform:rotate(7deg)}
+@media (max-aspect-ratio:1/1){.tt-ab{left:3vw;bottom:3vh}.tt-lu{left:3vw;top:13vh}.tt-ca{right:3vw;top:13vh}.tt-ch{height:clamp(60px,19vw,110px)}}
 @keyframes swing{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
 .tt-title{margin:0;font-family:LilitaOne,system-ui,sans-serif;font-weight:400;font-size:clamp(48px,min(15vmin,11vh),130px);line-height:.92;color:#ffd23f;letter-spacing:2px;-webkit-text-stroke:clamp(5px,1.4vmin,10px) #5a2d86;paint-order:stroke fill;text-shadow:0 6px 0 #3b1a5c}
 .tt-ribbon{background:#e2197a;color:#fff;font-family:LilitaOne,system-ui,sans-serif;font-size:clamp(16px,3.6vmin,28px);padding:6px 34px;clip-path:polygon(0 0,100% 0,94% 50%,100% 100%,0 100%,6% 50%);letter-spacing:1px}
@@ -70,7 +75,8 @@ canvas#game{display:block;width:100%;height:100%;flex:1;min-height:0}
   <div class="disclaimer">Free play only · No real money · No purchases</div>
 </div>
 <div class="screen title" id="start">
-  <div class="tt-heads" aria-hidden="true"><img src="/lp/abuela_head.webp" alt=""/><img class="pin" src="/play/t_pinata.webp" alt=""/><img src="/lp/lucha_head.webp" alt=""/><img src="/lp/calaca_head.webp" alt=""/></div>
+  <div class="tt-heads" aria-hidden="true"><img class="pin" src="/play/t_pinata.webp" alt=""/></div>
+  <img class="tt-ch tt-ab" src="/lp/abuela_face.webp" alt="" aria-hidden="true"/><img class="tt-ch tt-lu" src="/lp/lucha_face.webp" alt="" aria-hidden="true"/><img class="tt-ch tt-ca" src="/lp/calaca_face.webp" alt="" aria-hidden="true"/>
   <h1 class="tt-title">PIÑATA<br/>SLOTS</h1>
   <div class="tt-ribbon">Free play · Working title</div>
   <button id="go" class="tt-tap">TAP TO PLAY</button>
