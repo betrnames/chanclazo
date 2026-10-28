@@ -69,7 +69,7 @@ export default function LorePage() {
       </nav>
 
       {/* Main content */}
-      <main style={{ flex: 1, maxWidth: '560px', margin: '0 auto', padding: '48px 24px 64px', width: '100%', position: 'relative', zIndex: 2 }}>
+      <main style={{ flex: 1, maxWidth: '560px', margin: '0 auto', padding: '48px 24px 64px', width: '100%', boxSizing: 'border-box', position: 'relative', zIndex: 2 }}>
 
         <p style={{ fontSize: '10px', color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700, marginBottom: '16px' }}>
           Latino Culture · Field Guide
