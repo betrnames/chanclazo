@@ -13,7 +13,7 @@ const gaId = (import.meta.env.PUBLIC_GA_ID || import.meta.env.VITE_GA_ID || '').
     s.dataset.ga = gaId;
     document.head.appendChild(s);
     var path = location.pathname.replace(/\.html$/, '') || '/';
-    var titles = { '/': 'Home', '/fling': 'Chancla Strike', '/match': 'Chanclazo Match', '/slots': 'Piñata Slots', '/lore': 'Lore' };
+    var titles = { '/': 'Home', '/choose': 'Choose a Game', '/fling': 'Chancla Strike', '/match': 'Chanclazo Match', '/slots': 'Piñata Slots', '/lore': 'Lore' };
     window.gtag('event', 'page_view', {
       page_title: titles[path] || document.title,
       page_path: path,

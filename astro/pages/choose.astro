@@ -1,0 +1,131 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Chanclazo: Choose your chapter">
+<main class="comic">
+  <header class="masthead">
+    <a class="back" href="/">← Home</a>
+    <h1>THE CASE OF THE<br/><span>MISSING CHANCLA</span></h1>
+    <p class="issue">A Chanclazo comic · Issue #1</p>
+  </header>
+
+  <div class="page">
+    <section class="panel p1 tilt-l">
+      <p class="cap">Día de los Muertos. Marigolds glow in the plaza, and Abuela guards her legendary chancla.</p>
+      <img class="spr abuela" src="/play/abuela_sprite.webp" alt="Abuela, fists raised" />
+      <p class="bubble b-right">Nobody touches my chancla!</p>
+    </section>
+
+    <section class="panel p2 tilt-r">
+      <span class="burst zas">¡ZAS!</span>
+      <p class="cap">A sudden gust! The chancla spins into the sky and lands inside a mischievous llama piñata.</p>
+      <img class="spr chancla" src="/play/t_chancla.webp" alt="" />
+      <img class="spr llama" src="/play/t_pinata.webp" alt="The llama piñata" />
+      <p class="bubble b-left">Oops…</p>
+    </section>
+
+    <section class="panel game g1 tilt-l">
+      <p class="chapter">Chapter 1</p>
+      <h2>Piñata Slots</h2>
+      <p class="cap">Spin the reels to track down the runaway piñata.</p>
+      <a class="thumb" href="/slots" data-game="slots"><img src="/lp/thumb_slots.webp" alt="Piñata Slots: the bright 5×4 slot cabinet" loading="lazy" /></a>
+      <a class="playbtn" href="/slots" data-game="slots">PLAY</a>
+    </section>
+
+    <section class="panel game g2 tilt-r">
+      <p class="chapter">Chapter 2</p>
+      <h2>Chanclazo Match</h2>
+      <p class="cap">The calacas scrambled the clues. Match them up to clear the trail.</p>
+      <a class="thumb" href="/match" data-game="match"><img src="/lp/thumb_match.webp" alt="Chanclazo Match: the tile board at night" loading="lazy" /></a>
+      <a class="playbtn" href="/match" data-game="match">PLAY</a>
+    </section>
+
+    <section class="panel game g3 tilt-l">
+      <span class="burst paf">¡PAF!</span>
+      <p class="chapter">Chapter 3</p>
+      <h2>Chancla Strike</h2>
+      <p class="cap">Cornered at the altar! The luchador and the calacas guard the loot. Aim true!</p>
+      <a class="thumb" href="/fling" data-game="fling"><img src="/lp/thumb_fling.webp" alt="Chancla Strike: aiming at the altar" loading="lazy" /></a>
+      <a class="playbtn" href="/fling" data-game="fling">PLAY</a>
+    </section>
+
+    <section class="panel p6 tilt-r">
+      <p class="cap">The chancla is home. Justice served… with a Chanclazo.</p>
+      <div class="team">
+        <img class="spr" src="/play/luchador_sprite.webp" alt="The luchador" />
+        <img class="spr" src="/play/abuela_sprite.webp" alt="Abuela" />
+        <img class="spr" src="/play/calaca_sprite.webp" alt="The calaca" />
+      </div>
+      <p class="bubble b-top">Who's hungry? I made tamales!</p>
+    </section>
+  </div>
+  <footer>Free play only · No real money · <a href="/lore">Lore</a></footer>
+</main>
+</Base>
+
+<style>
+  :global(html),:global(body){margin:0;background:#ffe9c2}
+  .comic{min-height:100svh;font-family:LilitaOne,system-ui,sans-serif;color:#1a0b2e;
+    background:radial-gradient(circle,rgba(226,25,122,.22) 1.6px,transparent 1.8px) 0 0/12px 12px,#ffe9c2;padding:14px 14px 0}
+  .masthead{max-width:1200px;margin:0 auto 14px;text-align:center;position:relative}
+  .back{position:absolute;left:0;top:4px;font-size:16px;color:#1a0b2e;background:#ffd23f;border:3px solid #1a0b2e;border-radius:10px;padding:4px 10px;text-decoration:none;box-shadow:3px 3px 0 #1a0b2e}
+  h1{margin:30px 0 4px;font-weight:400;font-size:clamp(28px,5.5vw,62px);line-height:.95;color:#ffd23f;-webkit-text-stroke:clamp(4px,.8vw,8px) #1a0b2e;paint-order:stroke fill;text-shadow:5px 5px 0 #e2197a,8px 8px 0 #1a0b2e;transform:rotate(-2deg)}
+  h1 span{color:#fff}
+  .issue{margin:6px 0 0;font-family:system-ui,sans-serif;font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+  .page{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+  .panel{position:relative;background:#fff;border:5px solid #1a0b2e;box-shadow:7px 7px 0 #1a0b2e;padding:14px;overflow:hidden;min-height:260px;
+    background-image:radial-gradient(circle,rgba(0,0,0,.13) 1.3px,transparent 1.5px);background-size:9px 9px}
+  .tilt-l{transform:rotate(-.8deg)}.tilt-r{transform:rotate(.8deg)}
+  .p1{grid-column:span 3;background-color:#ffd23f}
+  .p2{grid-column:span 3;background-color:#18b5b0;clip-path:polygon(3% 0,100% 0,100% 100%,0 100%)}
+  .g1{grid-column:span 2;background-color:#ff8ac0}
+  .g2{grid-column:span 2;background-color:#b48ee0}
+  .g3{grid-column:span 2;background-color:#ffb36b}
+  .p6{grid-column:span 6;background-color:#8cc63f;min-height:240px}
+  .cap{position:relative;z-index:2;display:inline-block;margin:0 0 8px;background:#fff6c2;border:3px solid #1a0b2e;padding:6px 10px;font-family:'Comic Sans MS','Comic Neue',system-ui,sans-serif;font-weight:700;font-size:15px;line-height:1.3;max-width:62%}
+  .game .cap{max-width:none}
+  .spr{position:absolute;bottom:0;height:78%;filter:drop-shadow(3px 0 0 #1a0b2e) drop-shadow(-3px 0 0 #1a0b2e) drop-shadow(0 3px 0 #1a0b2e) drop-shadow(0 -3px 0 #1a0b2e)}
+  .abuela{right:6%}
+  .llama{right:10%;height:70%;animation:wob 2.4s ease-in-out infinite}
+  .chancla{right:46%;top:34%;height:22%;bottom:auto;animation:spin 2.8s linear infinite}
+  @keyframes wob{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .bubble{position:absolute;z-index:3;margin:0;background:#fff;border:3px solid #1a0b2e;border-radius:22px;padding:8px 14px;font-size:clamp(15px,1.8vw,20px)}
+  .bubble::after{content:'';position:absolute;bottom:-14px;width:18px;height:18px;background:#fff;border-right:3px solid #1a0b2e;border-bottom:3px solid #1a0b2e;transform:skewX(35deg) rotate(45deg)}
+  .b-right{right:38%;top:44%}.b-right::after{right:16px}
+  .b-left{left:8%;bottom:16%}.b-left::after{right:22px}
+  .b-top{left:50%;top:14px;transform:translateX(-50%);white-space:nowrap}.b-top::after{left:50%}
+  .burst{position:absolute;z-index:4;right:10px;top:10px;padding:16px 20px;font-size:clamp(22px,2.6vw,34px);color:#ffd23f;-webkit-text-stroke:2px #1a0b2e;background:#e2197a;transform:rotate(10deg);
+    clip-path:polygon(50% 0,61% 22%,85% 8%,78% 34%,100% 42%,80% 58%,94% 82%,66% 74%,58% 100%,45% 78%,22% 96%,24% 70%,0 64%,18% 46%,4% 22%,30% 26%);animation:pop 1.6s ease-in-out infinite}
+  .paf{background:#ff5a36;left:auto;right:8px;top:6px;transform:rotate(-8deg)}
+  @keyframes pop{0%,100%{scale:1}50%{scale:1.12}}
+  .chapter{margin:0;font-family:system-ui,sans-serif;font-weight:900;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+  h2{margin:2px 0 8px;font-weight:400;font-size:clamp(24px,2.4vw,32px);color:#fff;-webkit-text-stroke:5px #1a0b2e;paint-order:stroke fill}
+  .thumb{display:block;border:4px solid #1a0b2e;box-shadow:4px 4px 0 #1a0b2e;background:#1a0b2e}
+  .thumb img{display:block;width:100%;aspect-ratio:25/16;object-fit:cover}
+  .playbtn{display:inline-block;margin-top:12px;font-size:24px;color:#1a0b2e;text-decoration:none;background:#ffd23f;border:4px solid #1a0b2e;border-radius:12px;padding:6px 26px;box-shadow:4px 4px 0 #1a0b2e;transition:transform .1s}
+  .playbtn:hover,.thumb:hover{transform:translate(-2px,-2px)}
+  .team{position:absolute;inset:auto 0 0 0;height:78%;display:flex;justify-content:center;align-items:flex-end;gap:2%}
+  .team .spr{position:static;height:100%}
+  .team .spr:nth-child(2){height:108%}
+  footer{text-align:center;padding:26px 16px max(20px,env(safe-area-inset-bottom));font-family:system-ui,sans-serif;font-size:13px}
+  footer a{color:#c2185b}
+  @media (max-width:820px){
+    .page{grid-template-columns:1fr;gap:18px}
+    .p1,.p2,.g1,.g2,.g3,.p6{grid-column:auto}
+    .p2{clip-path:none}
+    .panel{min-height:240px}
+    .cap{max-width:58%;font-size:14px}
+    .game .cap{max-width:none}
+    .b-right{right:auto;left:10px;top:auto;bottom:22%}
+    .p6{min-height:300px}
+    .team{height:62%}
+    .b-top{white-space:normal;width:80%;text-align:center;top:auto;bottom:66%}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<script>
+  document.querySelectorAll<HTMLAnchorElement>('a[data-game]').forEach((a) => a.addEventListener('click', () => {
+    const w = window as any; if (w.gtag) w.gtag('event', 'landing_card_click', { game: a.dataset.game, source: 'comic' });
+  }));
+</script>
