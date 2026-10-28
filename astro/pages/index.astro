@@ -4,12 +4,12 @@ import Base from '../layouts/Base.astro';
 <Base>
 <main class="home">
   <picture class="hero">
-    <source media="(min-aspect-ratio: 1/1)" srcset="/lp/lander-desktop-960.webp 960w, /lp/lander-desktop-1500.webp 1500w" sizes="100vw" />
+    <source media="(min-aspect-ratio: 1/1)" srcset="/lp/lander-bg-960.webp 960w, /lp/lander-bg-1500.webp 1500w" sizes="100vw" />
     <img src="/lp/lander-mobile-1125.webp" srcset="/lp/lander-mobile-750.webp 750w, /lp/lander-mobile-1125.webp 1125w, /lp/lander-mobile-1500.webp 1500w" sizes="100vw"
       width="1500" height="2667" fetchpriority="high"
       alt="Chanclazo: the abuela, the llama piñata and the luchador cheer under a glowing chancla in a Day of the Dead hall. When words fail, the Chanclazo speaks!" />
   </picture>
-  <img class="mir" id="mirL" alt="" aria-hidden="true" /><img class="mir" id="mirR" alt="" aria-hidden="true" />
+  <img class="herogrp" id="herogrp" src="/lp/lander-hero.webp" width="757" height="586" alt="" aria-hidden="true" />
   <div class="fly" id="fly" aria-hidden="true"><img class="burst" src="/lp/chancla_burst.webp" alt="" /><img class="gold" src="/lp/chancla_gold.webp" alt="" /></div>
   <div class="cta">
     <p class="tag">When words fail, the chanclazo speaks!</p>
@@ -28,8 +28,7 @@ import Base from '../layouts/Base.astro';
   @media (max-aspect-ratio: 1/1){.hero img{--fy:50%}}
   /* phones narrower than 9:16: fit width so the title is never cropped; the art's own dark bands blend into the page color */
   @media (max-aspect-ratio: 9/16){.hero img{object-fit:contain}}
-  .home.dfit .hero img{object-fit:fill}
-  .mir{display:none;position:absolute;object-fit:fill;transform:scaleX(-1);pointer-events:none}
+  .herogrp{display:none;position:absolute;z-index:1;pointer-events:none}
   .fly{position:absolute;left:0;top:0;width:var(--s,150px);height:var(--s,150px);transform:translate(calc(var(--x,-999px) - 50%),calc(var(--y,-999px) - 50%));pointer-events:none;z-index:2}
   .fly img{position:absolute;inset:0;width:100%;height:100%}
   .fly .burst{filter:drop-shadow(0 0 14px rgba(255,190,40,.75));animation:burst 2.4s ease-in-out infinite}
@@ -53,24 +52,30 @@ import Base from '../layouts/Base.astro';
   // Keep the chancla locked to its spot in the art under object-fit: cover (image coords -> screen).
   const ART = { d: { w: 1500, h: 844, x: 752, y: 60, s: 215 }, m: { w: 1500, h: 2667, x: 750, y: 560, s: 520 } };
   const fly = document.getElementById('fly')!;
+  const HERO = { w: 757, h: 586, cx: 752 - 361 }; // hero group cut from the desktop art; chancla centre x in hero coords
+  const hero = document.getElementById('herogrp') as HTMLImageElement;
   const place = () => {
-    const a = matchMedia('(min-aspect-ratio: 1/1)').matches ? ART.d : ART.m;
     const vw = innerWidth, vh = (document.querySelector('.home') as HTMLElement).clientHeight;
-    const desk = a === ART.d, home = document.querySelector('.home') as HTMLElement;
-    // Desktop: never crop the top (chancla band) - scale so the whole art height fits (small dark margin), cover the width;
-    // on very wide screens the sides are filled with mirrored copies of the same art (no filters/tints).
-    const k = desk ? Math.min(Math.max(vw / a.w, vh / a.h), vh / (a.h * (vw / vh > 2 ? 1.2 : 1.1))) : (vw / vh < 9 / 16 ? Math.min : Math.max)(vw / a.w, vh / a.h);
-    const ox = (vw - a.w * k) / 2, oy = (vh - a.h * k) / 2;
-    home.classList.toggle('dfit', desk);
-    const img = document.querySelector('.hero img') as HTMLImageElement, mirs = [document.getElementById('mirL') as HTMLImageElement, document.getElementById('mirR') as HTMLImageElement];
-    if (desk) {
-      Object.assign(img.style, { maxWidth: 'none', inset: 'auto', left: `${ox}px`, top: `${oy}px`, width: `${a.w * k}px`, height: `${a.h * k}px` });
-      mirs.forEach((m, i) => { if (ox > 0.5) { const src = img.currentSrc || img.src; if (m.src !== src) m.src = src; Object.assign(m.style, { maxWidth: 'none', display: 'block', top: `${oy}px`, height: `${a.h * k}px`, width: `${a.w * k}px`, left: `${i === 0 ? ox - a.w * k : ox + a.w * k}px` }); } else m.style.display = 'none'; });
-    } else { img.removeAttribute('style'); mirs.forEach((m) => (m.style.display = 'none')); }
-    const size = Math.min(a.s * k, 360); // cap: source sprite is 160px; avoid heavy upscaling on huge screens
-    fly.style.setProperty('--x', `${ox + a.x * k}px`); fly.style.setProperty('--y', `${oy + a.y * k}px`); fly.style.setProperty('--s', `${size}px`);
+    const cta = (document.querySelector('.cta') as HTMLElement).getBoundingClientRect().height + 24;
+    if (matchMedia('(min-aspect-ratio: 1/1)').matches) {
+      // Desktop/tablet-landscape: background layer is cover-fit by CSS; hero group is contained in the safe area above the CTA.
+      const top = 16, chTop = 0.22;                           // room for the chancla above the heads (fraction of hero height)
+      const availH = vh - top - cta, ar = vw / vh;
+      const maxW = vw * (ar > 2.6 ? 0.36 : ar > 2 ? 0.44 : ar > 1.7 ? 0.56 : 0.62);
+      const hh = Math.min(availH / (1 + chTop), maxW * HERO.h / HERO.w), hw = hh * HERO.w / HERO.h;
+      const hx = (vw - hw) / 2, hy = top + hh * chTop + Math.max(0, (availH - hh * (1 + chTop)) * 0.5);
+      Object.assign(hero.style, { display: 'block', left: `${hx}px`, top: `${hy}px`, width: `${hw}px`, height: `${hh}px` });
+      const size = Math.min(hw * 0.3, 360);
+      fly.style.setProperty('--x', `${hx + HERO.cx * hw / HERO.w}px`); fly.style.setProperty('--y', `${hy - size * 0.12}px`); fly.style.setProperty('--s', `${size}px`);
+      Object.assign((document.querySelector('.cta') as HTMLElement).style, { top: `${Math.min(hy + hh + 8, vh - cta + 12)}px`, bottom: 'auto' });
+    } else {
+      hero.style.display = 'none'; Object.assign((document.querySelector('.cta') as HTMLElement).style, { top: '', bottom: '' });
+      const a = ART.m, k = (vw / vh < 9 / 16 ? Math.min : Math.max)(vw / a.w, vh / a.h), ox = (vw - a.w * k) / 2, oy = (vh - a.h * k) / 2;
+      const size = Math.min(a.s * k, 360);
+      fly.style.setProperty('--x', `${ox + a.x * k}px`); fly.style.setProperty('--y', `${oy + a.y * k}px`); fly.style.setProperty('--s', `${size}px`);
+    }
   };
-  place(); addEventListener('resize', place); (document.querySelector('.hero img') as HTMLImageElement).addEventListener('load', place);
+  place(); addEventListener('resize', place);
   import { initLanderMusic } from '../../src/play/music';
   initLanderMusic(document.getElementById('lmusic') as HTMLButtonElement);
   document.getElementById('playNow')?.addEventListener('click', () => {
