@@ -59,7 +59,8 @@ const skulls = [
   @media (max-aspect-ratio: 3/4){
     .skulls img{width:calc(var(--s) * .6);opacity:.45}
     /* fill the portrait viewport: art takes all height left after the button + footer */
-    .art{width:100vw;height:max(150vw,calc(100svh - 128px));object-fit:cover;object-position:50% 40%}
+    .hero{min-height:calc(100svh - 40px);justify-content:center;gap:6px}
+    .art{width:100vw;height:auto}
   }
   @media (prefers-reduced-motion:reduce){.skulls img,.play,.play::after{animation:none}}
 </style>
