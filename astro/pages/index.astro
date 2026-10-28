@@ -98,7 +98,7 @@ const sparks = Array.from({ length: 18 }, (_, i) => ({ l: (i * 37) % 100, t: (i 
   .ch-calaca{height:86%;margin-right:-3%;z-index:2}
   .ch-llama{height:72%;align-self:flex-start;margin-top:-1%;z-index:3}
   .ch-llama .body{animation:swing 2.8s ease-in-out infinite;transform-origin:50% 0}
-  .ch-llama::before{content:'';position:absolute;left:50%;top:-60vh;height:60vh;border-left:3px solid #5a2a00;z-index:-1}
+  .ch-llama::before{content:'';position:absolute;left:50%;top:-3vh;height:3vh;border-left:3px solid #5a2a00;z-index:-1}
   .ch-lucha{height:92%;margin-left:-3%;z-index:4}
   @keyframes idle{0%,100%{transform:translateY(0) rotateY(-8deg) rotate(-1deg)}50%{transform:translateY(-8px) rotateY(8deg) rotate(1deg)}}
   @keyframes swing{0%,100%{transform:rotate(-6deg) rotateY(-10deg)}50%{transform:rotate(6deg) rotateY(10deg)}}
@@ -119,7 +119,7 @@ const sparks = Array.from({ length: 18 }, (_, i) => ({ l: (i * 37) % 100, t: (i 
   footer a{color:#ffd23f}
   @media (max-width:760px){
     .games{grid-template-columns:1fr}
-    .stage{height:clamp(220px,38vh,360px)}
+    .stage{height:min(40vh,58vw)}
     .ch-abuela{margin-right:-9%}.ch-calaca{margin-right:-7%}.ch-lucha{margin-left:-7%}
   }
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
