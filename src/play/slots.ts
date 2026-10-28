@@ -474,7 +474,10 @@ function litFace(im: HTMLImageElement, w: number, h: number) {
   // rim: warm silhouette offset up-left
   const sil = document.createElement('canvas'); sil.width = c.width; sil.height = c.height; const sx = sil.getContext('2d')!;
   sx.drawImage(im, pad, pad, w, h); sx.globalCompositeOperation = 'source-in'; sx.fillStyle = '#fff1b8'; sx.fillRect(0, 0, sil.width, sil.height);
-  x.drawImage(sil, -2.5, -2.5);
+  if (im.src.includes('abuela')) { // black outline only (no light rim) for the abuela
+    sx.fillStyle = '#000'; sx.fillRect(0, 0, sil.width, sil.height);
+    for (const [dx, dy] of [[-2, 0], [2, 0], [0, -2], [0, 2], [-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) x.drawImage(sil, dx, dy);
+  } else x.drawImage(sil, -2.5, -2.5);
   x.drawImage(im, pad, pad, w, h);
   x.globalCompositeOperation = 'source-atop';
   const lg = x.createRadialGradient(pad + w * 0.32, pad + h * 0.25, 2, pad + w * 0.5, pad + h * 0.55, Math.max(w, h) * 0.75);
@@ -964,7 +967,7 @@ async function boot() {
   A.unlock();
   initAudioControls('slots', (m) => { A.setMuted(m); });
   const loads: Promise<unknown>[] = [
-    loadImg('/play/t_abuela.webp').then(i => imgs.abuela = i),
+    loadImg('/lp/abuela_face.webp').then(i => imgs.abuela = i), // full head (tile art crops the bun)
     loadImg('/lp/calaca_face.webp').then(i => imgs.calaca_face = i),
     loadImg('/lp/abuela_face.webp').then(i => imgs.abuela_face = i),
     loadImg('/lp/lucha_face.webp').then(i => imgs.lucha_face = i),
@@ -981,9 +984,6 @@ async function boot() {
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
   fit(); setHud();
   requestAnimationFrame(frame);
-  $('go').onclick = () => { $('start').classList.add('hidden'); A.unlock(); wakeAudio(); };
-  $('rulesBtn').onclick = () => $('rules').classList.remove('hidden');
-  $('rulesClose').onclick = () => $('rules').classList.add('hidden');
   $('again').onclick = () => { $('end').classList.add('hidden'); mode = 'idle'; };
 }
 boot();

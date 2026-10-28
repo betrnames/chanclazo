@@ -197,7 +197,7 @@ function fitImg(img: HTMLImageElement, x: number, y: number, s: number, rot = 0)
 let last = performance.now(), T = 0;
 function frame(now: number) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; T += dt;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); { const sky = ctx.createLinearGradient(0, 0, 0, innerHeight); sky.addColorStop(0, '#ffc15e'); sky.addColorStop(0.35, '#ff8a5c'); sky.addColorStop(0.7, '#e2497a'); sky.addColorStop(1, '#8e44c9'); ctx.fillStyle = sky; ctx.fillRect(0, 0, innerWidth, innerHeight); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); { const sky = ctx.createLinearGradient(0, 0, 0, innerHeight); sky.addColorStop(0, '#0d0716'); sky.addColorStop(0.35, '#2a0f45'); sky.addColorStop(0.7, '#3d1760'); sky.addColorStop(0.9, '#0f3b45'); sky.addColorStop(1, '#4a1a10'); ctx.fillStyle = sky; ctx.fillRect(0, 0, innerWidth, innerHeight); }
   if (bgImg && false) { const s = Math.max(innerWidth / bgImg.width, innerHeight / bgImg.height); ctx.globalAlpha = 0.75; ctx.drawImage(bgImg, (innerWidth - bgImg.width * s) / 2, (innerHeight - bgImg.height * s) / 2, bgImg.width * s, bgImg.height * s); ctx.globalAlpha = 1; }
   { const fl = ['#e2197a', '#18b5b0', '#8cc63f', '#f7a21b', '#7b3fbf', '#ff5a36']; const fw = Math.max(26, innerWidth / 22); for (let k = 0, x = 4; x < innerWidth; k++, x += fw + 4) { const y = 4 + Math.sin(((x + fw / 2) / innerWidth) * Math.PI) * 14; ctx.fillStyle = fl[k % fl.length]; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + fw, y); ctx.lineTo(x + fw, y + fw * 0.9); ctx.lineTo(x + fw / 2, y + fw * 1.15); ctx.lineTo(x, y + fw * 0.9); ctx.closePath(); ctx.fill(); } }
   // board

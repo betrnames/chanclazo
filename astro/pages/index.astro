@@ -3,346 +3,137 @@ import Base from '../layouts/Base.astro';
 import PapelPicado from '../components/PapelPicado.astro';
 import Petals from '../components/Petals.astro';
 import ChanclaAnimation from '../components/ChanclaAnimation.astro';
-import MarqueeTitle from '../components/MarqueeTitle.astro';
-import PlayNow from '../components/PlayNow.astro';
-import Character from '../components/Character.astro';
-import GameCard from '../components/GameCard.astro';
-
+// Team composition built only from our existing hand-drawn sprites; all depth/lighting is CSS.
+const team = [
+  { k: 'abuela', src: '/play/abuela_sprite.webp', alt: 'The abuela, chancla ready', depth: 1.0 },
+  { k: 'calaca', src: '/play/calaca_sprite.webp', alt: 'The sugar skull calaca', depth: 0.55 },
+  { k: 'llama', src: '/play/t_pinata.webp', alt: 'The llama piñata', depth: 0.45 },
+  { k: 'lucha', src: '/play/luchador_sprite.webp', alt: 'The luchador', depth: 0.9 },
+];
+const games = [
+  { href: '/slots', name: 'Piñata Slots', blurb: 'Spin the 5×4 reels. Free play.', img: '/lp/slots_shot.webp', c: '#e2197a' },
+  { href: '/match', name: 'Chanclazo Match', blurb: 'Swap, match, smash. 8 levels.', img: '/lp/match_shot.webp', c: '#18b5b0' },
+  { href: '/fling', name: 'Chancla Strike', blurb: 'Fling the chancla. Topple the villains.', img: '/lp/fling_shot.webp', c: '#7b3fbf' },
+];
+const sparks = Array.from({ length: 18 }, (_, i) => ({ l: (i * 37) % 100, t: (i * 53) % 70 + 5, d: -(i * 0.37), s: 8 + (i % 4) * 5 }));
 ---
 <Base>
-  <header class="hero" id="top" data-title="1">
+<main class="home">
+  <section class="hero" id="top">
+    <div class="sky" aria-hidden="true"><div class="rays"></div><div class="sun"></div></div>
     <Petals />
-    <div class="hero-rail">
-      <PapelPicado />
+    <div class="rail"><PapelPicado /></div>
+    <div class="sparks" aria-hidden="true">{sparks.map((p) => <i style={`left:${p.l}%;top:${p.t}%;animation-delay:${p.d}s;--s:${p.s}px`}></i>)}</div>
+
+    <div class="brand">
+      <div class="chancla-slot"><ChanclaAnimation /></div>
+      <h1 class="title" aria-label="Chanclazo"><span data-t="CHANCLAZO">CHANCLAZO</span></h1>
+      <p class="ribbon">When words fail, the Chanclazo speaks.</p>
     </div>
 
-    <div class="hero-stage">
-      <div class="layer left desk-only">
-        <Character kind="abuela" class="abuela-windup" />
-      </div>
-
-      <div class="focal">
-        <div class="chancla-slot">
-          <ChanclaAnimation />
-        </div>
-        <MarqueeTitle />
-        <p class="hook">When words fail, the Chanclazo speaks.</p>
-        <div class="cta">
-          <PlayNow href="#games" />
-          <p class="sub">Insert chancla · free play</p>
-        </div>
-      </div>
-
-      <div class="layer right desk-only">
-        <div class="llama-swing" data-reveal>
-          <Character kind="llama" class="llama-hero" alt="Llama piñata swinging from the papel picado" />
-        </div>
-        <div class="heads">
-          <Character kind="lucha" class="peek-lucha" />
-          <Character kind="calaca" class="peek-calaca" />
-        </div>
-      </div>
+    <div class="stage" id="stage">
+      {team.map((m, i) => (
+        <figure class={`ch ch-${m.k}`} style={`--depth:${m.depth};--f:url(${m.src});--i:${i}`}>
+          <i class="halo" aria-hidden="true"></i>
+          <i class="floor" aria-hidden="true"></i>
+          <div class="body">
+            <img src={m.src} alt={m.alt} draggable="false" />
+            <i class="lit" aria-hidden="true"></i>
+            <i class="shine" aria-hidden="true"></i>
+          </div>
+        </figure>
+      ))}
     </div>
 
-    <!-- Mobile: full-face cast BELOW CTA (never under title, never headless crop) -->
-    <div class="mobile-cast" aria-label="Characters">
-      <Character kind="abuela" class="m-abuela" />
-      <div class="llama-swing m-llama" data-reveal>
-        <Character kind="llama" class="llama-hero" alt="Llama piñata" />
-      </div>
-      <Character kind="lucha" class="m-lucha" />
-      <Character kind="calaca" class="m-calaca" />
-    </div>
+    <a class="play" href="#games" id="playNow">PLAY NOW</a>
+  </section>
 
-    <div class="fold-peek" aria-hidden="true">
-      <span>Games below</span>
-      <div class="peek-bar"></div>
-    </div>
-
-    <nav class="title-switch" aria-label="Title style options">
-      <a href="/?title=1" class="on" title="Original wordmark">1</a>
-      <a href="/?title=2" title="Lotería poster">2</a>
-      <a href="/?title=3" title="Rótulo marquee">3</a>
-    </nav>
-  </header>
-
-  <main>
-    <GameCard
-      num="I"
-      name="Chancla Strike"
-      kick="Game one · Physics"
-      pitch="Pull back. Aim. Let it fly. Forts crumble. Luchadores drop."
-      href="/fling"
-      cta="Throw it →"
-      color="#ff922b"
-      shot="/lp/fling_loop.webp"
-      shotAlt="Chancla Strike gameplay"
-      shotB="/lp/fling_shot2.webp"
-      shotBAlt="A chancla mid-flight"
-    />
-    <GameCard
-      num="II"
-      name="Chanclazo Match"
-      kick="Game two · Puzzle"
-      pitch="Sugar skulls. Piñatas. Chanclas. Line up three and chain the combos."
-      href="/match"
-      cta="Match it →"
-      color="#38d9a9"
-      shot="/lp/match_loop.webp"
-      shotAlt="Chanclazo Match gameplay"
-      shotB="/lp/match_shot.webp"
-      shotBAlt="A Chanclazo Match board"
-      reverse
-    />
-    <GameCard
-      num="III"
-      name="Piñata Slots"
-      kick="Game three · Free-play slots"
-      pitch="Spin for the llama piñata. Free spins, then smash with the chancla."
-      href="/slots"
-      cta="Spin it →"
-      color="#f06595"
-      shot="/lp/slots_loop.webp"
-      shotAlt="Piñata Slots gameplay"
-      shotB="/lp/slots_bonus.webp"
-      shotBAlt="A piñata smash bonus"
-      note="Working title · Free play only. No real money."
-    />
-
-    <section class="fin reveal">
-      <h2>Three games.<br/>One chancla.</h2>
-      <div class="fin-links">
-        <a class="go" href="/fling" style="--c:#ff922b">Chancla Strike</a>
-        <a class="go" href="/match" style="--c:#38d9a9">Chanclazo Match</a>
-        <a class="go" href="/slots" style="--c:#f06595">Piñata Slots</a>
-      </div>
-      <p class="fin-note">Free in your browser. No download.</p>
-    </section>
-  </main>
-
-  <footer>
-    <p>© 2026 chanclazo.com · <a href="/lore">What is a chanclazo?</a></p>
-  </footer>
+  <section class="games" id="games">
+    {games.map((g) => (
+      <a class="card" href={g.href} style={`--c:${g.c}`}>
+        <span class="thumb"><img src={g.img} alt="" loading="lazy" /></span>
+        <span class="txt"><b>{g.name}</b><small>{g.blurb}</small></span>
+        <span class="go">PLAY</span>
+      </a>
+    ))}
+  </section>
+  <footer>Free play only · No real money · <a href="/lore">Lore</a></footer>
+</main>
 </Base>
 
 <style>
-  .hero{
-    --hero-bg:#ff8c1a;
-    position:relative;
-    background:var(--hero-bg);
-    color:var(--ink);
-    min-height:100svh;
-    min-height:100dvh;
-    display:flex;
-    flex-direction:column;
-    padding:max(6px,env(safe-area-inset-top)) 0 0;
-    overflow-x:clip;
-    overflow-y:hidden;
-  }
-  .hero-rail{position:relative;z-index:6;padding:0 clamp(8px,2vw,20px)}
+  :global(html),:global(body){margin:0;background:#8e44c9}
+  .home{font-family:LilitaOne,system-ui,sans-serif;color:#fff;overflow-x:hidden}
+  .hero{position:relative;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;isolation:isolate;padding-bottom:20px}
+  .sky{position:absolute;inset:0;z-index:-2;background:linear-gradient(180deg,#ffc15e 0%,#ff8a5c 35%,#e2497a 70%,#8e44c9 100%)}
+  .rays{position:absolute;left:50%;top:42%;width:240vmax;height:240vmax;transform:translate(-50%,-50%);background:repeating-conic-gradient(rgba(255,241,184,.22) 0 7deg,rgba(255,241,184,0) 7deg 18deg);animation:rot 60s linear infinite;-webkit-mask:radial-gradient(circle,#000 10%,transparent 55%);mask:radial-gradient(circle,#000 10%,transparent 55%)}
+  .sun{position:absolute;left:50%;top:42%;width:46vmin;height:46vmin;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,#fff6d0 0%,#ffe08a 40%,rgba(255,193,94,0) 70%)}
+  @keyframes rot{to{transform:translate(-50%,-50%) rotate(360deg)}}
+  .rail{width:100%;position:relative;z-index:2}
+  .sparks i{position:absolute;width:var(--s);height:var(--s);background:#fff8d6;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:tw 2.4s ease-in-out infinite;filter:drop-shadow(0 0 6px #ffd23f);z-index:1}
+  @keyframes tw{0%,100%{opacity:0;transform:scale(.3) rotate(0)}50%{opacity:1;transform:scale(1) rotate(45deg)}}
 
-  .hero-stage{
-    position:relative;
-    z-index:4;
-    flex:1;
-    display:grid;
-    grid-template-columns:minmax(100px,0.75fr) minmax(0,min(56vw,640px)) minmax(100px,0.75fr);
-    grid-template-rows:1fr;
-    grid-template-areas: "left focal right";
-    align-items:start;
-    gap:clamp(8px,2vw,20px);
-    padding:clamp(8px,2vw,20px) clamp(12px,3vw,28px) clamp(8px,2vh,20px);
-    min-height:0;
-  }
+  .brand{position:relative;z-index:3;text-align:center;margin-top:clamp(4px,2vh,20px)}
+  .chancla-slot{display:flex;justify-content:center;height:clamp(70px,13vh,130px);align-items:center}
+  .chancla-slot :global(.chancla){width:clamp(70px,13vh,130px)}
+  .title{margin:0;font-weight:400;line-height:.9;font-size:clamp(56px,min(14vw,15vh),150px);letter-spacing:.03em;position:relative}
+  .title span{position:relative;display:inline-block;color:#ffd23f;-webkit-text-stroke:clamp(5px,1.1vmin,10px) #3b1a5c;paint-order:stroke fill;
+    text-shadow:0 2px 0 #5a2d86,0 4px 0 #5a2d86,0 6px 0 #4a2272,0 8px 0 #4a2272,0 10px 0 #3b1a5c,0 12px 0 #3b1a5c,0 20px 24px rgba(58,20,80,.55);
+    animation:bob 3.2s ease-in-out infinite}
+  .title span::after{content:attr(data-t);position:absolute;inset:0;color:transparent;-webkit-text-stroke:0;background:linear-gradient(180deg,rgba(255,255,255,.75) 0%,rgba(255,255,255,0) 48%);-webkit-background-clip:text;background-clip:text;text-shadow:none;pointer-events:none}
+  .ribbon{display:inline-block;margin:clamp(6px,1.4vh,14px) 0 0;background:linear-gradient(180deg,#ff3d8f,#c2185b);color:#fff;font-size:clamp(15px,2.4vmin,24px);padding:8px 40px;clip-path:polygon(0 0,100% 0,95% 50%,100% 100%,0 100%,5% 50%);text-shadow:0 2px 0 #7a1f4f;letter-spacing:.02em}
 
-  /* Focal stack — reserved vertical slots; chancla never shares a row with text */
-  .focal{
-    grid-area:focal;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    text-align:center;
-    gap:0;
-    z-index:10;
-    padding:0 clamp(8px,2vw,20px) 8px;
-    min-width:0;
-    overflow:visible;
-    max-width:100%;
-    align-self:start;
-  }
-  .chancla-slot{
-    /* Layout box tall enough for spinny scale(1.15)+rotate visual extent
-       (transforms do not expand layout — pad so title starts clear below). */
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:100%;
-    height:clamp(220px,24vw,270px);
-    margin:0 0 8px;
-    padding:0;
-    overflow:visible;
-    flex:none;
-  }
-  .hook{
-    margin:8px 0 12px;
-    font-size:clamp(15px,3.2vw,22px);
-    font-style:italic;font-weight:600;max-width:18em;
-    color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.45);
-    position:relative;z-index:2;
-  }
-  .cta{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:11}
-  .sub{margin:0;font-family:Impact,sans-serif;font-size:clamp(10px,2vw,13px);letter-spacing:.28em;text-transform:uppercase;opacity:.85}
+  .stage{position:relative;z-index:3;width:min(1100px,100%);height:clamp(260px,46vh,520px);margin-top:clamp(0px,1vh,10px);display:flex;justify-content:center;align-items:flex-end;perspective:900px}
+  .ch{position:relative;margin:0;height:100%;flex:none;transform:translate3d(calc(var(--px,0) * var(--depth) * 18px),calc(var(--py,0) * var(--depth) * 10px),0);transition:transform .25s ease-out}
+  .ch .body{position:relative;height:100%;animation:idle calc(3s + var(--i) * .4s) ease-in-out infinite;animation-delay:calc(var(--i) * -.7s);transform-origin:50% 100%;transform-style:preserve-3d}
+  .ch img{height:100%;width:auto;display:block;user-select:none;
+    filter:drop-shadow(2px 0 0 #2a0f45) drop-shadow(-2px 0 0 #2a0f45) drop-shadow(0 2px 0 #2a0f45) drop-shadow(0 -2px 0 #2a0f45)
+           drop-shadow(-3px -3px 0 rgba(255,241,184,.9)) drop-shadow(0 18px 18px rgba(58,20,80,.55))}
+  .ch .lit,.ch .shine{position:absolute;inset:0;-webkit-mask:var(--f) center bottom/contain no-repeat;mask:var(--f) center bottom/contain no-repeat;pointer-events:none}
+  .ch .lit{background:radial-gradient(ellipse at 30% 18%,rgba(255,255,255,.4),rgba(255,255,255,0) 42%,rgba(60,20,90,.42) 100%);mix-blend-mode:normal}
+  .ch .shine{background:linear-gradient(110deg,rgba(255,255,255,0) 35%,rgba(255,255,255,.55) 45%,rgba(255,255,255,0) 55%);background-size:300% 100%;animation:shine 5s ease-in-out infinite;animation-delay:calc(var(--i) * -1.2s)}
+  .ch .halo{position:absolute;left:50%;top:45%;width:120%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(255,241,184,.75),rgba(255,210,63,.25) 45%,rgba(255,210,63,0) 70%);z-index:-1;animation:pulse 3s ease-in-out infinite}
+  .ch .floor{position:absolute;left:50%;bottom:-10px;width:70%;height:22px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(58,20,80,.55),rgba(58,20,80,0) 70%);z-index:-1}
+  .ch-abuela{height:100%;margin-right:-4%;z-index:4}
+  .ch-calaca{height:86%;margin-right:-3%;z-index:2}
+  .ch-llama{height:72%;align-self:flex-start;margin-top:-1%;z-index:3}
+  .ch-llama .body{animation:swing 2.8s ease-in-out infinite;transform-origin:50% 0}
+  .ch-llama::before{content:'';position:absolute;left:50%;top:-60vh;height:60vh;border-left:3px solid #5a2a00;z-index:-1}
+  .ch-lucha{height:92%;margin-left:-3%;z-index:4}
+  @keyframes idle{0%,100%{transform:translateY(0) rotateY(-8deg) rotate(-1deg)}50%{transform:translateY(-8px) rotateY(8deg) rotate(1deg)}}
+  @keyframes swing{0%,100%{transform:rotate(-6deg) rotateY(-10deg)}50%{transform:rotate(6deg) rotateY(10deg)}}
+  @keyframes shine{0%,60%{background-position:120% 0}100%{background-position:-120% 0}}
+  @keyframes pulse{0%,100%{opacity:.75;transform:translate(-50%,-50%) scale(.95)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-6px) rotate(1deg)}}
 
-  .layer{position:relative;height:100%;min-height:0;pointer-events:none;z-index:2;display:flex}
-  .layer.left{
-    grid-area:left;
-    align-self:stretch;
-    flex-direction:column;
-    justify-content:flex-end;
-    align-items:flex-start;
-    margin-left:clamp(-16px,-1.5vw,0);
-    margin-bottom:0;
-    overflow:visible;
-  }
-  .layer.left :global(.abuela-windup){width:clamp(140px,17vw,210px)}
-  .layer.left :global(.abuela-windup img){width:100%;height:auto;display:block}
+  .play{position:relative;z-index:5;margin-top:clamp(10px,2vh,22px);font-size:clamp(26px,4.4vmin,42px);color:#fff;text-decoration:none;background:linear-gradient(180deg,#3fd9d2,#18b5b0 55%,#0f8f8a);border:4px solid #3b1a5c;border-radius:999px;padding:12px 46px;box-shadow:0 7px 0 #3b1a5c,0 14px 24px rgba(58,20,80,.45),inset 0 3px 0 rgba(255,255,255,.45);text-shadow:0 2px 0 #0b5f5c;animation:pp 1.4s ease-in-out infinite}
+  @keyframes pp{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
 
-  .layer.right{
-    grid-area:right;
-    align-self:stretch;
-    flex-direction:column;
-    justify-content:flex-end;
-    align-items:center;
-    gap:clamp(8px,1.2vw,14px);
-    padding-bottom:0;
-    overflow:visible;
-    margin:0;
+  .games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:1100px;margin:0 auto;padding:28px 18px 18px;background:linear-gradient(180deg,#8e44c9,#6a2fa0)}
+  .card{display:flex;flex-direction:column;text-decoration:none;color:#fff;background:var(--c);border:4px solid #3b1a5c;border-radius:20px;overflow:hidden;box-shadow:0 8px 0 #3b1a5c;transition:transform .15s}
+  .card:hover{transform:translateY(-4px) rotate(-.5deg)}
+  .thumb{aspect-ratio:16/10;overflow:hidden;background:#3b1a5c}.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .txt{padding:10px 14px 4px;display:flex;flex-direction:column;gap:2px}.txt b{font-size:24px;font-weight:400}.txt small{font-family:system-ui,sans-serif;font-size:14px;opacity:.95}
+  .go{margin:8px 14px 14px;align-self:flex-start;background:#ffd23f;color:#3b1a5c;border-radius:999px;padding:6px 22px;font-size:20px;box-shadow:0 4px 0 #3b1a5c}
+  footer{text-align:center;padding:16px 16px max(22px,env(safe-area-inset-bottom));font-family:system-ui,sans-serif;font-size:13px;background:#6a2fa0;color:#ffe9c2}
+  footer a{color:#ffd23f}
+  @media (max-width:760px){
+    .games{grid-template-columns:1fr}
+    .stage{height:clamp(220px,38vh,360px)}
+    .ch-abuela{margin-right:-9%}.ch-calaca{margin-right:-7%}.ch-lucha{margin-left:-7%}
   }
-  .layer.right .llama-swing{width:clamp(110px,16vw,180px);margin:0 0 6px}
-  .layer.right .heads{display:flex;flex-direction:row;align-items:flex-end;justify-content:center;gap:clamp(8px,1.2vw,14px);margin:0}
-  :global(.peek-lucha){width:clamp(90px,12vw,150px);transform:rotate(8deg)}
-  :global(.peek-calaca){width:clamp(84px,11vw,140px);transform:rotate(-5deg)}
-  :global(.peek-lucha.on){transform:rotate(8deg) translateY(0)}
-  :global(.peek-calaca.on){transform:rotate(-5deg) translateY(0)}
-
-  .llama-swing{
-    transform-origin:top center;
-    animation:swing 3.2s ease-in-out infinite;
-  }
-  .llama-swing :global(.char){width:100%}
-  @keyframes swing{
-    0%,100%{transform:rotate(-10deg)}
-    50%{transform:rotate(10deg)}
-  }
-
-  .fold-peek{
-    z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;
-    padding:8px 16px 0;font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:.7;
-  }
-  .peek-bar{
-    width:min(100%,440px);height:20px;background:var(--cream);
-    border-radius:14px 14px 0 0;box-shadow:0 -4px 0 rgba(42,10,0,.08);
-  }
-  .title-switch{
-    position:absolute;top:max(8px,env(safe-area-inset-top));right:10px;z-index:30;
-    display:flex;gap:6px;
-  }
-  .title-switch a{
-    width:36px;height:36px;display:grid;place-items:center;
-    border:2px solid var(--ink);border-radius:8px;
-    background:rgba(255,244,224,.9);font-family:Impact,sans-serif;
-    text-decoration:none;font-size:14px;min-width:44px;min-height:44px;
-  }
-  .title-switch a.on{background:#ffd43b;box-shadow:2px 2px 0 var(--ink)}
-
-  @media (max-width:1024px){
-    .hero-stage{grid-template-columns:minmax(90px,.85fr) minmax(0,1.15fr) minmax(90px,.85fr)}
-    .layer.left :global(.abuela-windup){width:clamp(120px,18vw,180px)}
-    .layer.right .llama-swing{width:clamp(96px,15vw,150px)}
-    :global(.peek-lucha){width:clamp(80px,12vw,120px)}
-    :global(.peek-calaca){width:clamp(72px,11vw,110px)}
-  }
-
-  .mobile-cast{display:none}
-  .desk-only{display:flex}
-
-  /* Mobile: smaller FULL-BODY abuela from bottom-left (face visible), never headless */
-  @media (max-width:768px){
-    .desk-only{display:none!important}
-    .mobile-cast{
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      gap:clamp(6px,2vw,14px);
-      padding:2px 10px 0;
-      margin-top:0;
-      z-index:5;
-      position:relative;
-    }
-    .mobile-cast :global(.m-abuela){width:clamp(88px,28vw,120px);flex:none}
-    .mobile-cast :global(.m-abuela img){width:100%;height:auto}
-    .mobile-cast .m-llama, .mobile-cast :global(.m-llama){width:clamp(64px,20vw,92px);flex:none;animation:swing 3.2s ease-in-out infinite;transform-origin:top center}
-    .mobile-cast :global(.m-lucha){width:clamp(56px,16vw,78px);flex:none;transform:rotate(8deg)}
-    .mobile-cast :global(.m-calaca){width:clamp(50px,15vw,70px);flex:none;transform:rotate(-4deg)}
-    .hero-stage{
-      grid-template-columns:1fr;
-      grid-template-rows:auto;
-      grid-template-areas: "focal";
-      align-items:start;
-      padding:0 12px 0;
-      flex:0 0 auto; /* do NOT expand — was pushing cast to bottom of 100vh */
-      min-height:0;
-    }
-    .hero{justify-content:flex-start;min-height:0;min-height:unset}
-    .focal{grid-area:focal;padding:2px 4px 0;max-width:100%;overflow:visible}
-    .chancla-slot{height:clamp(110px,30vw,150px);margin-bottom:0}
-    .hook{margin:4px 0 6px;font-size:clamp(14px,3.8vw,18px)}
-    .cta{margin-top:2px;gap:4px}
-    .sub{margin:0}
-    .mobile-cast{padding:0 10px;margin-top:4px}
-    .fold-peek{padding:2px 16px 0;margin-top:2px}
-  }
-
-  @media (max-width:400px){
-    .mobile-cast :global(.m-abuela){width:clamp(84px,30vw,110px)}
-  }
-
-  @media (orientation:landscape) and (max-height:480px){
-    .fold-peek{display:none}
-    .abuela-windup{width:22vw}
-    .llama-swing{width:14vw}
-    .peek-lucha,.peek-calaca{width:11vw}
-    
-  }
-
-  .fin{text-align:center;padding:12vh 18px 6vh;background:var(--cream);color:var(--ink)}
-  .fin h2{font-family:Impact,sans-serif;font-size:clamp(32px,9vw,72px);margin:0 0 20px;text-transform:uppercase;line-height:.95}
-  .fin-links{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
-  .fin .go{
-    display:inline-flex;align-items:center;justify-content:center;min-height:44px;
-    padding:12px 22px;background:var(--c);color:var(--ink);
-    font-family:Impact,sans-serif;font-size:18px;text-transform:uppercase;text-decoration:none;
-    box-shadow:5px 5px 0 var(--ink);border:3px solid var(--ink);border-radius:8px;
-  }
-  .fin-note{margin-top:28px;font-style:italic;opacity:.8}
-  .fin.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
-  .fin.reveal.on{opacity:1;transform:none}
-  footer{text-align:center;padding:20px 16px max(24px,env(safe-area-inset-bottom));font-size:12px;opacity:.7;background:var(--cream-2);color:var(--ink)}
-  footer a{text-decoration:underline}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 
 <script>
-  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((e) => {
-      if (e.isIntersecting) {
-        e.target.classList.add('on');
-        io.unobserve(e.target);
-      }
-    });
-  }, { threshold: 0.12 });
-  document.querySelectorAll('.reveal,[data-reveal],.char').forEach((el) => {
-    if (reduce) el.classList.add('on');
-    else io.observe(el);
+  const stage = document.getElementById('stage');
+  addEventListener('pointermove', (e) => {
+    if (!stage) return;
+    const x = (e.clientX / innerWidth - 0.5) * 2, y = (e.clientY / innerHeight - 0.5) * 2;
+    stage.querySelectorAll<HTMLElement>('.ch').forEach((el) => { el.style.setProperty('--px', String(x)); el.style.setProperty('--py', String(y)); });
+  });
+  document.getElementById('playNow')?.addEventListener('click', () => {
+    const w = window as any;
+    if (w.gtag) { w.gtag('event', 'hero_play_click', { game: 'home' }); w.gtag('event', 'landing_card_click', { game: 'hero_play' }); }
   });
 </script>
