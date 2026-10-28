@@ -58,6 +58,8 @@ const skulls = [
   /* Phones: keep skulls off the characters (only near the edges, smaller) */
   @media (max-aspect-ratio: 3/4){
     .skulls img{width:calc(var(--s) * .6);opacity:.45}
+    /* fill the portrait viewport: art takes all height left after the button + footer */
+    .art{width:100vw;height:max(150vw,calc(100svh - 128px));object-fit:cover;object-position:50% 40%}
   }
   @media (prefers-reduced-motion:reduce){.skulls img,.play,.play::after{animation:none}}
 </style>

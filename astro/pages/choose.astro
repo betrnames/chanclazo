@@ -120,7 +120,14 @@ import Base from '../layouts/Base.astro';
     .b-right{right:auto;left:10px;top:auto;bottom:22%}
     .p6{min-height:300px}
     .team{height:62%}
-    .b-top{white-space:normal;width:80%;text-align:center;top:auto;bottom:66%}
+    .b-top{white-space:normal;width:auto;max-width:80%;text-align:center;top:auto;bottom:64%;left:auto;right:12px;transform:none}
+    .b-top::after{left:auto;right:30px}
+    .p6 .cap{max-width:70%}
+    .p6{min-height:340px}
+    .back{position:static;display:inline-block;margin-bottom:6px}
+    .masthead{text-align:left}
+    h1{margin-top:4px;text-align:center}
+    .issue{text-align:center}
   }
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
