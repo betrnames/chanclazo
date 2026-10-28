@@ -16,13 +16,16 @@ const skulls = [
     {skulls.map((k) => <img src="/play/t_skull.webp" alt="" style={`left:${k.x}%;top:${k.y}%;--s:${k.s}px;animation-delay:${k.d}s`} />)}
   </div>
   <section class="hero">
-    <picture>
-      <img class="art" src="/lp/keyart-1125.webp"
-        srcset="/lp/keyart-750.webp 750w, /lp/keyart-1125.webp 1125w, /lp/keyart-1500.webp 1500w"
-        sizes="(min-aspect-ratio: 3/4) calc((100svh - 104px) * 0.6667), 100vw"
-        width="1500" height="2250" fetchpriority="high"
-        alt="Chanclazo: the abuela, the llama piñata and the luchador cheer under a glowing chancla. When words fail, the Chanclazo speaks!" />
-    </picture>
+    <div class="art-wrap">
+      <picture>
+        <source media="(min-aspect-ratio: 1/1)" srcset="/lp/keyart-wide-1080.webp 1920w, /lp/keyart-wide-1620.webp 2880w" sizes="calc((100svh - 92px) * 1.7778)" />
+        <img class="art" src="/lp/keyart-1125.webp"
+          srcset="/lp/keyart-750.webp 750w, /lp/keyart-1125.webp 1125w, /lp/keyart-1500.webp 1500w"
+          sizes="100vw" width="1500" height="2250" fetchpriority="high"
+          alt="Chanclazo: the abuela, the llama piñata and the luchador cheer under a glowing chancla. When words fail, the Chanclazo speaks!" />
+      </picture>
+      <img class="chancla-fx" src="/lp/keyart-chancla.webp" alt="" aria-hidden="true" />
+    </div>
     <a class="play" href="/choose" id="playNow">PLAY NOW</a>
   </section>
   <footer>Free play only · No real money · <a href="/lore">Lore</a></footer>
@@ -48,21 +51,31 @@ const skulls = [
   @keyframes hover{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-16px) rotate(6deg)}}
   footer{text-align:center;padding:8px 16px max(16px,env(safe-area-inset-bottom));font-family:system-ui,sans-serif;font-size:13px;color:#ffe9c2}
   footer a{color:#ffd23f}
-  /* Desktop / landscape: art column centered, backdrop fills the sides */
-  @media (min-aspect-ratio: 3/4){
-    .hero{padding-top:0}
-    .art{height:calc(100svh - 104px);width:auto;max-width:none;box-shadow:0 0 60px rgba(0,0,0,.5);border-left:3px solid #ffd23f33;border-right:3px solid #ffd23f33}
-    .play{margin-top:-34px;font-size:34px}
-    .skulls img{opacity:.7}
+  .art-wrap{position:relative;width:100vw;aspect-ratio:1500/2250}
+  .art-wrap .art{width:100%;height:100%}
+  .chancla-fx{position:absolute;left:19%;top:-.18%;width:61.333%;height:auto;transform-origin:50% 50%;animation:chancla 3.2s ease-in-out infinite;pointer-events:none}
+  @keyframes chancla{
+    0%,100%{transform:translateY(0) rotate(-4deg) scale(1);filter:drop-shadow(0 0 6px rgba(255,200,60,.35)) brightness(1)}
+    50%{transform:translateY(-10px) rotate(4deg) scale(1.05);filter:drop-shadow(0 0 22px rgba(255,200,60,.75)) brightness(1.12)}
+  }
+  /* Desktop / landscape: full width. The art is pre-extended with the game's own night backdrop. */
+  @media (min-aspect-ratio: 1/1){
+    :global(html),:global(body){background:#140816}
+    .backdrop{display:none}
+    .hero{overflow:hidden;padding-bottom:10px}
+    .art-wrap{width:auto;height:calc(100svh - 92px);aspect-ratio:4000/2250;flex:none;left:0}
+    .chancla-fx{left:38.375%;width:23%}
+    .play{margin-top:-6px;font-size:32px;padding:10px 52px}
+    .skulls img{opacity:.6}
   }
   /* Phones: keep skulls off the characters (only near the edges, smaller) */
   @media (max-aspect-ratio: 3/4){
     .skulls img{width:calc(var(--s) * .6);opacity:.45}
     /* fill the portrait viewport: art takes all height left after the button + footer */
     .hero{min-height:calc(100svh - 40px);justify-content:center;gap:6px}
-    .art{width:100vw;height:auto}
+
   }
-  @media (prefers-reduced-motion:reduce){.skulls img,.play,.play::after{animation:none}}
+  @media (prefers-reduced-motion:reduce){.skulls img,.play,.play::after,.chancla-fx{animation:none}}
 </style>
 
 <script>
