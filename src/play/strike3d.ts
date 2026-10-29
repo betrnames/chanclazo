@@ -3,16 +3,16 @@ import * as CANNON from 'cannon-es';
 
 // ---------- story text table (one-line name swap) ----------
 const BOY = 'Sidro';
-const A = '/s3d/abuela_warm.webp', L = '/s3d/kid.webp', P = '/s3d/llama.webp', K = '/play/t_kid.webp', M = '/s3d/kidmask.webp';
+const A = '/s3d/abuela_warm.webp', AP = '/s3d/abuela_point.webp', AS = '/s3d/abuela_shock.webp', L = '/s3d/kid.webp', P = '/s3d/llama.webp', K = '/play/t_kid.webp', M = '/s3d/kidmask.webp';
 type Panel = { bg: string; cap: string; imgs?: { src: string; style: string }[]; bubbles?: { text: string; style: string; tx?: string }[]; fx?: string; glow?: boolean };
 const STORY: Record<string, Panel[]> = {
   intro: [
     { bg: 'hill', cap: 'Día de los Muertos. One road down the hill to the ofrenda.', imgs: [{ src: A, style: 'left:4%;height:62%' }], bubbles: [{ text: `${BOY}. Straight down. No stopping.`, style: 'right:5%;top:22%', tx: '18%' }] },
     { bg: 'smoke', cap: `${BOY} is small, and the dark is big. So he puts on the mask.`, imgs: [{ src: L, style: 'right:3%;height:62%' }], bubbles: [{ text: "Tonight I'm somebody braver.", style: 'left:5%;top:24%', tx: '72%' }] },
-    { bg: 'road', cap: 'Abuela hands over her chanclas.', imgs: [{ src: A, style: 'left:1%;height:62%' }, { src: L, style: 'right:1%;height:62%' }], bubbles: [{ text: "You'll know when to strike!", style: 'left:8%;top:20%', tx: '25%' }] },
+    { bg: 'road', cap: 'Abuela hands over her chanclas.', imgs: [{ src: AP, style: 'left:1%;height:62%' }, { src: L, style: 'right:1%;height:62%' }], bubbles: [{ text: "You'll know when to strike!", style: 'left:8%;top:20%', tx: '25%' }] },
   ],
-  l2: [{ bg: 'skull', cap: 'The skulls bite. And they spit.', imgs: [{ src: A, style: 'left:3%;height:62%' }], bubbles: [{ text: 'Move your feet, mijo.', style: 'right:5%;top:22%', tx: '20%' }] }],
-  l3: [{ bg: 'smoke', cap: 'Wind comes off the graves.', imgs: [{ src: A, style: 'left:3%;height:62%' }], bubbles: [{ text: 'Aim into it.', style: 'right:8%;top:24%', tx: '20%' }] }],
+  l2: [{ bg: 'skull', cap: 'The skulls bite. And they spit.', imgs: [{ src: AS, style: 'left:3%;height:62%' }], bubbles: [{ text: 'Move your feet, mijo.', style: 'right:5%;top:22%', tx: '20%' }] }],
+  l3: [{ bg: 'smoke', cap: 'Wind comes off the graves.', imgs: [{ src: AP, style: 'left:3%;height:62%' }], bubbles: [{ text: 'Aim into it.', style: 'right:8%;top:24%', tx: '20%' }] }],
   l4: [{ bg: 'road', cap: 'Something sweet hangs over the road.', imgs: [{ src: P, style: 'right:8%;height:62%' }, { src: A, style: 'left:2%;height:56%' }], bubbles: [{ text: "Break it. I won't tell.", style: 'left:6%;top:20%', tx: '30%' }] }],
   l5: [{ bg: 'glow', cap: 'Light at the bottom of the hill.', imgs: [{ src: L, style: 'left:4%;height:62%' }], bubbles: [{ text: 'Almost there.', style: 'right:8%;top:24%', tx: '25%' }] }],
   outro: [
@@ -110,6 +110,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 function frameAt(d: number) {
   const u = THREE.MathUtils.clamp(d / LEN, 0, 1);
   const p = curve.getPointAt(u), t = curve.getTangentAt(u);
+  if (d < 0) p.addScaledVector(t, d); else if (d > LEN) p.addScaledVector(t, d - LEN);
   const side = new THREE.Vector3().crossVectors(t, UP).normalize();
   return { p, t, side };
 }
@@ -263,7 +264,7 @@ function clearStage() {
 function startStage(i: number) {
   si = i; clearStage(); const st = STAGES[i]; st.build(st.from, st.to);
   total = skulls.length + pins.length + crates.length; kills = 0; stageScore = 0;
-  ammo = st.ammo; hearts = 3; lostHeart = false; lane = 1; laneX = 0; dist = st.from; playing = true;
+  turnT = 0; runPh = 0; ammo = st.ammo; hearts = 3; lostHeart = false; lane = 1; laneX = 0; dist = st.from; playing = true;
   $('wind').textContent = st.wind === 0 ? '' : `Wind ${st.wind > 0 ? '→' : '←'} ${Math.abs(st.wind).toFixed(1)}`;
   $('end').classList.add('hidden'); hud();
 }
@@ -342,7 +343,7 @@ function inkify(src: HTMLCanvasElement) {
   c.putImageData(im, 0, 0); return cv.toDataURL('image/jpeg', 0.85);
 }
 function renderComicBgs() {
-  const hideables: THREE.Object3D[] = [...pins.map((p) => p.m), hero];
+  const hideables: THREE.Object3D[] = [...pins.map((p) => p.m), hero, shadow];
   hideables.forEach((o) => (o.visible = false));
   const w = 360, h = 480, cam = new THREE.PerspectiveCamera(55, w / h, 0.1, 200);
   const old = new THREE.Vector2(); renderer.getSize(old); const pr = renderer.getPixelRatio(); renderer.setPixelRatio(1); renderer.setSize(w, h, false);
@@ -378,12 +379,13 @@ addEventListener('resize', resize); resize();
 let last = performance.now();
 const tmp = new THREE.Vector3();
 function frame(now: number) {
-  let dt = Math.min(0.05, (now - last) / 1000); last = now;
+  let dt = Math.min(0.05, (now - last) / 1000); last = now; if (paused) dt = 0;
   if (slow > 0) { slow -= dt; dt *= 0.3; }
   clock += dt;
   world.step(1 / 120, dt, 6);
   const st = STAGES[si];
-  if (playing) dist = Math.min(st.to, dist + SPEED * dt);
+  const running = heroFrame(dt);
+  if (playing && running) dist = Math.min(st.to, dist + SPEED * dt);
   laneX += (LANES[lane] - laneX) * Math.min(1, dt * 10);
   const me = at(dist, laneX, 1.2);
   setBright(THREE.MathUtils.smoothstep(dist / LEN, 0.55, 1));
@@ -429,7 +431,7 @@ function frame(now: number) {
   void f;
   const sx = shake > 0 ? (rnd() - 0.5) * shake : 0; shake = Math.max(0, shake - dt * 1.5);
   camera.position.copy(back).add(new THREE.Vector3(sx, sx * 0.6, 0)); camera.lookAt(look);
-  hero.position.copy(at(dist + 0.6, laneX, 0.9)); hero.lookAt(tmp.copy(camera.position).setY(hero.position.y));
+  const hp = at(dist + 0.6, laneX, 0); shadow.position.copy(hp).add(new THREE.Vector3(0, 0.03, 0)); hero.position.copy(hp).add(new THREE.Vector3(0, hero.scale.y / 2, 0)); hero.lookAt(tmp.copy(camera.position).setY(hero.position.y));
   stars.position.copy(camera.position); stars.material.opacity = 0.7 * (1 - THREE.MathUtils.smoothstep(dist / LEN, 0.6, 1));
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
@@ -439,8 +441,17 @@ function spit(k: Skull) {
   spits.push({ m, from: k.g.position.clone(), d: dist, lane, t: 0 }); beep(880, 0.1, 'square', 0.06);
   $('warn').textContent = lane === 0 ? 'DODGE →' : lane === 2 ? '← DODGE' : '← DODGE →';
 }
-// masked Sidro (Gabe's luchador cutout, as-is) running ahead of the camera
-const hero = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.26), sMat(L)); hero.renderOrder = 10; hero.material = sMat(L).clone(); (hero.material as THREE.MeshBasicMaterial).depthTest = false; scene.add(hero);
+// masked Sidro: Gabe's sprite sheets (unlit, original colors). Turnaround then run cycle.
+function sheetMat(u: string, n: number) { const t = tl.load(u); t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(1 / n, 1); t.magFilter = THREE.LinearFilter; return new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.3, fog: false, toneMapped: false, depthTest: false }); }
+const RUN = { n: 5, mat: sheetMat('/s3d/sidro_run.webp', 5), w: 292 / 492 * 1.3, h: 1.3 };
+const TURN = { n: 9, mat: sheetMat('/s3d/sidro_turn.webp', 9), w: 181 / 507 * 1.34, h: 1.34, order: [0, 0, 0, 1, 2, 3, 5, 6, 7, 8, 8] };
+const hero = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), TURN.mat); hero.renderOrder = 10; scene.add(hero);
+const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.36, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1, 0.55, 1); scene.add(shadow);
+let turnT = 0, runPh = 0, paused = false;
+function heroFrame(dt: number) {
+  if (turnT < TURN.order.length / 10) { turnT += dt; const i = TURN.order[Math.min(TURN.order.length - 1, Math.floor(turnT * 10))]; hero.material = TURN.mat; TURN.mat.map!.offset.x = i / TURN.n; hero.scale.set(TURN.w, TURN.h, 1); return false; }
+  runPh += dt * 11 * (SPEED / 5.2); hero.material = RUN.mat; RUN.mat.map!.offset.x = (Math.floor(runPh) % RUN.n) / RUN.n; hero.scale.set(RUN.w, RUN.h, 1); return true;
+}
 
 (window as unknown as Record<string, unknown>).__s3d = {
   throwChancla, dodge, startStage, spit: () => skulls.find((k) => k.alive) && spit(skulls.find((k) => k.alive)!),
@@ -448,7 +459,9 @@ const hero = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.26), sMat(L)); hero.r
   jump: (d: number) => { dist = d; },
   story: (k: string) => { localStorage.removeItem(SKIP_KEY); playStory(k, () => {}); },
   smoke: (v: boolean) => smoke.forEach((m) => (m.s.visible = v)),
-  heroRect: () => { const r = stage.getBoundingClientRect(); const pts = [[-0.35, -0.63], [0.35, 0.63]].map(([x, y]) => { const v = new THREE.Vector3(x, y, 0); hero.localToWorld(v); v.project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }); return pts; },
+  pose: (t: number) => { turnT = t; paused = true; }, unpause: () => { paused = false; },
+  hero: () => ({ turnT: +turnT.toFixed(2), frame: hero.material === RUN.mat ? 'run' + (Math.floor(runPh) % RUN.n) : 'turn', off: (hero.material as THREE.MeshBasicMaterial).map!.offset.x }),
+  heroRect: () => { const r = stage.getBoundingClientRect(); const pts = [[-0.5, -0.5], [0.5, 0.5]].map(([x, y]) => { const v = new THREE.Vector3(x, y, 0); hero.localToWorld(v); v.project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }); return pts; },
 };
 STAGES[0].build(STAGES[0].from, STAGES[0].to);
 renderComicBgs();
