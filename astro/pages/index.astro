@@ -24,7 +24,7 @@ import Base from '../layouts/Base.astro';
   :global(html),:global(body){margin:0;background:#0b0301;overflow:hidden}
   .home{position:relative;height:100svh;width:100vw;overflow:hidden;font-family:LilitaOne,system-ui,sans-serif}
   .hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
-  .ttl{margin:0;position:absolute;z-index:3;left:0;top:0;line-height:0}
+  .ttl{margin:0;position:absolute;z-index:5;left:0;top:0;line-height:0}
   .ttl img,.herogrp{position:absolute;z-index:3;pointer-events:none;visibility:hidden;max-width:none;max-height:none} /* title + characters: never filtered/blended/overlaid */
   .fly{position:absolute;left:0;top:0;width:var(--s,150px);height:var(--s,150px);transform:translate(calc(var(--x,-999px) - 50%),calc(var(--y,-999px) - 50%));pointer-events:none;z-index:4}
   .fly img{position:absolute;inset:0;width:100%;height:100%}
@@ -33,7 +33,7 @@ import Base from '../layouts/Base.astro';
   @keyframes burst{0%,100%{opacity:.9;transform:scale(.94) rotate(-4deg)}50%{opacity:1;transform:scale(1.06) rotate(4deg)}}
     @keyframes flip{0%{transform:translateY(0) rotate(-8deg)}25%{transform:translateY(-10%) rotate(6deg)}45%{transform:translateY(-14%) rotate(368deg) scale(1.04)}70%{transform:translateY(-4%) rotate(356deg)}100%{transform:translateY(0) rotate(352deg)}}
   @media (prefers-reduced-motion:reduce){.fly .gold,.fly .burst{animation:none}}
-  .cta{position:absolute;left:0;right:0;bottom:max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px}
+  .cta{position:absolute;z-index:6;left:0;right:0;bottom:max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px}
   .play{font-size:clamp(26px,3vw,40px);color:#3b1a5c;text-decoration:none;letter-spacing:.02em;
     background:linear-gradient(180deg,#fff2a8 0%,#ffd23f 45%,#f4a000 100%);border:4px solid #3b1a5c;border-radius:999px;padding:10px 54px;
     box-shadow:0 7px 0 #3b1a5c,0 0 28px rgba(255,200,60,.6),inset 0 3px 0 rgba(255,255,255,.7);text-shadow:0 2px 0 rgba(255,255,255,.6);animation:pp 1.5s ease-in-out infinite;position:relative;overflow:hidden}
@@ -54,33 +54,21 @@ import Base from '../layouts/Base.astro';
   const place = () => {
     const vw = innerWidth, vh = (document.querySelector('.home') as HTMLElement).clientHeight;
     const ctaEl = document.querySelector('.cta') as HTMLElement, cta = ctaEl.getBoundingClientRect().height;
-    if (vw / vh >= 1) {
-      // Desktop: chancla, title, characters, then CTA, all fully visible.
-      const ar = vw / vh, maxW = vw * (ar > 2.6 ? 0.4 : ar > 2 ? 0.48 : ar > 1.7 ? 0.58 : 0.64);
-      const top = 12, bot = cta + 24, availH = vh - top - bot;
-      // unit u = title width; title h = u*T.h/T.w; chars w = 0.78u; chancla room above title = 0.12u
-      const tH = T.h / T.w, cW = 0.85, cH = cW * C.h / C.w, chR = 0.12, gap = 0.015;
-      const u = Math.min(maxW, availH / (chR + tH + gap + cH));
-      const used = u * (chR + tH + gap + cH), y0 = top + Math.max(0, (availH - used) / 2) + u * chR;
-      const tx = (vw - u) / 2;
-      put(ttl, tx, y0, u, u * tH);
-      const cy = y0 + u * (tH + gap);
-      put(hero, (vw - u * cW) / 2, cy, u * cW, u * cH);
-      const size = Math.min(u * 0.22, 360);
-      fly.style.setProperty('--x', `${vw / 2}px`); fly.style.setProperty('--y', `${y0 - size * 0.02}px`); fly.style.setProperty('--s', `${size}px`);
-      Object.assign(ctaEl.style, { top: `${Math.min(cy + u * cH + 8, vh - cta - 12)}px`, bottom: 'auto' });
-    } else {
-      // Mobile/portrait: title on top, PLAY NOW right under it, characters fill the space below.
-      const pad = Math.max(10, vw * 0.04), u = Math.min(vw - 2 * pad, 640), tH = u * T.h / T.w;
-      const size = Math.min(u * 0.3, 220), y0 = 36 + size * 0.45;
-      put(ttl, (vw - u) / 2, y0, u, tH);
-      fly.style.setProperty('--x', `${vw / 2}px`); fly.style.setProperty('--y', `${y0 - size * 0.05}px`); fly.style.setProperty('--s', `${size}px`);
-      const ctop = y0 + tH + 6;
-      Object.assign(ctaEl.style, { top: `${ctop}px`, bottom: 'auto' });
-      const cTop = ctop + cta + 10, availH = vh - cTop - 10;
-      const cw = Math.min(vw - 2 * pad, availH * C.w / C.h, 700), ch = cw * C.h / C.w;
-      put(hero, (vw - cw) / 2, cTop + Math.max(0, (availH - ch) * 0.4), cw, ch);
-    }
+    // Characters centred on the page; title in the vertical middle OVER them; PLAY NOW right under the title; chancla above the heads.
+    const ar = vw / vh, desk = ar >= 1, pad = Math.max(10, vw * 0.04);
+    const maxW = desk ? vw * (ar > 2.6 ? 0.42 : ar > 2 ? 0.5 : ar > 1.7 ? 0.58 : 0.64) : Math.min(vw - 2 * pad, 700);
+    let ch = Math.min(maxW * C.h / C.w, vh * (desk ? 0.72 : 0.5)), cw = ch * C.w / C.h;
+    let cy = vh / 2 - ch * 0.42;
+    if (cy + ch > vh - 8) cy = vh - 8 - ch;
+    const s = Math.max(60, Math.min(cw * (desk ? 0.22 : 0.4), 360, (cy - 8) / 0.9));
+    put(hero, (vw - cw) / 2, cy, cw, ch);
+    fly.style.setProperty('--x', `${vw / 2}px`); fly.style.setProperty('--y', `${cy - s * 0.4}px`); fly.style.setProperty('--s', `${s}px`);
+    const u = Math.min(desk ? cw * 1.05 : vw - 2 * pad, vw * 0.92), tH = u * T.h / T.w;
+    let ty = vh / 2 - tH / 2;
+    ty = Math.max(ty, cy - s * 0.4 + s * 0.5 + 4);            // never under the chancla
+    ty = Math.min(ty, vh - tH - cta - 16);                     // CTA must fit below
+    put(ttl, (vw - u) / 2, ty, u, tH);
+    Object.assign(ctaEl.style, { top: `${ty + tH + 4}px`, bottom: 'auto' });
   };
   place(); addEventListener('resize', place);
   import { initLanderMusic } from '../../src/play/music';
