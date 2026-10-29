@@ -292,6 +292,13 @@ function chanclaMesh(dark = false) {
   const strap = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.03, 6, 12, Math.PI), new THREE.MeshStandardMaterial({ color: 0x1ec8c8 })); strap.position.set(0, 0.05, 0.08); strap.rotation.y = Math.PI / 2;
   g.add(sole, top, strap); return g;
 }
+const goldTex = (() => { const t = tl.load('/s3d/chancla_gold.webp'); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+void chanclaMesh;
+function goldChancla() {
+  const g = new THREE.Group();
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: goldTex, fog: false, toneMapped: false, depthWrite: false }));
+  sp.scale.set(1.5, 1.5, 1); sp.name = 'gold'; g.add(sp); return g;
+}
 function throwChancla(side: number, up: number) {
   if (!playing || ammo <= 0) return;
   ammo--; hud(); beep(520, 0.12, 'sawtooth', 0.05);
@@ -306,7 +313,7 @@ function throwChancla(side: number, up: number) {
   const body = new CANNON.Body({ mass: 0.5, shape: new CANNON.Box(new CANNON.Vec3(0.18, 0.06, 0.4)), position: new CANNON.Vec3(o.x, o.y, o.z) });
   body.velocity.set(v.x, v.y, v.z); body.angularVelocity.set(-14, (rnd() - 0.5) * 6, side * 4);
   body.addEventListener('collide', (e: { body: CANNON.Body; contact: CANNON.ContactEquation }) => { if (crates.some((c) => c.body === e.body) && Math.abs(e.contact.getImpactVelocityAlongNormal()) > 4) { shake = 0.3; slow = 0.3; beep(140, 0.15, 'square', 0.1); } });
-  const s: Shot = { body, mesh: chanclaMesh(), age: 0, prev: o.clone() }; world.addBody(body); scene.add(s.mesh); shots.push(s);
+  const s: Shot = { body, mesh: goldChancla(), age: 0, prev: o.clone() }; world.addBody(body); scene.add(s.mesh); shots.push(s);
 }
 
 // ---------- input ----------
@@ -392,7 +399,7 @@ function frame(now: number) {
   // shots
   for (const s of shots) {
     s.age += dt; s.body.applyForce(new CANNON.Vec3(st.wind * s.body.mass, 0, 0));
-    s.mesh.position.set(s.body.position.x, s.body.position.y, s.body.position.z); s.mesh.quaternion.set(s.body.quaternion.x, s.body.quaternion.y, s.body.quaternion.z, s.body.quaternion.w);
+    s.mesh.position.set(s.body.position.x, s.body.position.y, s.body.position.z); { const g = s.mesh.children[0] as THREE.Sprite; g.material.rotation -= dt * 14; }
     const seg = new THREE.Line3(s.prev.clone(), s.mesh.position.clone()); s.prev.copy(s.mesh.position);
     const near = (q: THREE.Vector3, r: number) => seg.closestPointToPoint(q, true, tmp).distanceTo(q) < r;
     for (const k of skulls) if (k.alive && near(k.g.position, 0.95)) { k.alive = false; kills++; scene.remove(k.g); burst(k.g.position, 30); addScore(100); shake = 0.35; slow = 0.4; beep(200, 0.2, 'square', 0.1); }
@@ -431,7 +438,7 @@ function frame(now: number) {
   void f;
   const sx = shake > 0 ? (rnd() - 0.5) * shake : 0; shake = Math.max(0, shake - dt * 1.5);
   camera.position.copy(back).add(new THREE.Vector3(sx, sx * 0.6, 0)); camera.lookAt(look);
-  const hp = at(dist + 0.6, laneX, 0); shadow.position.copy(hp).add(new THREE.Vector3(0, 0.03, 0)); hero.position.copy(hp).add(new THREE.Vector3(0, hero.scale.y / 2, 0)); hero.lookAt(tmp.copy(camera.position).setY(hero.position.y));
+  const hp = at(dist + 0.6, laneX, 0); shadow.position.copy(hp).add(new THREE.Vector3(0, 0.03, 0)); hero.position.copy(hp).add(new THREE.Vector3(0, hero.scale.y / 2 - heroDrop, 0)); hero.lookAt(tmp.copy(camera.position).setY(hero.position.y));
   stars.position.copy(camera.position); stars.material.opacity = 0.7 * (1 - THREE.MathUtils.smoothstep(dist / LEN, 0.6, 1));
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
@@ -443,14 +450,17 @@ function spit(k: Skull) {
 }
 // masked Sidro: Gabe's sprite sheets (unlit, original colors). Turnaround then run cycle.
 function sheetMat(u: string, n: number) { const t = tl.load(u); t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(1 / n, 1); t.magFilter = THREE.LinearFilter; return new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.3, fog: false, toneMapped: false, depthTest: false }); }
+// per-frame lowest opaque foot pixel (of 492px band) -> drop each frame so the lowest foot touches the ground; per-frame durations (s)
+const RUN_LOW = [438, 447, 458, 491, 482], RUN_DUR = [0.09, 0.085, 0.085, 0.06, 0.07];
 const RUN = { n: 5, mat: sheetMat('/s3d/sidro_run.webp', 5), w: 292 / 492 * 1.3, h: 1.3 };
 const TURN = { n: 9, mat: sheetMat('/s3d/sidro_turn.webp', 9), w: 181 / 507 * 1.34, h: 1.34, order: [0, 0, 0, 1, 2, 3, 5, 6, 7, 8, 8] };
 const hero = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), TURN.mat); hero.renderOrder = 10; scene.add(hero);
 const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.36, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1, 0.55, 1); scene.add(shadow);
-let turnT = 0, runPh = 0, paused = false;
+let turnT = 0, runPh = 0, runI = 0, heroDrop = 0, paused = false;
 function heroFrame(dt: number) {
-  if (turnT < TURN.order.length / 10) { turnT += dt; const i = TURN.order[Math.min(TURN.order.length - 1, Math.floor(turnT * 10))]; hero.material = TURN.mat; TURN.mat.map!.offset.x = i / TURN.n; hero.scale.set(TURN.w, TURN.h, 1); return false; }
-  runPh += dt * 11 * (SPEED / 5.2); hero.material = RUN.mat; RUN.mat.map!.offset.x = (Math.floor(runPh) % RUN.n) / RUN.n; hero.scale.set(RUN.w, RUN.h, 1); return true;
+  if (turnT < TURN.order.length / 10) { heroDrop = 0; turnT += dt; const i = TURN.order[Math.min(TURN.order.length - 1, Math.floor(turnT * 10))]; hero.material = TURN.mat; TURN.mat.map!.offset.x = i / TURN.n; hero.scale.set(TURN.w, TURN.h, 1); return false; }
+  runPh += dt * (SPEED / 5.2); while (runPh >= RUN_DUR[runI]) { runPh -= RUN_DUR[runI]; runI = (runI + 1) % RUN.n; }
+  hero.material = RUN.mat; RUN.mat.map!.offset.x = runI / RUN.n; hero.scale.set(RUN.w, RUN.h, 1); heroDrop = ((492 - RUN_LOW[runI]) / 492) * RUN.h; return true;
 }
 
 (window as unknown as Record<string, unknown>).__s3d = {
@@ -460,7 +470,7 @@ function heroFrame(dt: number) {
   story: (k: string) => { localStorage.removeItem(SKIP_KEY); playStory(k, () => {}); },
   smoke: (v: boolean) => smoke.forEach((m) => (m.s.visible = v)),
   pose: (t: number) => { turnT = t; paused = true; }, unpause: () => { paused = false; },
-  hero: () => ({ turnT: +turnT.toFixed(2), frame: hero.material === RUN.mat ? 'run' + (Math.floor(runPh) % RUN.n) : 'turn', off: (hero.material as THREE.MeshBasicMaterial).map!.offset.x }),
+  hero: () => ({ turnT: +turnT.toFixed(2), frame: hero.material === RUN.mat ? 'run' + runI : 'turn', off: (hero.material as THREE.MeshBasicMaterial).map!.offset.x }),
   heroRect: () => { const r = stage.getBoundingClientRect(); const pts = [[-0.5, -0.5], [0.5, 0.5]].map(([x, y]) => { const v = new THREE.Vector3(x, y, 0); hero.localToWorld(v); v.project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }); return pts; },
 };
 STAGES[0].build(STAGES[0].from, STAGES[0].to);
