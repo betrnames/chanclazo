@@ -8,7 +8,7 @@ import Base from '../layouts/Base.astro';
       width="1792" height="1008" fetchpriority="high" alt="" />
   </picture>
   <h1 class="ttl"><img id="ttl" src="/lp/lander-title.webp" width="1681" height="363" alt="Chanclazo: the abuela, the llama piñata and the luchador. When words fail, the Chanclazo speaks!" /></h1>
-  <img class="herogrp" id="herogrp" src="/lp/lander-chars.webp" width="960" height="864" alt="" aria-hidden="true" />
+  <img class="herogrp" id="herogrp" src="/lp/lander-chars.webp" width="943" height="880" alt="" aria-hidden="true" />
   <div class="fly" id="fly" aria-hidden="true"><img class="burst" src="/lp/chancla_burst.webp" alt="" /><img class="gold" src="/lp/chancla_gold.webp" alt="" /></div>
   <div class="cta">
     <p class="tag">When words fail, the chanclazo speaks!</p>
@@ -47,7 +47,7 @@ import Base from '../layouts/Base.astro';
 </style>
 <script>
   // Layout: background is cover-fit by CSS. Title, character group and chancla are placed together and scale as one unit.
-  const T = { w: 1681, h: 363 }, C = { w: 960, h: 864 }, EAR = { x: 620, y: 0 }, WAIST = 0.62;
+  const T = { w: 1681, h: 363 }, C = { w: 943, h: 880 }, EAR = { x: 602, y: 16 }, WAIST = 0.62;
   const fly = document.getElementById('fly')!;
   const ttl = document.getElementById('ttl') as HTMLImageElement, hero = document.getElementById('herogrp') as HTMLImageElement;
   const put = (el: HTMLElement, x: number, y: number, w: number, h: number) => Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px`, visibility: 'visible' });
