@@ -3,12 +3,12 @@ import * as CANNON from 'cannon-es';
 
 // ---------- story text table (one-line name swap) ----------
 const BOY = 'Isidro';
-const A = '/s3d/abuela.webp', L = '/s3d/luchador.webp', P = '/s3d/llama.webp', K = '/play/t_kid.webp', M = '/s3d/mask.webp';
+const A = '/s3d/abuela_warm.webp', L = '/s3d/kid.webp', P = '/s3d/llama.webp', K = '/play/t_kid.webp', M = '/s3d/kidmask.webp';
 type Panel = { bg: string; cap: string; imgs?: { src: string; style: string }[]; bubbles?: { text: string; style: string; tx?: string }[]; fx?: string; glow?: boolean };
 const STORY: Record<string, Panel[]> = {
   intro: [
     { bg: 'hill', cap: 'Día de los Muertos. One road down the hill to the ofrenda.', imgs: [{ src: A, style: 'left:4%;height:74%' }], bubbles: [{ text: `${BOY}. Straight down. No stopping.`, style: 'right:5%;top:22%', tx: '18%' }] },
-    { bg: 'smoke', cap: `${BOY} is afraid of the dark. So tonight he doesn't go as ${BOY}.`, imgs: [{ src: L, style: 'right:3%;height:78%' }], bubbles: [{ text: "Tonight I'm somebody braver.", style: 'left:5%;top:24%', tx: '72%' }] },
+    { bg: 'smoke', cap: `${BOY} is small, and the dark is big. So he puts on the mask.`, imgs: [{ src: L, style: 'right:3%;height:78%' }], bubbles: [{ text: "Tonight I'm somebody braver.", style: 'left:5%;top:24%', tx: '72%' }] },
     { bg: 'road', cap: 'Abuela hands over her chanclas.', imgs: [{ src: A, style: 'left:1%;height:66%' }, { src: L, style: 'right:1%;height:70%' }], fx: '¡CHANCLAZO!', bubbles: [{ text: "You'll know when.", style: 'left:8%;top:20%', tx: '25%' }] },
   ],
   l2: [{ bg: 'skull', cap: 'The skulls bite. And they spit.', imgs: [{ src: A, style: 'left:3%;height:62%' }], bubbles: [{ text: 'Move your feet, mijo.', style: 'right:5%;top:22%', tx: '20%' }] }],
@@ -440,14 +440,15 @@ function spit(k: Skull) {
   $('warn').textContent = lane === 0 ? 'DODGE →' : lane === 2 ? '← DODGE' : '← DODGE →';
 }
 // masked Isidro (Gabe's luchador cutout, as-is) running ahead of the camera
-const hero = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 1.25), sMat(L)); hero.renderOrder = 10; hero.material = sMat(L).clone(); (hero.material as THREE.MeshBasicMaterial).depthTest = false; scene.add(hero);
+const hero = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.26), sMat(L)); hero.renderOrder = 10; hero.material = sMat(L).clone(); (hero.material as THREE.MeshBasicMaterial).depthTest = false; scene.add(hero);
 
 (window as unknown as Record<string, unknown>).__s3d = {
   throwChancla, dodge, startStage, spit: () => skulls.find((k) => k.alive) && spit(skulls.find((k) => k.alive)!),
   state: () => ({ si, score, ammo, hearts, lane, playing, dist: +dist.toFixed(1), to: +STAGES[si].to.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills, total }),
   jump: (d: number) => { dist = d; },
+  story: (k: string) => { localStorage.removeItem(SKIP_KEY); playStory(k, () => {}); },
   smoke: (v: boolean) => smoke.forEach((m) => (m.s.visible = v)),
-  heroRect: () => { const r = stage.getBoundingClientRect(); const pts = [[-0.375, -0.625], [0.375, 0.625]].map(([x, y]) => { const v = new THREE.Vector3(x, y, 0); hero.localToWorld(v); v.project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }); return pts; },
+  heroRect: () => { const r = stage.getBoundingClientRect(); const pts = [[-0.35, -0.63], [0.35, 0.63]].map(([x, y]) => { const v = new THREE.Vector3(x, y, 0); hero.localToWorld(v); v.project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }); return pts; },
 };
 STAGES[0].build(STAGES[0].from, STAGES[0].to);
 renderComicBgs();
