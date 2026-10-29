@@ -23,7 +23,9 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@types/three": "^0.186.0",
     "autoprefixer": "^10.5.0",
+    "cannon-es": "^0.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -44,6 +46,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^3.4.19",
+    "three": "^0.186.1",
     "vaul": "^1.1.2",
     "zod": "^4.3.6"
   },

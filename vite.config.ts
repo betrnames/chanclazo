@@ -25,6 +25,7 @@ export default defineConfig({
         fling: path.resolve(__dirname, 'fling.html'),
         match: path.resolve(__dirname, 'match.html'),
         slots: path.resolve(__dirname, 'slots.html'),
+        strike3d: path.resolve(__dirname, 'strike3d.html'),
       },
     },
   },
