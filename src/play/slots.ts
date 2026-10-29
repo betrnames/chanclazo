@@ -522,8 +522,10 @@ function drawCabinet(box: {x:number;y:number;w:number;h:number}, g: ReturnType<t
     const im = imgs[NICHES[i][0] + '_face'];
     if (im && im.complete && im.width) {
       // Same visible head height in every niche, centered in the arch, capped by arch width.
-      let h2 = Math.min(g.nicheH * 0.9, nw * 0.62 * 1.15), hw = im.width * (h2 / im.height);
-      if (hw > iw * 0.92) { hw = iw * 0.92; h2 = im.height * (hw / im.width); }
+      const big = NICHES[i][0] === 'llama' ? 1.1 : 1.3;   // head-only crops for abuela/luchador; llama a tad bigger
+      let h2 = Math.min(g.nicheH * 0.9, nw * 0.62 * 1.15) * big, hw = im.width * (h2 / im.height);
+      if (hw > iw * 1.02) { hw = iw * 1.02; h2 = im.height * (hw / im.width); }
+      if (h2 > frameTop - 2) { h2 = frameTop - 2; hw = im.width * (h2 / im.height); } // never clip off the canvas top
       draw3DFace(im, nx + nw / 2, frameTop - h2 / 2 + 2, hw, h2, i);
     }
   }

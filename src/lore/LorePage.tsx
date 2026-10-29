@@ -146,9 +146,9 @@ export default function LorePage() {
       {/* Footer — centered */}
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', position: 'relative', zIndex: 2 }}>
         <div style={{ maxWidth: '560px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
-          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>© 2023 Chanclazo™</span>
+          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 3px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.7)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>© 2023 Chanclazo™</span>
           <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer" aria-label="Chanclazo on X (@ChanclaStrike)"
-            style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em', textDecoration: 'none' }}>
+            style={{ fontSize: '10px', color: 'rgba(255,255,255,0.85)', textShadow: '0 1px 3px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.7)', textTransform: 'uppercase', letterSpacing: '0.15em', textDecoration: 'none' }}>
             <svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" style={{ verticalAlign: '-1px', fill: 'currentColor', marginRight: '5px' }}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>@ChanclaStrike
           </a>
         </div>
