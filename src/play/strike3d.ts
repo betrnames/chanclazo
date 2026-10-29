@@ -518,10 +518,8 @@ const GAITS: Record<string, { seq: [number, number][]; dt: number; steps: number
   old: { seq: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], dt: 0.078, steps: 1 },
   even: { seq: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], dt: 0.064, steps: 1 },
   pp: { seq: [[0, 0], [1, 0], [2, 0], [1, 0]], dt: 0.08, steps: 1 },
-  mirror: { seq: [[0, 0], [1, 0], [2, 0], [1, 0], [0, 1], [1, 1], [2, 1], [1, 1]], dt: 0.04, steps: 2 },
-  mirror4: { seq: [[0, 0], [1, 0], [2, 0], [4, 0], [0, 1], [1, 1], [2, 1], [4, 1]], dt: 0.04, steps: 2 },
 };
-let gaitK = 'mirror';
+let gaitK = 'pp';
 let turnT = 0, runPh = 0, runI = 0, heroDrop = 0, paused = false;
 function heroFrame(dt: number) {
   if (turnT < TURN.order.length / 10) { heroDrop = 0; turnT += dt; const i = TURN.order[Math.min(TURN.order.length - 1, Math.floor(turnT * 10))]; hero.material = TURN.mat; TURN.mat.map!.offset.x = i / TURN.n; hero.scale.set(TURN.w, TURN.h, 1); return false; }
