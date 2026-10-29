@@ -59,7 +59,7 @@ import Base from '../layouts/Base.astro';
       const ar = vw / vh, maxW = vw * (ar > 2.6 ? 0.4 : ar > 2 ? 0.48 : ar > 1.7 ? 0.58 : 0.64);
       const top = 12, bot = cta + 24, availH = vh - top - bot;
       // unit u = title width; title h = u*T.h/T.w; chars w = 0.78u; chancla room above title = 0.12u
-      const tH = T.h / T.w, cW = 0.85, cH = cW * C.h / C.w, chR = 0.12, gap = -0.02;
+      const tH = T.h / T.w, cW = 0.85, cH = cW * C.h / C.w, chR = 0.12, gap = 0.015;
       const u = Math.min(maxW, availH / (chR + tH + gap + cH));
       const used = u * (chR + tH + gap + cH), y0 = top + Math.max(0, (availH - used) / 2) + u * chR;
       const tx = (vw - u) / 2;
