@@ -508,30 +508,24 @@ function spit(k: Skull) {
 // masked Sidro: Gabe's sprite sheets (unlit, original colors). Turnaround then run cycle.
 function sheetMat(u: string, n: number) { const t = tl.load(u); t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(1 / n, 1); t.magFilter = THREE.LinearFilter; return new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.3, fog: false, toneMapped: false, depthTest: false }); }
 // per-frame lowest opaque foot pixel (of 492px band) -> drop each frame so the lowest foot touches the ground; per-frame durations (s)
-const RUN_LOW = [438, 447, 458, 491, 482];
-const RUN = { n: 5, mat: sheetMat('/s3d/sidro_run.webp', 5), w: 292 / 492 * 1.3, h: 1.3 };
+// Gabe's 8-frame back-view run (keyed, common band; heads aligned in source so the band itself is the ground line). low = lowest foot px of 259.
+// per-frame lowest foot: [256,252,254,241,253,254,254,255] -> contact 0,7 (and 5,6,2,4 near), flight 3
+const RUN_GROUND = 256, RUN_DT = 0.0625;
+const RUN = { n: 8, mat: sheetMat('/s3d/sidro_run8.webp', 8), w: 135 / 259 * 1.35, h: 1.35 };
 const TURN = { n: 9, mat: sheetMat('/s3d/sidro_turn.webp', 9), w: 181 / 507 * 1.34, h: 1.34, order: [0, 0, 0, 1, 2, 3, 5, 6, 7, 8, 8] };
 const hero = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), TURN.mat); hero.renderOrder = 10; scene.add(hero);
 const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.36, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1, 0.55, 1); scene.add(shadow);
 let camOverride: number[] | null = null;
-const GAITS: Record<string, { seq: [number, number][]; dt: number; steps: number }> = {
-  old: { seq: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], dt: 0.078, steps: 1 },
-  even: { seq: [[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], dt: 0.064, steps: 1 },
-  pp: { seq: [[0, 0], [1, 0], [2, 0], [1, 0]], dt: 0.08, steps: 1 },
-};
-let gaitK = 'pp';
 let turnT = 0, runPh = 0, runI = 0, heroDrop = 0, paused = false;
 function heroFrame(dt: number) {
   if (turnT < TURN.order.length / 10) { heroDrop = 0; turnT += dt; const i = TURN.order[Math.min(TURN.order.length - 1, Math.floor(turnT * 10))]; hero.material = TURN.mat; TURN.mat.map!.offset.x = i / TURN.n; hero.scale.set(TURN.w, TURN.h, 1); return false; }
-  // gait: [frame, mirrored] steps at even timing; one step (half stride) = 4 frames, mirrored half = other leg. Loop ~0.32s at SPEED 5.2.
-  const G = GAITS[gaitK]; runPh += dt * (SPEED / 5.2); while (runPh >= G.dt) { runPh -= G.dt; runI = (runI + 1) % G.seq.length; }
-  const [f, flip] = G.seq[runI % G.seq.length], mp = RUN.mat.map!;
-  hero.material = RUN.mat; mp.repeat.x = flip ? -1 / RUN.n : 1 / RUN.n; mp.offset.x = (flip ? f + 1 : f) / RUN.n;
-  const bob = Math.abs(Math.sin((runI + runPh / G.dt) / G.seq.length * Math.PI * G.steps)) * 0.035;
-  hero.scale.set(RUN.w, RUN.h, 1); heroDrop = ((492 - RUN_LOW[f]) / 492) * RUN.h - bob; return true;
+  // all 8 frames in order, even timing: 0.5s loop (~2 cycles/s) at SPEED 5.2; no mirroring. Source band keeps the artist's ground; frame 3 is the flight phase.
+  runPh += dt * (SPEED / 5.2); while (runPh >= RUN_DT) { runPh -= RUN_DT; runI = (runI + 1) % RUN.n; }
+  hero.material = RUN.mat; RUN.mat.map!.offset.x = runI / RUN.n;
+  hero.scale.set(RUN.w, RUN.h, 1); heroDrop = ((259 - RUN_GROUND) / 259) * RUN.h; return true;
 }
 
-(window as unknown as Record<string, unknown>).__s3d = { gait: (k: string) => { gaitK = k; runI = 0; runPh = 0; },
+(window as unknown as Record<string, unknown>).__s3d = {
   throwChancla, dodge, startStage, spit: () => skulls.find((k) => k.alive) && spit(skulls.find((k) => k.alive)!),
   state: () => ({ si, score, ammo, hearts, lane, playing, dist: +dist.toFixed(1), to: +STAGES[si].to.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills, total }),
   jump: (d: number) => { dist = d; },
