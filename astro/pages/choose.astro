@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import PapelPicado from '../components/PapelPicado.astro';
 const games = [
-  { game: 'fling', href: '/fling?start=1', name: 'Chancla Strike', tag: 'Main game', line: 'Fling the chancla and topple the villains.', img: '/play/abuela_sprite.webp', alt: 'The abuela', cls: 'abuela', c: '#f7a21b' },
+  { game: 'fling', href: '/fling?start=1', name: 'Chancla Strike', tag: 'Main game', line: 'Fling the chancla and topple the villains.', img: '/play/abuela_choose.webp', alt: 'The abuela', cls: 'abuela', c: '#f7a21b' },
   { game: 'slots', href: '/slots?start=1', name: 'Piñata Slots', tag: 'Mini game', line: 'Spin the 5×4 reels, smash piñatas, win free spins.', img: '/play/llama_choose.webp', alt: 'The llama piñata', cls: 'llama', c: '#e2197a' },
 ];
 ---
@@ -70,7 +70,7 @@ const games = [
   .art{position:relative;height:clamp(200px,38svh,340px);display:flex;align-items:flex-end;justify-content:center}
   .glow{position:absolute;left:50%;top:50%;width:80%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--c) 55%,transparent),transparent 65%);animation:pulse 3s ease-in-out infinite}
   .art img{position:relative;height:100%;width:auto;max-width:100%;object-fit:contain;filter:drop-shadow(0 0 2px #14050f) drop-shadow(0 12px 16px rgba(0,0,0,.6));animation:bob 3.2s ease-in-out infinite;user-select:none}
-  .art img.llama{filter:none} /* Gabe's llama cutout: passed through, no filters */
+  .art img.llama,.art img.abuela{filter:none} /* Gabe's llama cutout: passed through, no filters */
   .tag{display:inline-block;margin-top:10px;font:700 12px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#14050f;background:var(--c);border-radius:999px;padding:3px 12px}
   .tag + h2{margin-top:6px}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
