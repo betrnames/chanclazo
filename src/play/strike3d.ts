@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
 // ---------- story text table (one-line name swap) ----------
-const BOY = 'Isidro';
+const BOY = 'Sidro';
 const A = '/s3d/abuela_warm.webp', L = '/s3d/kid.webp', P = '/s3d/llama.webp', K = '/play/t_kid.webp', M = '/s3d/kidmask.webp';
 type Panel = { bg: string; cap: string; imgs?: { src: string; style: string }[]; bubbles?: { text: string; style: string; tx?: string }[]; fx?: string; glow?: boolean };
 const STORY: Record<string, Panel[]> = {
@@ -439,7 +439,7 @@ function spit(k: Skull) {
   spits.push({ m, from: k.g.position.clone(), d: dist, lane, t: 0 }); beep(880, 0.1, 'square', 0.06);
   $('warn').textContent = lane === 0 ? 'DODGE →' : lane === 2 ? '← DODGE' : '← DODGE →';
 }
-// masked Isidro (Gabe's luchador cutout, as-is) running ahead of the camera
+// masked Sidro (Gabe's luchador cutout, as-is) running ahead of the camera
 const hero = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.26), sMat(L)); hero.renderOrder = 10; hero.material = sMat(L).clone(); (hero.material as THREE.MeshBasicMaterial).depthTest = false; scene.add(hero);
 
 (window as unknown as Record<string, unknown>).__s3d = {
