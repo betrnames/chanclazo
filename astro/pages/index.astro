@@ -8,7 +8,7 @@ import Base from '../layouts/Base.astro';
       width="1792" height="1008" fetchpriority="high" alt="" />
   </picture>
   <h1 class="ttl"><img id="ttl" src="/lp/lander-title.webp" width="1681" height="363" alt="Chanclazo: the abuela, the llama piñata and the luchador. When words fail, the Chanclazo speaks!" /></h1>
-  <img class="lpart ear" id="earL" src="/lp/llama_earL.webp" width="81" height="155" alt="" aria-hidden="true" />
+  <img class="lpart ear" id="earL" src="/lp/llama_earL.webp" width="80" height="157" alt="" aria-hidden="true" />
   <img class="lpart ear" id="earR" src="/lp/llama_earR.webp" width="68" height="95" alt="" aria-hidden="true" />
   <img class="lpart" id="jaw" src="/lp/llama_jaw.webp" width="76" height="27" alt="" aria-hidden="true" />
   <img class="herogrp" id="herogrp" src="/lp/lander-chars.webp" width="943" height="880" alt="" aria-hidden="true" />
@@ -30,8 +30,8 @@ import Base from '../layouts/Base.astro';
   .ttl img,.herogrp{position:absolute;z-index:3;pointer-events:none;visibility:hidden;max-width:none;max-height:none} /* title + characters: never filtered/blended/overlaid */
   .lpart{position:absolute;z-index:2;pointer-events:none;visibility:hidden;max-width:none;max-height:none;will-change:transform}
   #jaw{z-index:4}
-  #earL{transform-origin:33.5% 92.9%;animation:twL 7.3s ease-in-out infinite}
-  #earR{transform-origin:82.4% 88.4%;animation:twR 9.1s ease-in-out 1.7s infinite}
+  #earL{transform-origin:35.2% 93%;animation:twL 7.3s ease-in-out infinite}
+  #earR{transform-origin:83.5% 88.4%;animation:twR 9.1s ease-in-out 1.7s infinite}
   @keyframes twL{0%,62%,100%{transform:rotate(0)}66%{transform:rotate(-5deg)}69%{transform:rotate(2deg)}72%{transform:rotate(-3deg)}76%{transform:rotate(0)}88%{transform:rotate(-2deg)}93%{transform:rotate(0)}}
   @keyframes twR{0%,48%,100%{transform:rotate(0)}52%{transform:rotate(5deg)}55%{transform:rotate(-2deg)}58%{transform:rotate(3deg)}62%{transform:rotate(0)}84%{transform:rotate(3deg)}90%{transform:rotate(0)}}
   #jaw.chew{animation:chew 1s ease-in-out}
@@ -52,7 +52,7 @@ import Base from '../layouts/Base.astro';
 <script>
   // Layout: background is cover-fit by CSS. Title, character group and chancla are placed together and scale as one unit.
   const T = { w: 1681, h: 363 }, C = { w: 943, h: 880 }, EAR = { x: 602, y: 30 }, WAIST = 0.62;
-  const PARTS: [string, number, number, number, number][] = [['earL', 528, 30, 81, 155], ['earR', 601, 42, 68, 95], ['jaw', 646, 266, 76, 27]];
+  const PARTS: [string, number, number, number, number][] = [['earL', 502, 27, 80, 157], ['earR', 574, 37, 68, 95], ['jaw', 625, 260, 76, 27]];
   const ttl = document.getElementById('ttl') as HTMLImageElement, hero = document.getElementById('herogrp') as HTMLImageElement;
   const put = (el: HTMLElement, x: number, y: number, w: number, h: number) => Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px`, visibility: 'visible' });
   const place = () => {
