@@ -146,7 +146,7 @@ export default function LorePage() {
       {/* Footer — centered */}
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', position: 'relative', zIndex: 2 }}>
         <div style={{ maxWidth: '560px', margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', width: '100%', boxSizing: 'border-box' }}>
-          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>© 2026 Chanclazo</span>
+          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em' }}>© 2023 Chanclazo™</span>
           <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener noreferrer"
             style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', textTransform: 'uppercase', letterSpacing: '0.15em', textDecoration: 'none' }}>
             @ChanclaStrike
