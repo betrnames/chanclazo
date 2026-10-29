@@ -10,7 +10,8 @@ import Base from '../layouts/Base.astro';
   <h1 class="ttl"><img id="ttl" src="/lp/lander-title.webp" width="1681" height="363" alt="Chanclazo: the abuela, the llama piñata and the luchador. When words fail, the Chanclazo speaks!" /></h1>
   <img class="lpart ear" id="earL" src="/lp/llama_earL.webp" width="80" height="157" alt="" aria-hidden="true" />
   <img class="lpart ear" id="earR" src="/lp/llama_earR.webp" width="68" height="95" alt="" aria-hidden="true" />
-  <img class="lpart" id="jaw" src="/lp/llama_jaw.webp" width="76" height="27" alt="" aria-hidden="true" />
+  <img class="lpart" id="mouth" src="/lp/llama_mouth.webp" width="67" height="45" alt="" aria-hidden="true" />
+  <img class="lpart" id="jaw" src="/lp/llama_jaw.webp" width="67" height="45" alt="" aria-hidden="true" />
   <img class="herogrp" id="herogrp" src="/lp/lander-chars.webp" width="943" height="880" alt="" aria-hidden="true" />
   <div class="cta">
     <p class="tag">When words fail, the chanclazo speaks!</p>
@@ -29,13 +30,14 @@ import Base from '../layouts/Base.astro';
   .ttl{margin:0;position:absolute;z-index:5;left:0;top:0;line-height:0}
   .ttl img,.herogrp{position:absolute;z-index:3;pointer-events:none;visibility:hidden;max-width:none;max-height:none} /* title + characters: never filtered/blended/overlaid */
   .lpart{position:absolute;z-index:2;pointer-events:none;visibility:hidden;max-width:none;max-height:none;will-change:transform}
-  #jaw{z-index:4}
+  #mouth{z-index:4}
+  #jaw{z-index:4;transform-origin:2% 8%}
   #earL{transform-origin:35.2% 93%;animation:twL 7.3s ease-in-out infinite}
   #earR{transform-origin:83.5% 88.4%;animation:twR 9.1s ease-in-out 1.7s infinite}
   @keyframes twL{0%,62%,100%{transform:rotate(0)}66%{transform:rotate(-5deg)}69%{transform:rotate(2deg)}72%{transform:rotate(-3deg)}76%{transform:rotate(0)}88%{transform:rotate(-2deg)}93%{transform:rotate(0)}}
   @keyframes twR{0%,48%,100%{transform:rotate(0)}52%{transform:rotate(5deg)}55%{transform:rotate(-2deg)}58%{transform:rotate(3deg)}62%{transform:rotate(0)}84%{transform:rotate(3deg)}90%{transform:rotate(0)}}
-  #jaw.chew{animation:chew 1s ease-in-out}
-  @keyframes chew{0%,100%{transform:translate(0,0)}15%{transform:translate(-1%,8%)}30%{transform:translate(1%,1%)}45%{transform:translate(1.5%,9%)}60%{transform:translate(-1%,1%)}78%{transform:translate(0,6%)}}
+  #jaw.chew{animation:chew 1.8s ease-in-out}
+  @keyframes chew{0%,100%{transform:rotate(0) translateX(0)}9%{transform:rotate(7.5deg) translateX(-1.5%)}18%{transform:rotate(.5deg) translateX(1.5%)}28%{transform:rotate(7deg) translateX(1.5%)}37%{transform:rotate(.5deg) translateX(-1.5%)}47%{transform:rotate(7.5deg) translateX(-1.5%)}56%{transform:rotate(.5deg) translateX(1.5%)}66%{transform:rotate(6.5deg) translateX(1.5%)}75%{transform:rotate(.5deg) translateX(-1%)}85%{transform:rotate(6deg) translateX(0)}93%{transform:rotate(0) translateX(0)}}
   @media (prefers-reduced-motion:reduce){.ear,#jaw.chew{animation:none}}
   .cta{position:absolute;z-index:6;left:0;right:0;bottom:max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px}
   .play{font-size:clamp(26px,3vw,40px);color:#3b1a5c;text-decoration:none;letter-spacing:.02em;
@@ -52,7 +54,7 @@ import Base from '../layouts/Base.astro';
 <script>
   // Layout: background is cover-fit by CSS. Title, character group and chancla are placed together and scale as one unit.
   const T = { w: 1681, h: 363 }, C = { w: 943, h: 880 }, EAR = { x: 602, y: 30 }, WAIST = 0.62;
-  const PARTS: [string, number, number, number, number][] = [['earL', 502, 27, 80, 157], ['earR', 574, 37, 68, 95], ['jaw', 625, 260, 76, 27]];
+  const PARTS: [string, number, number, number, number][] = [['earL', 502, 27, 80, 157], ['earR', 574, 37, 68, 95], ['mouth', 629, 247, 67, 45], ['jaw', 629, 247, 67, 45]];
   const ttl = document.getElementById('ttl') as HTMLImageElement, hero = document.getElementById('herogrp') as HTMLImageElement;
   const put = (el: HTMLElement, x: number, y: number, w: number, h: number) => Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px`, visibility: 'visible' });
   const place = () => {
@@ -79,8 +81,8 @@ import Base from '../layouts/Base.astro';
   place(); addEventListener('resize', place);
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const jaw = document.getElementById('jaw')!;
-    const chew = () => { jaw.classList.remove('chew'); void jaw.offsetWidth; jaw.classList.add('chew'); setTimeout(chew, 6000 + Math.random() * 8000); };
-    setTimeout(chew, 3000 + Math.random() * 5000);
+    const chew = () => { jaw.classList.remove('chew'); void jaw.offsetWidth; jaw.classList.add('chew'); setTimeout(chew, 1800 + 4000 + Math.random() * 4000); };
+    setTimeout(chew, 2000 + Math.random() * 1000);
   }
   import { initLanderMusic } from '../../src/play/music';
   initLanderMusic(document.getElementById('lmusic') as HTMLButtonElement);
