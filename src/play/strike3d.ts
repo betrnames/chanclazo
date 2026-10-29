@@ -7,17 +7,17 @@ const A = '/s3d/abuela_warm.webp', L = '/s3d/kid.webp', P = '/s3d/llama.webp', K
 type Panel = { bg: string; cap: string; imgs?: { src: string; style: string }[]; bubbles?: { text: string; style: string; tx?: string }[]; fx?: string; glow?: boolean };
 const STORY: Record<string, Panel[]> = {
   intro: [
-    { bg: 'hill', cap: 'Día de los Muertos. One road down the hill to the ofrenda.', imgs: [{ src: A, style: 'left:4%;height:74%' }], bubbles: [{ text: `${BOY}. Straight down. No stopping.`, style: 'right:5%;top:22%', tx: '18%' }] },
-    { bg: 'smoke', cap: `${BOY} is small, and the dark is big. So he puts on the mask.`, imgs: [{ src: L, style: 'right:3%;height:78%' }], bubbles: [{ text: "Tonight I'm somebody braver.", style: 'left:5%;top:24%', tx: '72%' }] },
-    { bg: 'road', cap: 'Abuela hands over her chanclas.', imgs: [{ src: A, style: 'left:1%;height:66%' }, { src: L, style: 'right:1%;height:70%' }], fx: '¡CHANCLAZO!', bubbles: [{ text: "You'll know when.", style: 'left:8%;top:20%', tx: '25%' }] },
+    { bg: 'hill', cap: 'Día de los Muertos. One road down the hill to the ofrenda.', imgs: [{ src: A, style: 'left:4%;height:62%' }], bubbles: [{ text: `${BOY}. Straight down. No stopping.`, style: 'right:5%;top:22%', tx: '18%' }] },
+    { bg: 'smoke', cap: `${BOY} is small, and the dark is big. So he puts on the mask.`, imgs: [{ src: L, style: 'right:3%;height:62%' }], bubbles: [{ text: "Tonight I'm somebody braver.", style: 'left:5%;top:24%', tx: '72%' }] },
+    { bg: 'road', cap: 'Abuela hands over her chanclas.', imgs: [{ src: A, style: 'left:1%;height:62%' }, { src: L, style: 'right:1%;height:62%' }], bubbles: [{ text: "You'll know when to strike!", style: 'left:8%;top:20%', tx: '25%' }] },
   ],
   l2: [{ bg: 'skull', cap: 'The skulls bite. And they spit.', imgs: [{ src: A, style: 'left:3%;height:62%' }], bubbles: [{ text: 'Move your feet, mijo.', style: 'right:5%;top:22%', tx: '20%' }] }],
   l3: [{ bg: 'smoke', cap: 'Wind comes off the graves.', imgs: [{ src: A, style: 'left:3%;height:62%' }], bubbles: [{ text: 'Aim into it.', style: 'right:8%;top:24%', tx: '20%' }] }],
-  l4: [{ bg: 'road', cap: 'Something sweet hangs over the road.', imgs: [{ src: P, style: 'right:8%;height:70%' }, { src: A, style: 'left:2%;height:56%' }], bubbles: [{ text: "Break it. I won't tell.", style: 'left:6%;top:20%', tx: '30%' }] }],
-  l5: [{ bg: 'glow', cap: 'Light at the bottom of the hill.', imgs: [{ src: L, style: 'left:4%;height:74%' }], bubbles: [{ text: 'Almost there.', style: 'right:8%;top:24%', tx: '25%' }] }],
+  l4: [{ bg: 'road', cap: 'Something sweet hangs over the road.', imgs: [{ src: P, style: 'right:8%;height:62%' }, { src: A, style: 'left:2%;height:56%' }], bubbles: [{ text: "Break it. I won't tell.", style: 'left:6%;top:20%', tx: '30%' }] }],
+  l5: [{ bg: 'glow', cap: 'Light at the bottom of the hill.', imgs: [{ src: L, style: 'left:4%;height:62%' }], bubbles: [{ text: 'Almost there.', style: 'right:8%;top:24%', tx: '25%' }] }],
   outro: [
     { bg: 'glow', cap: 'In the light, the mask comes off.', imgs: [{ src: M, style: 'left:50%;bottom:24%;height:32%;transform:translateX(-50%) rotate(-18deg)' }], glow: true },
-    { bg: 'glow', cap: `It was ${BOY} the whole time.`, imgs: [{ src: K, style: 'left:5%;height:40%' }, { src: A, style: 'right:3%;height:74%' }], glow: true, bubbles: [{ text: 'The mask never made you brave. It just held on until you were.', style: 'left:6%;top:18%', tx: '75%' }] },
+    { bg: 'glow', cap: `It was ${BOY} the whole time.`, imgs: [{ src: K, style: 'left:5%;height:40%' }, { src: A, style: 'right:3%;height:62%' }], glow: true, bubbles: [{ text: 'The mask never made you brave. It just held on until you were.', style: 'left:6%;top:18%', tx: '75%' }] },
   ],
 };
 
