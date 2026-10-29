@@ -507,7 +507,7 @@ function draw3DFace(im: HTMLImageElement, cx: number, cy: number, w: number, h: 
 }
 
 function drawCabinet(box: {x:number;y:number;w:number;h:number}, g: ReturnType<typeof cellGeom>) {
-  const STONE = '#7b4fb5', STONE_D = '#5a3590', STONE_L = '#9d74d6';
+  const STONE = '#2a0f3d', STONE_D = '#14061f', STONE_L = '#ffd23f';
   const frameTop = box.y + g.nicheH;
   const frameBot = box.y + box.h - g.btnH * 0.55;
   // niches (arched) with heads
@@ -559,7 +559,7 @@ function drawCabinet(box: {x:number;y:number;w:number;h:number}, g: ReturnType<t
 
 function drawControls(box: {x:number;y:number;w:number;h:number}, g: ReturnType<typeof cellGeom>) {
   const by = box.y + box.h - g.btnH * 0.82, bh = g.btnH * 0.72;
-  ctx.fillStyle = '#3b1a5c'; roundRect(box.x + 4, by, box.w - 8, bh, 12); ctx.fill();
+  ctx.fillStyle = '#1a0826'; roundRect(box.x + 4, by, box.w - 8, bh, 12); ctx.fill();
   ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 2; roundRect(box.x + 4, by, box.w - 8, bh, 12); ctx.stroke();
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   const sm = Math.max(9, bh * 0.2), big = Math.max(14, bh * 0.36);
@@ -581,7 +581,7 @@ function drawControls(box: {x:number;y:number;w:number;h:number}, g: ReturnType<
   const canBet = mode === 'idle' && freeSpins === 0;
   for (const [k, up] of [['up', true], ['down', false]] as const) {
     const [x, y, w, h] = ctrl[k];
-    ctx.fillStyle = '#5a2d86'; roundRect(x, y, w, h, 6); ctx.fill();
+    ctx.fillStyle = '#3d1760'; roundRect(x, y, w, h, 6); ctx.fill();
     ctx.fillStyle = canBet ? '#fff' : 'rgba(255,255,255,.4)'; ctx.beginPath();
     const cx = x + w / 2, cy = y + h / 2, t = Math.min(w, h) * 0.28;
     if (up) { ctx.moveTo(cx - t, cy + t * 0.6); ctx.lineTo(cx + t, cy + t * 0.6); ctx.lineTo(cx, cy - t * 0.7); }
@@ -648,7 +648,7 @@ function drawMachine(dt: number) {
   ctx.save();
   roundRect(g.ox - 3, winY - 3, COLS * g.rw + (COLS - 1) * g.reelGap + 6, winH + 6, 8);
   ctx.clip();
-  ctx.fillStyle = '#3d1760';
+  ctx.fillStyle = '#1c0a2b';
   ctx.fillRect(g.ox - 3, winY - 3, COLS * g.rw + (COLS - 1) * g.reelGap + 6, winH + 6);
 
   for (let c = 0; c < COLS; c++) {
@@ -668,7 +668,7 @@ function drawMachine(dt: number) {
         drawSym(grid[c][r], cx + g.rw / 2, winY + (r + 0.5) * g.rh, Math.min(g.rw, g.rh) * 0.9, wild);
       }
     }
-    ctx.strokeStyle = '#7b4fb5'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#3d1760'; ctx.lineWidth = 1.5;
     ctx.strokeRect(cx, winY, g.rw, winH);
   }
   ctx.restore();
@@ -848,22 +848,14 @@ function drawFx(dt: number) {
 }
 
 function drawBg() {
-  // sky
-  const sky = ctx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#ffc15e'); sky.addColorStop(0.35, '#ff8a5c'); sky.addColorStop(0.7, '#e2497a'); sky.addColorStop(1, '#8e44c9');
-  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#fff1b8'; ctx.beginPath(); ctx.arc(W * 0.85, H * 0.12, Math.min(W, H) * 0.07, 0, Math.PI * 2); ctx.fill();
-  // warm buildings
-  const cols = ['#f4a261', '#e76f51', '#ffcf56', '#f28482', '#2ec4b6', '#f7a21b'];
-  const bw = Math.max(70, W / 9);
-  for (let i = 0, x = -10; x < W; i++, x += bw) {
-    const h = H * (0.38 + ((i * 37) % 5) * 0.05), y = H - h;
-    ctx.fillStyle = cols[i % cols.length]; ctx.fillRect(x, y, bw + 1, h);
-    ctx.fillStyle = '#b5523b'; ctx.fillRect(x - 3, y - 8, bw + 7, 10);
-    ctx.fillStyle = '#ffe9c2';
-    for (let wy = y + 22; wy < H - 50; wy += 46) for (let wx = x + bw * 0.18; wx < x + bw - 20; wx += bw * 0.42) ctx.fillRect(wx, wy, bw * 0.22, 24);
-  }
-  ctx.fillStyle = '#e9c46a'; ctx.fillRect(0, H - 40, W, 40);
+  // Day of the Dead night cemetery (same art as Chancla Strike), cover-fit, with the same night tint
+  ctx.fillStyle = '#0b0301'; ctx.fillRect(0, 0, W, H);
+  const bg = imgs.bg;
+  if (bg && bg.complete && bg.width) { const s = Math.max(W / bg.width, H / bg.height); ctx.globalAlpha = 0.9; ctx.drawImage(bg, (W - bg.width * s) / 2, (H - bg.height * s) / 2, bg.width * s, bg.height * s); ctx.globalAlpha = 1; }
+  const tint = ctx.createLinearGradient(0, 0, 0, H);
+  tint.addColorStop(0, 'rgba(10,4,30,.72)'); tint.addColorStop(1, 'rgba(25,8,40,.5)');
+  ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 0.35;
   // papel picado bunting
   const flags = ['#e2197a', '#18b5b0', '#8cc63f', '#f7a21b', '#7b3fbf', '#ff5a36'];
   for (const [yy, amp] of [[H * 0.02, 18], [H * 0.09, 26]] as const) {
@@ -877,6 +869,7 @@ function drawBg() {
       ctx.fillStyle = '#ffc15e'; ctx.beginPath(); ctx.arc(x + fw / 2, y + fw * 0.45, fw * 0.14, 0, Math.PI * 2); ctx.fill();
     }
   }
+  ctx.globalAlpha = 1;
 }
 
 let last = performance.now();
@@ -974,6 +967,7 @@ async function boot() {
   initAudioControls('slots', (m) => { A.setMuted(m); });
   const loads: Promise<unknown>[] = [
     loadImg('/lp/abuela_face.webp').then(i => imgs.abuela = i), // full head (tile art crops the bun)
+    loadImg('/play/night_bg.webp').then(i => imgs.bg = i),
     loadImg('/play/slots/head_llama.webp').then(i => imgs.llama_face = i),
     loadImg('/play/slots/head_abuela.webp').then(i => imgs.abuela_face = i),
     loadImg('/play/slots/head_lucha.webp').then(i => imgs.lucha_face = i),
