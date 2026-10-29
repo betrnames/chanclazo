@@ -474,7 +474,7 @@ function marigold(x: number, y: number, r: number) {
   ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(x, y, r * 0.32, 0, Math.PI * 2); ctx.fill();
 }
 
-const NICHES: [string, string][] = [['abuela', 'CHANCLAZO'], ['lucha', 'CHANCLA WILD'], ['calaca', 'PIÑATA SMASH']];
+const NICHES: [string, string][] = [['abuela', 'CHANCLAZO'], ['lucha', 'CHANCLA WILD'], ['llama', 'PIÑATA SMASH']];
 
 // Lit face sprite (cached per size): rim highlight + radial light/shade, composited onto the face's own alpha.
 const faceCache = new Map<string, HTMLCanvasElement>();
@@ -498,11 +498,11 @@ function litFace(im: HTMLImageElement, w: number, h: number) {
 }
 function draw3DFace(im: HTMLImageElement, cx: number, cy: number, w: number, h: number, i: number) {
   const t = performance.now() / 1000 + i * 1.3;
-  const c = litFace(im, w, h);
+  void litFace; // new character art is drawn as provided (no relighting)
   ctx.save();
   void t; ctx.translate(cx, cy); // static heads (no bob/tilt/yaw)
   ctx.shadowColor = 'rgba(58,20,80,.55)'; ctx.shadowBlur = 10; ctx.shadowOffsetX = 3; ctx.shadowOffsetY = 6;
-  ctx.drawImage(c, -c.width / 2, -c.height / 2);
+  ctx.imageSmoothingQuality = 'high'; ctx.drawImage(im, -w / 2, -h / 2, w, h);
   ctx.restore();
 }
 
@@ -972,9 +972,9 @@ async function boot() {
   initAudioControls('slots', (m) => { A.setMuted(m); });
   const loads: Promise<unknown>[] = [
     loadImg('/lp/abuela_face.webp').then(i => imgs.abuela = i), // full head (tile art crops the bun)
-    loadImg('/lp/calaca_face.webp').then(i => imgs.calaca_face = i),
-    loadImg('/lp/abuela_face.webp').then(i => imgs.abuela_face = i),
-    loadImg('/lp/lucha_face.webp').then(i => imgs.lucha_face = i),
+    loadImg('/play/slots/head_llama.webp').then(i => imgs.llama_face = i),
+    loadImg('/play/slots/head_abuela.webp').then(i => imgs.abuela_face = i),
+    loadImg('/play/slots/head_lucha.webp').then(i => imgs.lucha_face = i),
     loadImg('/play/t_skull.webp').then(i => imgs.skull = i),
     loadImg('/play/t_lucha.webp').then(i => imgs.lucha = i),
     loadImg('/play/t_chancla.webp').then(i => imgs.chancla = i),
