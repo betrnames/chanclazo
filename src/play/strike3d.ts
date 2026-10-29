@@ -99,7 +99,7 @@ const moon = new THREE.DirectionalLight(0x5fd6d0, 0.9); moon.position.set(-20, 4
 const warm = new THREE.PointLight(0xffb060, 0, 80, 1.2); scene.add(warm);
 const tl = new THREE.TextureLoader();
 const sMats: Record<string, THREE.MeshBasicMaterial> = {};
-const sMat = (u: string) => (sMats[u] ??= new THREE.MeshBasicMaterial({ map: (() => { const t = tl.load(u); t.colorSpace = THREE.SRGBColorSpace; return t; })(), transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, fog: false }));
+const sMat = (u: string) => (sMats[u] ??= new THREE.MeshBasicMaterial({ map: (() => { const t = tl.load(u); t.colorSpace = THREE.SRGBColorSpace; return t; })(), transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, fog: false, toneMapped: false, color: 0xffffff }));
 
 // ---------- winding downhill road ----------
 const ctrl: THREE.Vector3[] = [];
@@ -177,6 +177,11 @@ const endGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: flame, blending
 endGlow.scale.set(40, 30, 1); endGlow.position.copy(endP); scene.add(endGlow);
 warm.position.copy(endP).add(new THREE.Vector3(0, 4, 0));
 
+// moon + stars
+const moonSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(128, 128, (c) => { const g = c.createRadialGradient(64, 64, 20, 64, 64, 64); g.addColorStop(0, 'rgba(235,240,255,1)'); g.addColorStop(0.42, 'rgba(210,220,255,.95)'); g.addColorStop(0.5, 'rgba(140,200,220,.25)'); g.addColorStop(1, 'rgba(80,120,200,0)'); c.fillStyle = g; c.fillRect(0, 0, 128, 128); }), fog: false, depthWrite: false }));
+moonSpr.scale.set(2.2, 2.2, 1); moonSpr.position.set(-2.4, 5.6, -14); moonSpr.renderOrder = -1; moonSpr.material.depthTest = false; scene.add(camera); camera.add(moonSpr);
+const starGeo = new THREE.BufferGeometry(); { const a: number[] = []; for (let i = 0; i < 500; i++) { const th = rnd() * Math.PI * 2, ph = rnd() * 0.45 + 0.08; a.push(Math.cos(th) * Math.cos(ph) * 150, Math.sin(ph) * 150, Math.sin(th) * Math.cos(ph) * 150); } starGeo.setAttribute('position', new THREE.Float32BufferAttribute(a, 3)); }
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xcfd6ff, size: 0.9, sizeAttenuation: true, fog: false, transparent: true, opacity: 0.7 })); scene.add(stars);
 // ---------- animated smoke ----------
 const smoke: { s: THREE.Sprite; v: number; ph: number }[] = [];
 for (let i = 0; i < 70; i++) {
@@ -213,7 +218,7 @@ world.allowSleep = true;
 type Skull = { g: THREE.Group; jaw: THREE.Group; d: number; lane: number; alive: boolean; t: number; spitT: number };
 type Pin = { m: THREE.Mesh; d: number; lane: number; alive: boolean; t: number };
 type Crate = { body: CANNON.Body; mesh: THREE.Mesh; home: CANNON.Vec3; down: boolean; d: number; lane: number };
-type Shot = { body: CANNON.Body; mesh: THREE.Group; age: number };
+type Shot = { body: CANNON.Body; mesh: THREE.Group; age: number; prev: THREE.Vector3 };
 type Spit = { m: THREE.Mesh; from: THREE.Vector3; d: number; lane: number; t: number };
 let skulls: Skull[] = [], pins: Pin[] = [], crates: Crate[] = [], shots: Shot[] = [], spits: Spit[] = [], statics: CANNON.Body[] = [];
 const candy: { m: THREE.Mesh; v: THREE.Vector3; life: number }[] = [];
@@ -289,12 +294,18 @@ function chanclaMesh(dark = false) {
 function throwChancla(side: number, up: number) {
   if (!playing || ammo <= 0) return;
   ammo--; hud(); beep(520, 0.12, 'sawtooth', 0.05);
-  const f = frameAt(dist + 1), o = at(dist + 1, laneX, 1.4);
-  const fwd = 9 + up * 20, v = f.t.clone().multiplyScalar(fwd + SPEED).addScaledVector(f.side, side * 16).addScaledVector(UP, 2.5 + up * 7);
+  const o = at(dist + 1, laneX, 1.4), f = frameAt(dist + 1), fwd = 9 + up * 20;
+  let v = f.t.clone().multiplyScalar(fwd + SPEED).addScaledVector(f.side, side * 16).addScaledVector(UP, 2.5 + up * 7);
+  // aim assist: pick the live target closest to the swipe's line, then solve a real arc to it (scale-free: swipe is normalized to the canvas column)
+  let best: THREE.Vector3 | null = null, bd = 0.22;
+  const dir = new THREE.Vector3(v.x, 0, v.z).normalize();
+  const cands = [...skulls.filter((k) => k.alive).map((k) => k.g.position), ...pins.filter((q) => q.alive).map((q) => q.m.position)];
+  for (const tp of cands) { const h = new THREE.Vector3(tp.x - o.x, 0, tp.z - o.z); const L = h.length(); if (L < 2.5 || L > 32) continue; const e = 1 - h.normalize().dot(dir); if (e < bd) { bd = e; best = tp; } }
+  if (best) { const h = new THREE.Vector3(best.x - o.x, 0, best.z - o.z), L = h.length(), T = L / (fwd + SPEED); v = h.multiplyScalar(1 / T); v.y = (best.y - o.y + 4.91 * T * T) / T; }
   const body = new CANNON.Body({ mass: 0.5, shape: new CANNON.Box(new CANNON.Vec3(0.18, 0.06, 0.4)), position: new CANNON.Vec3(o.x, o.y, o.z) });
   body.velocity.set(v.x, v.y, v.z); body.angularVelocity.set(-14, (rnd() - 0.5) * 6, side * 4);
   body.addEventListener('collide', (e: { body: CANNON.Body; contact: CANNON.ContactEquation }) => { if (crates.some((c) => c.body === e.body) && Math.abs(e.contact.getImpactVelocityAlongNormal()) > 4) { shake = 0.3; slow = 0.3; beep(140, 0.15, 'square', 0.1); } });
-  const s: Shot = { body, mesh: chanclaMesh(), age: 0 }; world.addBody(body); scene.add(s.mesh); shots.push(s);
+  const s: Shot = { body, mesh: chanclaMesh(), age: 0, prev: o.clone() }; world.addBody(body); scene.add(s.mesh); shots.push(s);
 }
 
 // ---------- input ----------
@@ -315,7 +326,8 @@ function burst(p: THREE.Vector3, n = 50) {
   const cols = [0xff3d7f, 0xffd23f, 0x1ec8c8, 0x8ae234, 0xb04bff, 0xff9f1c];
   for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: cols[i % 6] })); m.position.copy(p); scene.add(m); candy.push({ m, v: new THREE.Vector3((rnd() - 0.5) * 8, rnd() * 6, (rnd() - 0.5) * 8), life: 2 }); }
 }
-function hurt() { hearts--; lostHeart = true; shake = 0.5; beep(90, 0.3, 'sawtooth', 0.12); stage.style.boxShadow = 'inset 0 0 80px red'; setTimeout(() => (stage.style.boxShadow = ''), 250); hud(); }
+let invuln = 0;
+function hurt() { if (clock < invuln) return; invuln = clock + 1.2; hearts--; lostHeart = true; shake = 0.5; beep(90, 0.3, 'sawtooth', 0.12); stage.style.boxShadow = 'inset 0 0 80px red'; setTimeout(() => (stage.style.boxShadow = ''), 250); hud(); }
 
 // ---------- comic backgrounds rendered from this scene ----------
 function inkify(src: HTMLCanvasElement) {
@@ -379,8 +391,10 @@ function frame(now: number) {
   for (const s of shots) {
     s.age += dt; s.body.applyForce(new CANNON.Vec3(st.wind * s.body.mass, 0, 0));
     s.mesh.position.set(s.body.position.x, s.body.position.y, s.body.position.z); s.mesh.quaternion.set(s.body.quaternion.x, s.body.quaternion.y, s.body.quaternion.z, s.body.quaternion.w);
-    for (const k of skulls) if (k.alive && k.g.position.distanceTo(s.mesh.position) < 0.9) { k.alive = false; kills++; scene.remove(k.g); burst(k.g.position, 30); addScore(100); shake = 0.35; slow = 0.4; beep(200, 0.2, 'square', 0.1); }
-    for (const p of pins) if (p.alive && p.m.position.distanceTo(s.mesh.position) < 1.2) { p.alive = false; kills++; scene.remove(p.m); burst(p.m.position, 70); addScore(250); shake = 0.4; slow = 0.5; beep(660, 0.25, 'triangle', 0.1); }
+    const seg = new THREE.Line3(s.prev.clone(), s.mesh.position.clone()); s.prev.copy(s.mesh.position);
+    const near = (q: THREE.Vector3, r: number) => seg.closestPointToPoint(q, true, tmp).distanceTo(q) < r;
+    for (const k of skulls) if (k.alive && near(k.g.position, 0.95)) { k.alive = false; kills++; scene.remove(k.g); burst(k.g.position, 30); addScore(100); shake = 0.35; slow = 0.4; beep(200, 0.2, 'square', 0.1); }
+    for (const p of pins) if (p.alive && near(p.m.position, 1.2)) { p.alive = false; kills++; scene.remove(p.m); burst(p.m.position, 70); addScore(250); shake = 0.4; slow = 0.5; beep(660, 0.25, 'triangle', 0.1); }
   }
   shots = shots.filter((s) => { if (s.age > 3) { world.removeBody(s.body); scene.remove(s.mesh); return false; } return true; });
   for (const c of crates) {
@@ -416,6 +430,7 @@ function frame(now: number) {
   const sx = shake > 0 ? (rnd() - 0.5) * shake : 0; shake = Math.max(0, shake - dt * 1.5);
   camera.position.copy(back).add(new THREE.Vector3(sx, sx * 0.6, 0)); camera.lookAt(look);
   hero.position.copy(at(dist + 0.6, laneX, 0.9)); hero.lookAt(tmp.copy(camera.position).setY(hero.position.y));
+  stars.position.copy(camera.position); stars.material.opacity = 0.7 * (1 - THREE.MathUtils.smoothstep(dist / LEN, 0.6, 1));
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
@@ -425,12 +440,14 @@ function spit(k: Skull) {
   $('warn').textContent = lane === 0 ? 'DODGE →' : lane === 2 ? '← DODGE' : '← DODGE →';
 }
 // masked Isidro (Gabe's luchador cutout, as-is) running ahead of the camera
-const hero = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 1.25), sMat(L)); hero.renderOrder = 5; scene.add(hero);
+const hero = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 1.25), sMat(L)); hero.renderOrder = 10; hero.material = sMat(L).clone(); (hero.material as THREE.MeshBasicMaterial).depthTest = false; scene.add(hero);
 
 (window as unknown as Record<string, unknown>).__s3d = {
   throwChancla, dodge, startStage, spit: () => skulls.find((k) => k.alive) && spit(skulls.find((k) => k.alive)!),
   state: () => ({ si, score, ammo, hearts, lane, playing, dist: +dist.toFixed(1), to: +STAGES[si].to.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills, total }),
   jump: (d: number) => { dist = d; },
+  smoke: (v: boolean) => smoke.forEach((m) => (m.s.visible = v)),
+  heroRect: () => { const r = stage.getBoundingClientRect(); const pts = [[-0.375, -0.625], [0.375, 0.625]].map(([x, y]) => { const v = new THREE.Vector3(x, y, 0); hero.localToWorld(v); v.project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }); return pts; },
 };
 STAGES[0].build(STAGES[0].from, STAGES[0].to);
 renderComicBgs();
