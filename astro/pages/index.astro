@@ -12,7 +12,7 @@ import Base from '../layouts/Base.astro';
   <img class="lpart ear" id="earR" src="/lp/llama_earR.webp" width="68" height="95" alt="" aria-hidden="true" />
   <img class="lpart" id="mouth" src="/lp/llama_mouth.webp" width="67" height="45" alt="" aria-hidden="true" />
   <img class="lpart" id="jaw" src="/lp/llama_jaw.webp" width="67" height="45" alt="" aria-hidden="true" />
-  <img class="herogrp" id="herogrp" src="/lp/lander-chars.webp" width="893" height="880" alt="" aria-hidden="true" />
+  <img class="herogrp" id="herogrp" src="/lp/lander-chars.webp" width="943" height="880" alt="" aria-hidden="true" />
   <div class="cta">
     <p class="tag">When words fail, the chanclazo speaks!</p>
     <a class="play" href="/choose" id="playNow">PLAY NOW</a>
@@ -53,8 +53,8 @@ import Base from '../layouts/Base.astro';
 </style>
 <script>
   // Layout: background is cover-fit by CSS. Title, character group and chancla are placed together and scale as one unit.
-  const T = { w: 1681, h: 363 }, C = { w: 893, h: 880 }, EAR = { x: 602, y: 30 }, WAIST = 0.62;
-  const PARTS: [string, number, number, number, number][] = [['earL', 452, 27, 80, 157], ['earR', 524, 37, 68, 95], ['mouth', 579, 247, 67, 45], ['jaw', 579, 247, 67, 45]];
+  const T = { w: 1681, h: 363 }, C = { w: 943, h: 880 }, EAR = { x: 602, y: 30 }, WAIST = 0.62;
+  const PARTS: [string, number, number, number, number][] = [['earL', 477, 27, 80, 157], ['earR', 549, 37, 68, 95], ['mouth', 604, 247, 67, 45], ['jaw', 604, 247, 67, 45]];
   const ttl = document.getElementById('ttl') as HTMLImageElement, hero = document.getElementById('herogrp') as HTMLImageElement;
   const put = (el: HTMLElement, x: number, y: number, w: number, h: number) => Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, height: `${h}px`, visibility: 'visible' });
   const place = () => {
