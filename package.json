@@ -1,7 +1,7 @@
 {
   "name": "chanclazo",
   "private": true,
-  "version": "0.2.1",
+  "version": "1.0.0",
   "type": "module",
   "description": "Chanclazo: Day of the Dead browser games (Chancla Strike and Chanclazo Match).",
   "author": "betrnames",

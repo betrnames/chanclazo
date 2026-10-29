@@ -52,4 +52,17 @@ for (const f of ['_redirects', '_headers']) {
   }
 }
 
+// Build stamp: package version + short commit (Cloudflare Pages env, else git, else 'dev')
+{
+  const { readFileSync, writeFileSync, readdirSync, statSync } = await import('node:fs');
+  const { execSync } = await import('node:child_process');
+  const ver = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
+  let sha = (process.env.CF_PAGES_COMMIT_SHA || '').slice(0, 7);
+  if (!sha) { try { sha = execSync('git rev-parse --short=7 HEAD', { cwd: ROOT }).toString().trim(); } catch { sha = 'dev'; } }
+  const stamp = `v${ver} · ${sha}`;
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  let n = 0;
+  for (const f of walk(DIST)) if (/\.(html|js)$/.test(f)) { const t = readFileSync(f, 'utf8'); if (t.includes('%%CZ_BUILD%%')) { writeFileSync(f, t.split('%%CZ_BUILD%%').join(stamp)); n++; } }
+  console.log('build stamp', stamp, 'in', n, 'files');
+}
 console.log('merge-dist: ok');
