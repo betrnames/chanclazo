@@ -402,15 +402,9 @@ const jawOpen = (j: THREE.Group, k: number) => { j.position.y = (j as THREE.Grou
 const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
 world.allowSleep = true;
 
-type Skull = { g: THREE.Group; jaw: THREE.Group; d: number; lane: number; alive: boolean; t: number; spitT: number };
+type Skull = { g: THREE.Group; jaw: THREE.Group; d: number; lane: number; alive: boolean; t: number; h: number }; // collectible calavera (not an enemy); h = height it sits at
 type Pickup = { g: THREE.Group; d: number; lane: number; alive: boolean; t: number };
 let pickups: Pickup[] = [];
-function addPickup(d: number, lane: number) {
-  const g = new THREE.Group();
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: flame, color: 0xffd23f, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); halo.scale.setScalar(1.5); g.add(halo);
-  const c = new THREE.Sprite(new THREE.SpriteMaterial({ map: goldTex, fog: false, toneMapped: false, depthWrite: false })); c.scale.setScalar(1.1); g.add(c);
-  scene.add(g); pickups.push({ g, d, lane, alive: true, t: Math.random() * 3 });
-}
 type Pin = { m: THREE.Mesh; d: number; lane: number; alive: boolean; t: number };
 type Crate = { body: CANNON.Body; mesh: THREE.Mesh; home: CANNON.Vec3; down: boolean; d: number; lane: number; gone?: boolean; top: number };
 const crateGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -458,7 +452,34 @@ function barricade(d: number, lane: number, n: number, sz = 0.8) {
     scene.add(mesh); crates.push({ body, mesh, home: body.position.clone(), down: false, d, lane, top: y + sz / 2 });
   }
 }
-function addSkull(d: number, lane: number) { const s = makeSkull(); skulls.push({ g: s.g, jaw: s.jawPivot, d, lane, alive: true, t: rnd() * 6, spitT: 2 + rnd() * 3 }); }
+const skullGlowMat = new THREE.SpriteMaterial({ map: flame, color: 0x9fd8ff, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.85 });
+function addSkull(d: number, lane: number, h = 0) { const s = makeSkull(); s.g.scale.multiplyScalar(0.62); const glow = new THREE.Sprite(skullGlowMat); glow.scale.setScalar(2.1); glow.position.z = -0.05; s.g.add(glow); skulls.push({ g: s.g, jaw: s.jawPivot, d, lane, alive: true, t: rnd() * 6, h }); }
+// ---------- adobe / brick wall blockers ----------
+type Wall = { bricks: THREE.Mesh[]; d: number; lane: number; breakable: boolean; alive: boolean; top: number };
+let walls: Wall[] = [];
+const brickGeo = new THREE.BoxGeometry(1, 1, 1);
+const adobeMats = [0x4a3028, 0x553628, 0x3e2a24].map((c) => new THREE.MeshLambertMaterial({ color: c, emissive: 0x24160f }));
+const stoneMats = [0x262230, 0x2c2834, 0x211d29].map((c) => new THREE.MeshLambertMaterial({ color: c, emissive: 0x0d0b12 }));
+const WALL = { W: 1.75, H: 2.3, T: 0.45, rows: 7, cols: 4 };
+function addWall(d: number, lane: number, breakable: boolean) { // breakable = crumbling adobe (cracked, ragged top, gaps); solid = dark mortared stone, chancla bounces off
+  const f = frameAt(d), p = at(d, LANES[lane]), yaw = Math.atan2(f.t.x, f.t.z), bricks: THREE.Mesh[] = [];
+  const bh = WALL.H / WALL.rows, bw = WALL.W / WALL.cols;
+  for (let r = 0; r < WALL.rows; r++) for (let c = 0; c < WALL.cols + (r % 2); c++) {
+    const top = r === WALL.rows - 1; if (breakable && top && Math.random() < 0.45) continue; // ragged crumbling top
+    let x = (c - (WALL.cols - 1) / 2 - (r % 2) * 0.5) * bw, w = bw * 0.94; if (Math.abs(x) + w / 2 > WALL.W / 2) { const e = WALL.W / 2 - (Math.abs(x) - w / 2); x = Math.sign(x) * (WALL.W / 2 - e / 2); w = e; } if (w < 0.08) continue;
+    const m = new THREE.Mesh(brickGeo, pick(breakable ? adobeMats : stoneMats));
+    const j = breakable ? 0.06 : 0.015; m.scale.set(w - (breakable ? Math.random() * 0.06 : 0), bh * 0.92, WALL.T * (breakable ? 0.8 + Math.random() * 0.3 : 1));
+    m.position.copy(p).addScaledVector(f.side, x).add(new THREE.Vector3(0, r * bh + bh / 2, 0)); m.rotation.set((Math.random() - 0.5) * j, yaw + (Math.random() - 0.5) * j * 2, (Math.random() - 0.5) * j);
+    scene.add(m); bricks.push(m);
+  }
+  if (!breakable) { const cap = new THREE.Mesh(brickGeo, stoneMats[2]); cap.scale.set(WALL.W + 0.1, 0.14, WALL.T + 0.12); cap.position.copy(p).add(new THREE.Vector3(0, WALL.H + 0.07, 0)); cap.rotation.y = yaw; scene.add(cap); bricks.push(cap); }
+  walls.push({ bricks, d, lane, breakable, alive: true, top: WALL.H + (breakable ? 0 : 0.14) });
+}
+function breakWall(w: Wall) {
+  w.alive = false; const f = frameAt(w.d);
+  for (const m of w.bricks) { const v = f.t.clone().multiplyScalar(2 + Math.random() * 5).add(new THREE.Vector3((Math.random() - 0.5) * 4, 1 + Math.random() * 4, (Math.random() - 0.5) * 2)); m.scale.multiplyScalar(0.7 + Math.random() * 0.3); splinters.push({ m, v, w: new THREE.Vector3(Math.random() * 8, Math.random() * 8, Math.random() * 8), life: 1.6 + Math.random() * 0.6 }); }
+  const c = at(w.d, LANES[w.lane], 1); for (let i = 0; i < 3; i++) spark(c, 14, 3, 0.5); shake = 0.45; slow = 0.35; beep(110, 0.3, 'sawtooth', 0.12);
+}
 function addPin(d: number, lane: number) { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.8), sMat(P)); scene.add(m); pins.push({ m, d, lane, alive: true, t: rnd() * 6 }); }
 
 // ---------- endless run: procedural spawner, cars, ramps, jump, score multiplier ----------
@@ -504,43 +525,52 @@ function breakCar(c: Car) {
 }
 // ---- run state ----
 let score = 0, best = +(localStorage.getItem('s3d_best') || 0), ammo = 0, playing = false, lane = 1, laneX = 0, dist = 0, kills = 0, runT = 0, mult = 1, spd = 6.8, god = false;
-let heroY = 0, heroVY = 0, wasRamp = false, spawnD = 0, pickD = 0;
+let throwCD = 0, heroY = 0, heroVY = 0, wasRamp = false, spawnD = 0;
 const SPEED = 6.8; // base forward speed (was 5.2 before the fast-run pass)
 const JUMP_V = 9.0, GRAV = 24, STEP = 0.55; // apex 1.69, airtime 0.75 s
 const multAt = (t: number) => Math.min(5, 1 + 0.5 * Math.floor(t / 15)); // +0.5x every 15 s, cap 5x (reached at 2:00)
 const speedAt = (t: number) => SPEED * (1 + Math.min(0.2, t / 600)); // gentle ramp: +2%/min... +20% max at 2:00
-const PTS = { skull: 100, crate: 50, carHit: 25, car: 300, pinata: 250 };
+const PTS = { skull: 50, crate: 40, wall: 80, carHit: 10, car: 150, pinata: 120 }; // all × multiplier; skulls are collected, never shot
 function clearRun() {
   for (const s of skulls) scene.remove(s.g); for (const p of pins) scene.remove(p.m); for (const k of pickups) scene.remove(k.g); pickups = [];
   for (const c of crates) if (!c.gone) { scene.remove(c.mesh); world.removeBody(c.body); } for (const b of statics) world.removeBody(b.b);
   for (const s of shots) { scene.remove(s.mesh); world.removeBody(s.body); } for (const s of spits) scene.remove(s.m);
   for (const c of cars) if (c.alive) scene.remove(c.g); for (const r of ramps) scene.remove(r.m);
-  skulls = []; pins = []; crates = []; shots = []; spits = []; statics = []; cars = []; ramps = [];
+  for (const w of walls) if (w.alive) for (const m of w.bricks) scene.remove(m);
+  skulls = []; pins = []; crates = []; shots = []; spits = []; statics = []; cars = []; ramps = []; walls = [];
 }
 // ---- endless spawner: one pattern per gap (10-18u, scaled with speed), never more than 2 lanes blocked inside a pattern ----
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 const others = (l: number) => [0, 1, 2].filter((x) => x !== l);
-function spawnPattern(d: number) {
+function trail(d: number, lane: number, n: number, gap = 2.4, h = 0) { for (let k = 0; k < n; k++) addSkull(d + k * gap, lane, h); }
+let lastKind = '', forceKind = '';
+const PAT: Record<string, (d: number) => void> = Object.fromEntries(['trail', 'crate', 'car', 'forced', 'route', 'onebreak', 'rampcrate', 'pin'].map((k) => [k, (d: number) => { forceKind = k; spawnPattern(d); }]));
+function spawnPattern(d: number) { // small route puzzles; every pattern leaves at least one passable line (open lane, breakable blocker, or jumpable car/ramp)
   const t = runT, L = Math.floor(Math.random() * 3), o = others(L), w = Math.random();
-  const table: [string, number][] = [['skull1', 1.2], ['cluster', 1.1], ['stagger', 1.2], ['pair', t > 10 ? 0.9 : 0.3], ['crate', 1.4], ['crate2', t > 15 ? 0.8 : 0.3], ['car', t > 8 ? 1 : 0.4], ['car2', t > 30 ? 0.6 : 0], ['rampcar', 0.7], ['rampcrate', 0.5], ['pin', t > 20 ? 0.35 : 0]];
-  let acc = 0; const tot = table.reduce((a, b) => a + b[1], 0); let kind = 'skull1'; for (const [k, wt] of table) { acc += wt / tot; if (w < acc) { kind = k; break; } }
+  const table: [string, number][] = [['trail', 1.0], ['crate', 0.9], ['car', t > 6 ? 0.8 : 0.3], ['forced', t > 8 ? 1.1 : 0.4], ['route', 1.1], ['onebreak', t > 12 ? 1.0 : 0.3], ['rampcrate', 0.6], ['pin', 0.25]];
+  let acc = 0; const tot = table.reduce((a, b) => a + b[1], 0); let kind = 'trail'; for (const [k, wt] of table) { acc += wt / tot; if (w < acc) { kind = k; break; } }
+  if (kind === lastKind && kind !== 'trail') kind = 'trail'; lastKind = kind;
+  if (forceKind) { kind = forceKind; forceKind = ''; }
   switch (kind) {
-    case 'skull1': addSkull(d, L); return 4;
-    case 'cluster': { const n = 2 + (Math.random() < 0.5 ? 1 : 0); for (let k = 0; k < n; k++) addSkull(d + k * 2.6, L); return n * 2.6 + 2; } // same-lane group
-    case 'stagger': { const b = pick(o); addSkull(d, L); addSkull(d + 4, b); if (Math.random() < 0.5) addSkull(d + 8, L); return 10; } // left/right zig-zag
-    case 'pair': { addSkull(d, o[0]); addSkull(d + (Math.random() - 0.5), o[1]); return 4; } // two lanes, third always free
-    case 'crate': barricade(d, L, pick([1, 1, 2, 3]), pick([0.7, 0.8, 0.9])); return 3;
-    case 'crate2': barricade(d, L, pick([1, 2]), 0.8); barricade(d + 1.5, pick(o), 1, pick([0.7, 0.9])); return 4;
-    case 'car': addCar(d + 1.8, L); return 5;
-    case 'car2': addCar(d + 1.8, L); addCar(d + 8, pick(o)); return 11;
-    case 'rampcar': addRamp(d, L); addCar(d + RAMP.L + 3.8, L); return 10; // launch onto / over the car
-    case 'rampcrate': addRamp(d, L); barricade(d + RAMP.L + 2.5, L, 3, 0.8); return 7;
-    default: addPin(d + 2, L); return 4;
+    case 'trail': { const n = 3 + Math.floor(Math.random() * 3); if (Math.random() < 0.5) trail(d, L, n); else { trail(d, L, 2); trail(d + 5, pick(o), n - 2); } return n * 2.4 + 3; } // skulls on the ground, sometimes swapping lanes
+    case 'crate': barricade(d, L, pick([1, 2, 3]), pick([0.7, 0.8, 0.9])); addSkull(d + 3, L); return 5; // skull behind the crate = reward for clearing it
+    case 'car': addCar(d + 1.8, L); trail(d + 0.8, L, 2, 1.4, CAR.roof); return 6; // hop on the roof to grab the skulls
+    case 'forced': { // every lane blocked by something breakable: throw (or jump the car)
+      const kinds = ['wall', 'wall', 'crate', 'car'].sort(() => Math.random() - 0.5).slice(0, 3);
+      kinds.forEach((k, i) => { if (k === 'wall') addWall(d, i, true); else if (k === 'crate') barricade(d, i, 3, 0.8); else addCar(d + 1.2, i); });
+      addSkull(d + 3.5, L); return 7; }
+    case 'route': { // high road: ramp -> car roof with skulls; low road: ground lane with one skull; third lane walled off
+      const [g, x] = Math.random() < 0.5 ? o : [o[1], o[0]];
+      addRamp(d, L); addCar(d + RAMP.L + 3.0, L); trail(d + RAMP.L - 0.5, L, 2, 1.6, 1.9); trail(d + RAMP.L + 2.4, L, 2, 1.3, CAR.roof);
+      addSkull(d + 5, g); addWall(d + 4, x, false); return RAMP.L + 8; }
+    case 'onebreak': { // two solid stone walls, one crumbling adobe: find the soft one
+      const soft = Math.floor(Math.random() * 3); for (let i = 0; i < 3; i++) addWall(d, i, i === soft); addSkull(d + 3, soft); addSkull(d + 5, soft); return 7; }
+    case 'rampcrate': addRamp(d, L); barricade(d + RAMP.L + 2.5, L, 3, 0.8); trail(d + RAMP.L, L, 3, 1.4, 2.2); return 8; // jump it via the ramp (skulls in the air) or break it
+    default: addPin(d + 2, L); return 4; // pinata = optional bonus up high, not an enemy
   }
 }
 function spawnAhead() {
   while (spawnD < dist + 95) { const used = spawnPattern(spawnD); spawnD += used + (10 + Math.random() * 8) * (spd / SPEED) * 0.75; }
-  while (pickD < dist + 95) { const ln = Math.floor(Math.random() * 3); addPickup(pickD, ln); pickD += 38 + Math.random() * 25; }
 }
 function despawn() { // recycle everything that's behind the runner
   const gone = dist - 12;
@@ -550,14 +580,15 @@ function despawn() { // recycle everything that's behind the runner
   crates = crates.filter((c) => { if (c.d < gone) { if (!c.gone) { scene.remove(c.mesh); world.removeBody(c.body); } return false; } return true; });
   statics = statics.filter((s) => { if (s.d < gone) { world.removeBody(s.b); return false; } return true; });
   cars = cars.filter((c) => { if (c.d < gone) { if (c.alive) scene.remove(c.g); return false; } return true; });
+  walls = walls.filter((w) => { if (w.d < gone) { if (w.alive) for (const m of w.bricks) scene.remove(m); return false; } return true; });
   ramps = ramps.filter((r) => { if (r.d < gone) { scene.remove(r.m); return false; } return true; });
 }
 function startRun() {
   clearRun(); kills = 0; score = 0; runT = 0; mult = 1; spd = SPEED; heroY = 0; heroVY = 0; wasRamp = false;
-  turnT = 0; runPh = 0; ammo = 10; lane = 1; laneX = 0; dist = 0; spawnD = 24; pickD = 30; playing = true;
+  turnT = 0; runPh = 0; ammo = 10; lane = 1; laneX = 0; dist = 0; spawnD = 24; playing = true;
   spawnAhead(); $('end').classList.add('hidden'); hud();
 }
-function hud() { $('stat').textContent = String(score); $('mult').textContent = `×${mult.toFixed(1).replace('.0', '')}`; $('ammo').textContent = String(Math.max(0, ammo)); }
+function hud() { $('stat').textContent = String(score); $('mult').textContent = `×${mult.toFixed(1).replace('.0', '')}`; $('ammo').textContent = '∞'; }
 function addScore(n: number) { score += Math.round(n * mult); hud(); const e = $('stat'); e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); }
 function crash() { // one crash ends the run (Gabe's rule); no hearts
   if (god || !playing) return; playing = false; shake = 0.6; beep(90, 0.4, 'sawtooth', 0.14); stage.style.boxShadow = 'inset 0 0 90px red'; setTimeout(() => (stage.style.boxShadow = ''), 300);
@@ -587,14 +618,14 @@ function goldChancla() {
   sp.scale.set(1.5, 1.5, 1); sp.name = 'gold'; g.add(sp); return g;
 }
 function throwChancla(side: number, up: number) {
-  if (!playing || ammo <= 0) return;
-  ammo--; hud(); beep(520, 0.12, 'sawtooth', 0.05);
+  if (!playing || clock < throwCD) return; // the chancla is a tool: unlimited, 0.3 s cooldown
+  throwCD = clock + 0.3; beep(520, 0.12, 'sawtooth', 0.05);
   const o = at(dist + 1, laneX, 1.4 + heroY), f = frameAt(dist + 1), fwd = 9 + up * 20;
   let v = f.t.clone().multiplyScalar(fwd + spd).addScaledVector(f.side, side * 16).addScaledVector(UP, 2.5 + up * 7);
   // aim assist: pick the live target closest to the swipe's line, then solve a real arc to it (scale-free: swipe is normalized to the canvas column)
   let best: THREE.Vector3 | null = null, bd = 0.22;
   const dir = new THREE.Vector3(v.x, 0, v.z).normalize();
-  const cands = [...skulls.filter((k) => k.alive).map((k) => k.g.position), ...pins.filter((q) => q.alive).map((q) => q.m.position), ...crates.filter((c) => !c.down).map((c) => c.mesh.position), ...cars.filter((c) => c.alive).map((c) => c.g.position.clone().add(new THREE.Vector3(0, 0.8, 0)))]; // crates/cars were missing: straight throws flew over near crates
+  const cands = [...walls.filter((q) => q.alive && q.breakable).map((q) => at(q.d, LANES[q.lane], 1.0)), ...crates.filter((c) => !c.down).map((c) => c.mesh.position), ...cars.filter((c) => c.alive).map((c) => c.g.position.clone().add(new THREE.Vector3(0, 0.8, 0)))]; // only breakable blockers (adobe walls, crates, cars); no skulls, no pinatas
   for (const tp of cands) { const h = new THREE.Vector3(tp.x - o.x, 0, tp.z - o.z); const L = h.length(); if (L < 2.5 || L > 32) continue; const e = 1 - h.normalize().dot(dir); if (e < bd) { bd = e; best = tp; } }
   if (best) { const h = new THREE.Vector3(best.x - o.x, 0, best.z - o.z), L = h.length(), T = L / (fwd + spd); v = h.multiplyScalar(1 / T); v.y = (best.y - o.y + 4.91 * T * T) / T; }
   const body = new CANNON.Body({ mass: 0.5, shape: new CANNON.Box(new CANNON.Vec3(0.18, 0.06, 0.4)), position: new CANNON.Vec3(o.x, o.y, o.z) });
@@ -709,7 +740,7 @@ function frame(now: number) {
     s.mesh.position.set(s.body.position.x, s.body.position.y, s.body.position.z); { const g = s.mesh.children[0] as THREE.Sprite; g.material.rotation -= dt * 14; if (s.age > 0.12 && s.age < 2) spark(s.mesh.position, 1, 0.6, 0.28); }
     const seg = new THREE.Line3(s.prev.clone(), s.mesh.position.clone()); s.prev.copy(s.mesh.position);
     const near = (q: THREE.Vector3, r: number) => seg.closestPointToPoint(q, true, tmp).distanceTo(q) < r;
-    for (const k of skulls) if (k.alive && near(k.g.position, 0.95)) { k.alive = false; kills++; scene.remove(k.g); burst(k.g.position, 30); addScore(PTS.skull); shake = 0.35; slow = 0.4; beep(200, 0.2, 'square', 0.1); }
+    for (const w of walls) if (w.alive && s.age < 2.5 && near(at(w.d, LANES[w.lane], 1.0), 1.1)) { s.age = 9; if (w.breakable) { kills++; breakWall(w); addScore(PTS.wall); } else { spark(at(w.d, LANES[w.lane], 1.2), 8, 3, 0.25); beep(300, 0.06, 'square', 0.05); } }
     for (const p of pins) if (p.alive && near(p.m.position, 1.2)) { p.alive = false; kills++; scene.remove(p.m); burst(p.m.position, 70); addScore(PTS.pinata); shake = 0.4; slow = 0.5; beep(660, 0.25, 'triangle', 0.1); }
     // swept test for crates too: a fast chancla (~22 u/s) can tunnel through a 0.8 crate between physics steps, so the hit never registered
     for (const c of crates) if (!c.down && s.age < 2.5 && near(c.mesh.position, 0.9)) { s.age = 9; c.body.wakeUp(); c.body.velocity.set(s.body.velocity.x * 0.4, 3, s.body.velocity.z * 0.4); c.body.position.y += 0.7; shake = 0.3; slow = 0.3; beep(140, 0.15, 'square', 0.1); }
@@ -722,15 +753,14 @@ function frame(now: number) {
     if (!c.down && c.body.position.distanceTo(c.home) > 0.6) { c.down = true; kills++; if (playing) addScore(PTS.crate); }
     if (c.down) { c.gone = true; breakCrate(c); }
   }
-  // skulls float toward you, jaws chomping
+  // calaveras: glowing collectibles sitting along the route (ground, car roofs, mid-air over ramps)
   for (const k of skulls) {
     if (!k.alive) continue; k.t += dt;
-    if (k.d - dist < 30) k.d -= dt * 1.4;
-    k.g.position.copy(at(k.d, LANES[k.lane] + Math.sin(k.t * 0.9) * 0.3, 0.72 + Math.sin(k.t * 2.2) * 0.06)); // hovering just off the cobbles
-    k.g.lookAt(camera.position); jawOpen(k.jaw, Math.max(0, Math.sin(k.t * 7)));
-    if (playing && runT > 25 && k.d - dist > 7 && k.d - dist < 26) { k.spitT -= dt; if (k.spitT <= 0) { k.spitT = 3.5 + rnd() * 3; spit(k); } }
-    if (playing && Math.abs(k.d - dist) < 0.8 && Math.abs(LANES[k.lane] - laneX) < 1 && heroY < 1.2) crash();
+    k.g.position.copy(at(k.d, LANES[k.lane], k.h + 0.5 + Math.sin(k.t * 2.2) * 0.08));
+    k.g.lookAt(camera.position); jawOpen(k.jaw, Math.max(0, Math.sin(k.t * 3)) * 0.4);
+    if (playing && Math.abs(k.d - dist) < 0.9 && Math.abs(LANES[k.lane] - laneX) < 0.9 && k.h + 0.5 > heroY - 0.3 && k.h + 0.5 < heroY + 1.9) { k.alive = false; scene.remove(k.g); addScore(PTS.skull); spark(k.g.position, 24, 4, 0.4); beep(1180, 0.1, 'triangle', 0.07); }
   }
+  for (const w of walls) if (playing && w.alive && Math.abs(w.d - dist) < 0.45 && Math.abs(LANES[w.lane] - laneX) < 1.1 && heroY < w.top - 0.1) crash();
   for (const p of pins) { if (!p.alive) continue; p.t += dt; p.m.position.copy(at(p.d, LANES[p.lane] + Math.sin(p.t * 1.3) * 0.5, 3.2)); p.m.lookAt(tmp.copy(camera.position).setY(p.m.position.y)); p.m.rotation.z = Math.sin(p.t * 1.3) * 0.15; }
   // crate collisions (jumping over a stack clears it)
   for (const c of crates) if (playing && !c.down && Math.abs(c.d - dist) < 0.6 && lane === c.lane && heroY < c.top - 0.1) crash();
@@ -738,7 +768,7 @@ function frame(now: number) {
   for (let i = splinters.length - 1; i >= 0; i--) if (splinters[i].life <= 0) { scene.remove(splinters[i].m); splinters.splice(i, 1); }
   // spit projectiles
   for (const s of spits) { s.t += dt / 1.4; const k = Math.min(1, s.t); const to = at(dist + 0.5, LANES[s.lane], 1.2); s.m.position.lerpVectors(s.from, to, k); s.m.position.y += Math.sin(k * Math.PI) * 1.5; s.m.rotation.x += dt * 12;
-    if (k >= 1 && Math.abs(laneX - LANES[s.lane]) < 1 && heroY < 1) crash(); }
+    }
   spits = spits.filter((s) => { if (s.t >= 1) { scene.remove(s.m); return false; } return true; });
   $('warn').style.display = spits.length ? 'block' : 'none';
   for (const sp of sparks) { sp.life -= dt; sp.s.position.addScaledVector(sp.v, dt); sp.s.scale.multiplyScalar(0.97); }
@@ -763,11 +793,6 @@ function frame(now: number) {
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
-function spit(k: Skull) {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), new THREE.MeshBasicMaterial({ color: 0x7dff6a })); scene.add(m);
-  spits.push({ m, from: k.g.position.clone(), d: dist, lane, t: 0 }); beep(880, 0.1, 'square', 0.06);
-  $('warn').textContent = lane === 0 ? 'DODGE →' : lane === 2 ? '← DODGE' : '← DODGE →';
-}
 // masked Sidro: Gabe's sprite sheets (unlit, original colors). Turnaround then run cycle.
 function sheetMat(u: string, n: number) { const t = tl.load(u); t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(1 / n, 1); t.magFilter = THREE.LinearFilter; return new THREE.MeshBasicMaterial({ map: t, transparent: true, alphaTest: 0.3, fog: false, toneMapped: false, depthTest: false }); }
 // per-frame lowest opaque foot pixel (of 492px band) -> drop each frame so the lowest foot touches the ground; per-frame durations (s)
@@ -789,8 +814,8 @@ function heroFrame(dt: number) {
 }
 
 (window as unknown as Record<string, unknown>).__s3d = {
-  throwChancla, dodge, jump, startRun, startStage: () => startRun(), god: (v: boolean) => { god = v; }, put: (k: string, off: number, ln: number) => { const d = dist + off; if (k === 'car') addCar(d, ln); else if (k === 'ramp') addRamp(d, ln); else if (k === 'crate') barricade(d, ln, 3, 0.8); else addSkull(d, ln); }, clear: () => clearRun(), hold: () => { spawnD = 1e9; }, setT: (t: number) => { runT = t; }, freeze: (v: boolean) => { paused = v; }, dbg: () => ({ shots: shots.map((q) => q.mesh.position.toArray().map((n) => +n.toFixed(2))), crates: crates.filter((c) => !c.down).map((c) => c.mesh.position.toArray().map((n) => +n.toFixed(2))) }), spit: () => skulls.find((k) => k.alive) && spit(skulls.find((k) => k.alive)!),
-  state: () => ({ score, mult, spd: +spd.toFixed(2), runT: +runT.toFixed(1), heroY: +heroY.toFixed(2), cars: cars.filter((c) => c.alive).map((c) => [c.lane, +(c.d - dist).toFixed(1), c.hp]), ramps: ramps.length, crates: crates.filter((c) => !c.down).length, ammo, lane, playing, dist: +dist.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills }),
+  throwChancla, dodge, jump, startRun, startStage: () => startRun(), god: (v: boolean) => { god = v; }, put: (k: string, off: number, ln: number, h = 0) => { const d = dist + off; if (k === 'car') addCar(d, ln); else if (k === 'ramp') addRamp(d, ln); else if (k === 'crate') barricade(d, ln, 3, 0.8); else if (k === 'wall') addWall(d, ln, true); else if (k === 'stone') addWall(d, ln, false); else if (k in PAT) PAT[k](d); else addSkull(d, ln, h); }, clear: () => clearRun(), hold: () => { spawnD = 1e9; }, setT: (t: number) => { runT = t; }, freeze: (v: boolean) => { paused = v; }, dbg: () => ({ shots: shots.map((q) => q.mesh.position.toArray().map((n) => +n.toFixed(2))), crates: crates.filter((c) => !c.down).map((c) => c.mesh.position.toArray().map((n) => +n.toFixed(2))) }),
+  state: () => ({ score, mult, spd: +spd.toFixed(2), runT: +runT.toFixed(1), heroY: +heroY.toFixed(2), walls: walls.filter((w) => w.alive).map((w) => [w.lane, +(w.d - dist).toFixed(1), w.breakable ? 1 : 0]), cars: cars.filter((c) => c.alive).map((c) => [c.lane, +(c.d - dist).toFixed(1), c.hp]), ramps: ramps.length, crates: crates.filter((c) => !c.down).length, ammo, lane, playing, dist: +dist.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills }),
   warp: (d: number) => { dist = d; spawnD = Math.max(spawnD, d + 20); },
   story: (k: string) => { localStorage.removeItem(SKIP_KEY); playStory(k, () => {}); },
   smoke: (v: boolean) => smoke.forEach((m) => (m.s.visible = v)),
