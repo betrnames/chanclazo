@@ -21,6 +21,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.9);backdr
 #wind{position:absolute;top:58px;left:50%;transform:translateX(-50%);font:800 12px system-ui;color:#ffd23f;text-shadow:0 1px 3px #000;z-index:5;pointer-events:none}
 #hint{position:absolute;bottom:56px;left:0;right:0;text-align:center;font:800 13px system-ui;color:#fff;text-shadow:0 1px 4px #000;z-index:5;pointer-events:none;opacity:.9}
 .pill.score{color:#fff;font-size:13px}.pill.score .mult{color:#ffd23f;display:inline-block}#mult.pop{animation:ammopop .45s ease-out}#stat.pop{display:inline-block;animation:ammopop .25s ease-out}
+.pill.hearts{color:#ff4d6d;font-size:13px;letter-spacing:1px}#hearts.pop{animation:ammopop .4s ease-out}
 #warn{position:absolute;top:40%;left:0;right:0;text-align:center;font:400 34px LilitaOne,system-ui;color:#ff4d6d;text-shadow:0 3px 0 #2a0010;z-index:6;pointer-events:none;display:none}
 .screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,3,15,.78);z-index:10;padding:16px}
 .hidden{display:none!important}
@@ -49,7 +50,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.9);backdr
 <div id="stage">
   <div class="hud">
     <a href="/choose" aria-label="Back to game selection">← Games</a>
-    <span class="pill score"><span id="stat">0</span> <span class="mult" id="mult">×1</span></span><span class="sp"></span><span class="pill ammo">🩴 <span id="ammo">0</span></span>
+    <span class="pill score"><span id="stat">0</span> <span class="mult" id="mult">×1</span></span><span class="pill hearts" id="hearts">❤❤❤</span><span class="sp"></span><span class="pill ammo">🩴 <span id="ammo">0</span></span>
     <button id="mute" aria-label="Sound on or off">🔊</button>
   </div>
   <div id="wind"></div>

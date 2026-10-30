@@ -406,7 +406,7 @@ type Skull = { g: THREE.Group; jaw: THREE.Group; d: number; lane: number; alive:
 type Pickup = { g: THREE.Group; d: number; lane: number; alive: boolean; t: number };
 let pickups: Pickup[] = [];
 type Pin = { m: THREE.Mesh; d: number; lane: number; alive: boolean; t: number };
-type Crate = { body: CANNON.Body; mesh: THREE.Mesh; home: CANNON.Vec3; down: boolean; d: number; lane: number; gone?: boolean; top: number };
+type Crate = { body: CANNON.Body; mesh: THREE.Mesh; home: CANNON.Vec3; down: boolean; d: number; lane: number; gone?: boolean; top: number; smashed?: boolean };
 const crateGeo = new THREE.BoxGeometry(1, 1, 1);
 type Shot = { body: CANNON.Body; mesh: THREE.Group; age: number; prev: THREE.Vector3 };
 type Spit = { m: THREE.Mesh; from: THREE.Vector3; d: number; lane: number; t: number };
@@ -584,14 +584,23 @@ function despawn() { // recycle everything that's behind the runner
   ramps = ramps.filter((r) => { if (r.d < gone) { scene.remove(r.m); return false; } return true; });
 }
 function startRun() {
-  clearRun(); kills = 0; score = 0; runT = 0; mult = 1; spd = SPEED; heroY = 0; heroVY = 0; wasRamp = false;
+  clearRun(); kills = 0; score = 0; runT = 0; mult = 1; spd = SPEED; heroY = 0; heroVY = 0; wasRamp = false; hearts = HEARTS; invulnT = 0; multT0 = 0;
   turnT = 0; runPh = 0; ammo = 10; lane = 1; laneX = 0; dist = 0; spawnD = 24; playing = true;
   spawnAhead(); $('end').classList.add('hidden'); hud();
 }
-function hud() { $('stat').textContent = String(score); $('mult').textContent = `×${mult.toFixed(1).replace('.0', '')}`; $('ammo').textContent = '∞'; }
+function hud() { $('stat').textContent = String(score); $('mult').textContent = `×${mult.toFixed(1).replace('.0', '')}`; $('ammo').textContent = '∞'; $('hearts').textContent = '❤'.repeat(Math.max(0, hearts)) + '♡'.repeat(Math.max(0, HEARTS - hearts)); }
 function addScore(n: number) { score += Math.round(n * mult); hud(); const e = $('stat'); e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); }
-function crash() { // one crash ends the run (Gabe's rule); no hearts
-  if (god || !playing) return; playing = false; shake = 0.6; beep(90, 0.4, 'sawtooth', 0.14); stage.style.boxShadow = 'inset 0 0 90px red'; setTimeout(() => (stage.style.boxShadow = ''), 300);
+const HEARTS = 3, INVULN = 1.0;
+let hearts = HEARTS, invulnT = 0, multT0 = 0;
+function hurt() { // Sidro smashes through a breakable blocker: -1 heart, no points, multiplier back to x1, 1 s blink
+  if (god || !playing || clock < invulnT) return;
+  hearts--; invulnT = clock + INVULN; multT0 = runT; mult = 1; hud();
+  shake = 0.55; slow = 0.25; beep(70, 0.35, 'square', 0.16); stage.style.boxShadow = 'inset 0 0 70px #ff3b3b'; setTimeout(() => (stage.style.boxShadow = ''), 220);
+  const h = $('hearts'); h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop');
+  if (hearts <= 0) { invulnT = 0; crash(); }
+}
+function crash() { // stone walls / car sides / last heart: run over
+  if (god || !playing) return; hud(); playing = false; shake = 0.6; beep(90, 0.4, 'sawtooth', 0.14); stage.style.boxShadow = 'inset 0 0 90px red'; setTimeout(() => (stage.style.boxShadow = ''), 300);
   if (score > best) { best = score; localStorage.setItem('s3d_best', String(best)); }
   $('stars').innerHTML = ''; $('endTitle').textContent = '¡Ay, no! Game over'; $('endMsg').innerHTML = `Score <b>${score}</b> · best ${best}<br><small>survived ${Math.floor(runT)} s · reached ×${mult.toFixed(1).replace('.0', '')}</small>`;
   $('next').classList.add('hidden'); $('retry').textContent = 'Run again ⏎';
@@ -724,7 +733,7 @@ function frame(now: number) {
   clock += dt;
   world.step(1 / 120, dt, 6);
   const running = heroFrame(dt);
-  if (playing && running) { runT += dt; spd = speedAt(runT); dist += spd * dt; const m2 = multAt(runT); if (m2 !== mult) { mult = m2; hud(); const e = $('mult'); e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); beep(880, 0.15, 'triangle', 0.06); } spawnAhead(); despawn(); }
+  if (playing && running) { runT += dt; spd = speedAt(runT); dist += spd * dt; const m2 = multAt(runT - multT0); if (m2 !== mult) { mult = m2; hud(); const e = $('mult'); e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); beep(880, 0.15, 'triangle', 0.06); } spawnAhead(); despawn(); }
   laneX += (LANES[lane] - laneX) * Math.min(1, dt * 13); // was dt*10: snappier lane change for the faster run
   // jump / car roofs / ramps
   { const { g, ramp } = groundAt(dist, laneX), prev = heroY;
@@ -760,10 +769,10 @@ function frame(now: number) {
     k.g.lookAt(camera.position); jawOpen(k.jaw, Math.max(0, Math.sin(k.t * 3)) * 0.4);
     if (playing && Math.abs(k.d - dist) < 0.75 && Math.abs(LANES[k.lane] - laneX) < 0.75 && k.h + 0.32 > heroY - 0.3 && k.h + 0.32 < heroY + 1.9) { k.alive = false; scene.remove(k.g); addScore(PTS.skull); spark(k.g.position, 24, 4, 0.4); beep(1180, 0.1, 'triangle', 0.07); }
   }
-  for (const w of walls) if (playing && w.alive && Math.abs(w.d - dist) < 0.45 && Math.abs(LANES[w.lane] - laneX) < 1.1 && heroY < w.top - 0.1) crash();
+  for (const w of walls) if (playing && w.alive && Math.abs(w.d - dist) < 0.45 && Math.abs(LANES[w.lane] - laneX) < 1.1 && heroY < w.top - 0.1) { if (w.breakable) { breakWall(w); hurt(); } else crash(); } // adobe: smash through for a heart; stone: run over
   for (const p of pins) { if (!p.alive) continue; p.t += dt; p.m.position.copy(at(p.d, LANES[p.lane] + Math.sin(p.t * 1.3) * 0.5, 3.2)); p.m.lookAt(tmp.copy(camera.position).setY(p.m.position.y)); p.m.rotation.z = Math.sin(p.t * 1.3) * 0.15; }
   // crate collisions (jumping over a stack clears it)
-  for (const c of crates) if (playing && !c.down && Math.abs(c.d - dist) < 0.6 && lane === c.lane && heroY < c.top - 0.1) crash();
+  for (const c of crates) if (playing && !c.down && Math.abs(c.d - dist) < 0.6 && lane === c.lane && heroY < c.top - 0.1) { for (const q of crates) if (!q.down && q.d === c.d && q.lane === c.lane) { q.down = true; q.smashed = true; } hurt(); } // smash through the stack for a heart
   for (const sp of splinters) { sp.life -= dt; sp.v.y -= 9.8 * dt; sp.m.position.addScaledVector(sp.v, dt); sp.m.rotation.x += sp.w.x * dt; sp.m.rotation.y += sp.w.y * dt; sp.m.rotation.z += sp.w.z * dt; if (sp.m.position.y < at(dist, 0).y - 2) sp.life = 0; }
   for (let i = splinters.length - 1; i >= 0; i--) if (splinters[i].life <= 0) { scene.remove(splinters[i].m); splinters.splice(i, 1); }
   // spit projectiles
@@ -789,7 +798,7 @@ function frame(now: number) {
   camera.position.copy(back).add(new THREE.Vector3(sx, sx * 0.6, 0)); camera.lookAt(look);
   if (camOverride) { const o = camOverride; camera.position.copy(at(o[0], o[1], o[2])); camera.lookAt(at(o[0] + o[3], o[4], o[5])); }
   const hp = at(dist + 0.6, laneX, 0); shadow.position.copy(hp).add(new THREE.Vector3(0, 0.03, 0)); hero.position.copy(hp).add(new THREE.Vector3(0, hero.scale.y / 2 - heroDrop + groundAt(dist + 0.6, laneX).g * 0 + heroY, 0)); hero.lookAt(tmp.copy(camera.position).setY(hero.position.y));
-  stars.position.copy(camera.position); stars.material.opacity = 0.7;
+  stars.position.copy(camera.position); stars.material.opacity = 0.7; hero.visible = !(clock < invulnT && Math.floor(clock * 14) % 2 === 0); (hero.material as THREE.MeshBasicMaterial).color.setHex(clock < invulnT - INVULN + 0.15 ? 0xff7070 : 0xffffff);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
@@ -815,7 +824,7 @@ function heroFrame(dt: number) {
 
 (window as unknown as Record<string, unknown>).__s3d = {
   throwChancla, dodge, jump, startRun, startStage: () => startRun(), god: (v: boolean) => { god = v; }, put: (k: string, off: number, ln: number, h = 0) => { const d = dist + off; if (k === 'car') addCar(d, ln); else if (k === 'ramp') addRamp(d, ln); else if (k === 'crate') barricade(d, ln, 3, 0.8); else if (k === 'wall') addWall(d, ln, true); else if (k === 'stone') addWall(d, ln, false); else if (k in PAT) PAT[k](d); else addSkull(d, ln, h); }, clear: () => clearRun(), hold: () => { spawnD = 1e9; }, setT: (t: number) => { runT = t; }, freeze: (v: boolean) => { paused = v; }, dbg: () => ({ shots: shots.map((q) => q.mesh.position.toArray().map((n) => +n.toFixed(2))), crates: crates.filter((c) => !c.down).map((c) => c.mesh.position.toArray().map((n) => +n.toFixed(2))) }),
-  state: () => ({ score, mult, spd: +spd.toFixed(2), runT: +runT.toFixed(1), heroY: +heroY.toFixed(2), walls: walls.filter((w) => w.alive).map((w) => [w.lane, +(w.d - dist).toFixed(1), w.breakable ? 1 : 0]), cars: cars.filter((c) => c.alive).map((c) => [c.lane, +(c.d - dist).toFixed(1), c.hp]), ramps: ramps.length, crates: crates.filter((c) => !c.down).length, ammo, lane, playing, dist: +dist.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills }),
+  state: () => ({ score, mult, hearts, spd: +spd.toFixed(2), runT: +runT.toFixed(1), heroY: +heroY.toFixed(2), walls: walls.filter((w) => w.alive).map((w) => [w.lane, +(w.d - dist).toFixed(1), w.breakable ? 1 : 0]), cars: cars.filter((c) => c.alive).map((c) => [c.lane, +(c.d - dist).toFixed(1), c.hp]), ramps: ramps.length, crates: crates.filter((c) => !c.down).length, ammo, lane, playing, dist: +dist.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills }),
   warp: (d: number) => { dist = d; spawnD = Math.max(spawnD, d + 20); },
   story: (k: string) => { localStorage.removeItem(SKIP_KEY); playStory(k, () => {}); },
   smoke: (v: boolean) => smoke.forEach((m) => (m.s.visible = v)),
