@@ -242,8 +242,8 @@ for (let d = 6; d < LEN - 10; d += 7) { const s = rnd() < 0.5 ? -1 : 1; if (rnd(
     list.forEach((b, i) => { if (b instanceof THREE.Matrix4) im.setMatrixAt(i, b); else { im.setMatrixAt(i, b.m); im.setColorAt(i, new THREE.Color(b.c).lerp(new THREE.Color(0xfff2c0), soft)); } });
     scene.add(im); return im;
   };
-  const box = new THREE.BoxGeometry(1, 1, 1), lam = () => new THREE.MeshBasicMaterial({ color: 0xe0d0e8 });
-  IM(box, new THREE.MeshBasicMaterial({ color: 0xd0c0d8 }), walls); IM(box, lam(), parapets); IM(box, lam(), balcs);
+  const box = new THREE.BoxGeometry(1, 1, 1), lam = () => new THREE.MeshBasicMaterial({ color: 0x7c6e92 });
+  IM(box, new THREE.MeshBasicMaterial({ color: 0x6e6084 }), walls); // night tone IM(box, lam(), parapets); IM(box, lam(), balcs);
   IM(arch(1, 1), new THREE.MeshBasicMaterial({ color: 0x0a0410 }), doors); IM(arch(1, 1), lam(), frames);
   IM(arch(1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }), wins);
   IM(box, new THREE.MeshLambertMaterial({ color: 0x7a3b1e }), pots); IM(new THREE.SphereGeometry(0.11, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff9f1c }), plants);
@@ -251,7 +251,7 @@ for (let d = 6; d < LEN - 10; d += 7) { const s = rnd() < 0.5 ? -1 : 1; if (rnd(
   IM(new THREE.SphereGeometry(0.07, 5, 3), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }), lights, 0.5);
   IM(box, new THREE.MeshBasicMaterial({ color: 0x140a14 }), rails);
   IM(new THREE.PlaneGeometry(1, 1), decoSkullMat, skDec);
-  IM(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: flame, color: 0xffa050, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }), glows);
+  IM(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: flame, color: 0xffa050, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }), glows);
 }
 
 // ---------- layered dusk sky (camera-attached planes, canvas textures, parallax via UV scroll) ----------
@@ -295,7 +295,8 @@ for (let i = 0; i < 14; i++) { const sp = new THREE.Sprite(new THREE.SpriteMater
 
 // moon + stars
 const moonSpr = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(128, 128, (c) => { const g = c.createRadialGradient(64, 64, 20, 64, 64, 64); g.addColorStop(0, 'rgba(235,240,255,1)'); g.addColorStop(0.42, 'rgba(210,220,255,.95)'); g.addColorStop(0.5, 'rgba(140,200,220,.25)'); g.addColorStop(1, 'rgba(80,120,200,0)'); c.fillStyle = g; c.fillRect(0, 0, 128, 128); }), fog: false, depthWrite: false }));
-moonSpr.scale.set(2.2, 2.2, 1); moonSpr.position.set(-2.4, 5.6, -14); moonSpr.renderOrder = -1; moonSpr.material.depthTest = false; scene.add(camera); camera.add(moonSpr);
+// moon: same screen spot as before but pushed behind the sky layers (-150..-135) and depth-tested so clouds/buildings cover it
+moonSpr.scale.set(23.9, 23.9, 1); moonSpr.position.set(-26.06, 60.8, -152); moonSpr.renderOrder = -4.5; moonSpr.material.depthWrite = false; scene.add(camera); camera.add(moonSpr);
 const starGeo = new THREE.BufferGeometry(); { const a: number[] = []; for (let i = 0; i < 500; i++) { const th = rnd() * Math.PI * 2, ph = rnd() * 0.45 + 0.08; a.push(Math.cos(th) * Math.cos(ph) * 150, Math.sin(ph) * 150, Math.sin(th) * Math.cos(ph) * 150); } starGeo.setAttribute('position', new THREE.Float32BufferAttribute(a, 3)); }
 const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xcfd6ff, size: 0.9, sizeAttenuation: true, fog: false, transparent: true, opacity: 0.7 })); scene.add(stars);
 // ---------- animated smoke ----------
