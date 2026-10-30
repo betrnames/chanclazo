@@ -364,12 +364,22 @@ function throwChancla(side: number, up: number) {
 // ---------- input ----------
 let start: { x: number; y: number } | null = null;
 const H = () => stage.clientHeight;
-stage.addEventListener('pointerdown', (e) => { if (!playing || (e.target as HTMLElement).closest('a,button,.screen,#comic')) return; start = { x: e.clientX, y: e.clientY }; });
-addEventListener('pointerup', (e) => {
-  if (!start) return; const dx = e.clientX - start.x, dy = e.clientY - start.y; start = null;
-  if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.3) dodge(dx > 0 ? 1 : -1);
-  else if (-dy > 30) throwChancla(dx / H(), Math.min(0.6, -dy / H()));
-});
+// Thumb controls (phones): track the last move so a browser-cancelled gesture (iOS pointercancel) still resolves;
+// block native scroll/zoom with non-passive touch listeners; a quick tap throws straight ahead.
+let lastP: { x: number; y: number } | null = null, startT = 0;
+const uiHit = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('a,button,.screen,#comic');
+stage.addEventListener('pointerdown', (e) => { if (!playing || uiHit(e.target)) return; start = lastP = { x: e.clientX, y: e.clientY }; startT = performance.now(); });
+addEventListener('pointermove', (e) => { if (start) lastP = { x: e.clientX, y: e.clientY }; });
+const endGesture = (x: number, y: number) => {
+  if (!start) return; const dx = x - start.x, dy = y - start.y, quick = performance.now() - startT < 400; start = lastP = null;
+  if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy) * 1.2) dodge(dx > 0 ? 1 : -1);
+  else if (-dy > 25) throwChancla(dx / H(), Math.min(0.6, -dy / H()));
+  else if (quick && Math.abs(dx) < 12 && Math.abs(dy) < 12) throwChancla(0, 0.3);
+};
+addEventListener('pointerup', (e) => endGesture(e.clientX, e.clientY));
+addEventListener('pointercancel', () => { if (lastP) endGesture(lastP.x, lastP.y); });
+const noScroll = (e: TouchEvent) => { if (!uiHit(e.target)) e.preventDefault(); };
+stage.addEventListener('touchstart', noScroll, { passive: false }); stage.addEventListener('touchmove', noScroll, { passive: false });
 addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft' || e.key === 'a') dodge(-1); if (e.key === 'ArrowRight' || e.key === 'd') dodge(1); if (e.key === ' ' || e.key === 'ArrowUp') throwChancla(0, 0.3); });
 function dodge(d: number) { if (!playing) return; lane = Math.max(0, Math.min(2, lane + d)); beep(300, 0.06, 'triangle', 0.05); }
 
