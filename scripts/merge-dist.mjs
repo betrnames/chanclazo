@@ -65,4 +65,20 @@ for (const f of ['_redirects', '_headers']) {
   for (const f of walk(DIST)) if (/\.(html|js)$/.test(f)) { const t = readFileSync(f, 'utf8'); if (t.includes('%%CZ_BUILD%%')) { writeFileSync(f, t.split('%%CZ_BUILD%%').join(stamp)); n++; } }
   console.log('build stamp', stamp, 'in', n, 'files');
 }
+
+// Cache-bust static images referenced from built HTML: /lp/* and /play/* get ?v=<content md5 (8)>
+{
+  const { readFileSync, writeFileSync, readdirSync, statSync, existsSync: ex } = await import('node:fs');
+  const { createHash } = await import('node:crypto');
+  const walk = (d) => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  const memo = new Map();
+  const hashOf = (rel) => { if (!memo.has(rel)) { const fp = join(DIST, rel); memo.set(rel, ex(fp) ? createHash('md5').update(readFileSync(fp)).digest('hex').slice(0, 8) : null); } return memo.get(rel); };
+  let n = 0;
+  for (const f of walk(DIST)) if (f.endsWith('.html')) {
+    const t = readFileSync(f, 'utf8');
+    const u = t.replace(/(["'\s,(])(\/(?:lp|play)\/[\w.\-\/]+\.(?:webp|png|jpe?g|gif|svg))(?![?\w])/g, (m, pre, path) => { const h = hashOf(path.slice(1)); return h ? `${pre}${path}?v=${h}` : m; });
+    if (u !== t) { writeFileSync(f, u); n++; }
+  }
+  console.log('cache-bust images in', n, 'html files');
+}
 console.log('merge-dist: ok');
