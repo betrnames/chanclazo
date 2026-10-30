@@ -8,7 +8,7 @@ if (gameFromPath() === 'home') {
     const a = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
     if (!a) return;
     const href = a.getAttribute('href') || '';
-    if (href.startsWith('/fling')) markLandingCard('fling');
+    if ((href.startsWith('/chancla-strike') || href.startsWith('/fling'))) markLandingCard('fling');
     else if (href.startsWith('/match')) markLandingCard('match');
     else if (href.startsWith('/slots')) markLandingCard('slots');
     else if (href.startsWith('/lore')) markLandingCard('lore');

@@ -1,7 +1,7 @@
 {
   "name": "Chancla Strike",
   "short_name": "Chancla Strike",
-  "start_url": "/fling",
+  "start_url": "/chancla-strike",
   "scope": "/",
   "display": "fullscreen",
   "display_override": [

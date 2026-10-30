@@ -13,6 +13,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/index.html': 'Home',
   '/fling': 'Chancla Strike',
   '/fling.html': 'Chancla Strike',
+  '/chancla-strike': 'Chancla Strike',
+  '/chancla-strike.html': 'Chancla Strike',
   '/match': 'Chanclazo Match',
   '/match.html': 'Chanclazo Match',
   '/slots': 'Piñata Slots',
@@ -68,7 +70,7 @@ export function track(event: string, params: Record<string, string | number | bo
 
 export function gameFromPath(pathname = location.pathname): Game {
   const p = pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
-  if (p === '/fling') return 'fling';
+  if (p === '/fling' || p === '/chancla-strike') return 'fling';
   if (p === '/match') return 'match';
   if (p === '/slots') return 'slots';
   if (p === '/lore') return 'lore';

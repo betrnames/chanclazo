@@ -22,7 +22,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         lore: path.resolve(__dirname, 'lore.html'),
-        fling: path.resolve(__dirname, 'fling.html'),
+        fling: path.resolve(__dirname, 'chancla-strike.html'),
         match: path.resolve(__dirname, 'match.html'),
         slots: path.resolve(__dirname, 'slots.html'),
         strike3d: path.resolve(__dirname, 'strike3d.html'),

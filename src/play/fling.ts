@@ -291,7 +291,7 @@ function finish(win: boolean) {
   ($('retry') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); e.stopPropagation(); build(level); };
   ($('toMap') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); e.stopPropagation(); openMap(); };
   // X handle + Share on X only on game over (out of chanclas) or after clearing the final level.
-  if (!win || last) showLeaderboard('fling', 'Chancla Strike', score, level + 1, '/fling'); else hideLeaderboard();
+  if (!win || last) showLeaderboard('fling', 'Chancla Strike', score, level + 1, '/chancla-strike'); else hideLeaderboard();
   setTimeout(() => $('end').classList.remove('hidden'), win ? 300 : 600);
 }
 function checkFlow() {

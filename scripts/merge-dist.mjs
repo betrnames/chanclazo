@@ -19,7 +19,7 @@ if (!existsSync(DIST)) {
   process.exit(1);
 }
 
-const htmlFiles = ['fling.html', 'match.html', 'slots.html', 'strike3d.html', 'lore.html'];
+const htmlFiles = ['chancla-strike.html', 'match.html', 'slots.html', 'strike3d.html', 'lore.html'];
 for (const f of htmlFiles) {
   const src = join(GAMES, f);
   if (!existsSync(src)) {

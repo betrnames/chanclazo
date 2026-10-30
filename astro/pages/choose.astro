@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import PapelPicado from '../components/PapelPicado.astro';
 const games = [
-  { game: 'fling', href: '/fling?start=1', name: 'Chancla Strike', tag: 'Main game', line: 'Fling the chancla and topple the villains.', img: '/play/abuela_choose.webp', alt: 'The abuela', cls: 'abuela', c: '#f7a21b' },
+  { game: 'fling', href: '/chancla-strike?start=1', name: 'Chancla Strike', tag: 'Main game', line: 'Fling the chancla and topple the villains.', img: '/play/abuela_choose.webp', alt: 'The abuela', cls: 'abuela', c: '#f7a21b' },
   { game: 'slots', href: '/slots?start=1', name: 'Piñata Slots', tag: 'Mini game', line: 'Spin the 5×4 reels, smash piñatas, win free spins.', img: '/play/llama_choose.webp', alt: 'The llama piñata', cls: 'llama', c: '#e2197a' },
 ];
 ---
@@ -13,7 +13,7 @@ const games = [
     <a class="navbtn homebtn" id="navHome" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 11.2 12 3.5l9 7.7" fill="none" stroke="#3b1a5c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.6v-5.6h3.8v5.6h4.6V10" fill="none" stroke="#3b1a5c" stroke-width="2.6" stroke-linejoin="round"/></svg></a>
     <button class="navbtn menubtn" id="navMenu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="navPanel" hidden><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="#3b1a5c" stroke-width="2.8" stroke-linecap="round"/></svg></button>
     <nav class="navpanel" id="navPanel" aria-label="Site menu" hidden>
-      <a href="/">Home</a><a href="/fling?start=1">Chancla Strike</a><a href="/slots?start=1">Piñata Slots</a>
+      <a href="/">Home</a><a href="/chancla-strike?start=1">Chancla Strike</a><a href="/slots?start=1">Piñata Slots</a>
       <button type="button" id="navMusic">Music: on</button>
     </nav>
     <h1>Choose your game</h1></header>
