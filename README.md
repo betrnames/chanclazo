@@ -5,7 +5,7 @@ Day of the Dead browser games starring the original hand-drawn Chanclazo crew.
 | Route | Game |
 | --- | --- |
 | `/` | Landing page: "When words fail, the Chanclazo speaks." |
-| `/fling` | **Chancla Strike**: slingshot chanclas at villain forts (9 levels, 3 areas) |
+| `/fling` | **Chancla Strike**: throw chanclas at villain forts (9 levels, 3 areas) |
 | `/match` | **Chanclazo Match**: match-3 with sugar skulls, chanclas, bombs and piñatas |
 | `/lore` | What is a chanclazo? (definition page) |
 

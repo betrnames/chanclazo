@@ -9,7 +9,10 @@ import * as A from './flingAudio';
 
 const { Engine, Bodies, Composite, Body, Events, Vector, Sleeping } = Matter;
 const W = 1100, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
-const SLING = { x: 130, y: 760 };
+// Abuela throws by hand (no slingshot). HAND = her throwing hand in the release pose; launch + aim guide originate here.
+const ABU = { x: 68, ground: 920 };                 // feet centre (same spot the old sprite stood)
+const WIND = { h: 193, hand: { x: 22, y: 739 } }, REL = { h: 190 };
+const HAND = { x: 105, y: 775 };
 const MAXPULL = 140, POWER = 0.21;
 
 const cv = document.createElement('canvas'); (document.body as HTMLElement).insertBefore(cv, document.body.firstChild);
@@ -31,7 +34,7 @@ function fit() {
   const cs = getComputedStyle(safeProbe); const sl = parseFloat(cs.paddingLeft) || 0, sr = parseFloat(cs.paddingRight) || 0, sb = parseFloat(cs.paddingBottom) || 0;
   const VIEW_H = 560, avW = VW - sl - sr, avH = VH - sb;
   if (VH > VW * 1.15) {
-    // Portrait: zoom onto slingshot + fort and lift the ground to ~78% height.
+    // Portrait: zoom onto abuela + fort and lift the ground to ~78% height.
     scale = VW / 1060; ox = VW / 2 - (W / 2) * scale; oy = VH * 0.78 - GROUND * scale;
   } else { scale = Math.min(avW / W, (avH - 46) / VIEW_H); ox = sl + (avW - W * scale) / 2; oy = avH - (GROUND + 30) * scale; }
 }
@@ -65,7 +68,7 @@ document.addEventListener('visibilitychange', scheduleLayout);
 fit();
 
 const IMG: Record<string, HTMLImageElement> = {};
-const names = { bg: '/play/night_bg.webp', bgMercado: '/play/mercado_bg.webp', bgCata: '/play/cata_bg.webp', abuela: '/play/abuela_sprite.webp', lucha: '/play/t_lucha.webp', calaca: '/play/t_skull.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
+const names = { bg: '/play/night_bg.webp', bgMercado: '/play/mercado_bg.webp', bgCata: '/play/cata_bg.webp', abuela: '/play/abuela_windup.webp?v=9724bca5', abuelaRel: '/play/abuela_release.webp?v=f47e24e0', lucha: '/play/t_lucha.webp', calaca: '/play/t_skull.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
 const TINT: Record<string, HTMLCanvasElement> = {};
 function tintImg(img: HTMLImageElement, color: string, a: number) {
   const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d')!;
@@ -123,7 +126,7 @@ const engine = Engine.create({ enableSleeping: true, positionIterations: 10, vel
 const world = engine.world;
 let level = 0, score = 0, shotsLeft = 0, flying: Matter.Body[] = [], shotAt = 0, ended = false, playing = false, armed = false, split = false;
 let shotType: ShotType = 'chancla', throwKOs = 0, slowT = 0, focus = { x: 880, y: 800 }, zoom = 1, levelT = 0;
-let aiming = false, pull = { x: 0, y: 0 }, abuelaKick = 0, shake = 0, flashT = 0;
+let aiming = false, pull = { x: 0, y: 0 }, abuelaKick = 0, relT = 0, shake = 0, flashT = 0;
 interface Part { x: number; y: number; vx: number; vy: number; life: number; c: string; s: number }
 const parts: Part[] = [];
 interface Pop { x: number; y: number; t: string; life: number; big?: boolean }
@@ -240,12 +243,12 @@ cv.addEventListener('pointerdown', (e) => {
   wakeAudio(); if (isPortraitPhone() || !playing || ended) return;
   if (flying.length && shotType === 'triple' && !split && performance.now() - shotAt < 2500) { doSplit(); return; }
   if (flying.length || shotsLeft <= 0) return;
-  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; A.stretchStart(); A.stretch(0); cv.setPointerCapture(e.pointerId);
+  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; cv.setPointerCapture(e.pointerId);
 });
 cv.addEventListener('pointermove', (e) => {
   if (!aiming) return; const p = toWorld(e.clientX, e.clientY);
   let dx = p.x - dragStart.x, dy = p.y - dragStart.y; const d = Math.hypot(dx, dy);
-  if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy }; A.stretch(Math.hypot(dx, dy) / MAXPULL);
+  if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy };
 });
 function makeShot(x: number, y: number, vx: number, vy: number) { markFirstAction('fling', 'throw');
   const si = SHOT_INFO[shotType];
@@ -253,11 +256,11 @@ function makeShot(x: number, y: number, vx: number, vy: number) { markFirstActio
   Composite.add(world, b); Body.setVelocity(b, { x: vx, y: vy }); Body.setAngularVelocity(b, 0.35); flying.push(b); return b;
 }
 const release = () => {
-  if (!aiming) return; aiming = false; A.stretchStop();
+  if (!aiming) return; aiming = false;
   if (Math.hypot(pull.x, pull.y) < 25) { pull = { x: 0, y: 0 }; return; }
-  makeShot(SLING.x + pull.x, SLING.y + pull.y, -pull.x * POWER, -pull.y * POWER);
+  makeShot(HAND.x, HAND.y, -pull.x * POWER, -pull.y * POWER); relT = 0.45;
   armed = true; split = false; shotAt = performance.now(); shotsLeft--; throwKOs = 0; abuelaKick = 1; vib(15);
-  { const pw = Math.hypot(pull.x, pull.y) / MAXPULL; A.twang(shotType === 'boot' ? pw * 0.4 : pw); A.whoosh(pw); } pull = { x: 0, y: 0 }; hud();
+  { const pw = Math.hypot(pull.x, pull.y) / MAXPULL; A.whoosh(pw); } pull = { x: 0, y: 0 }; hud();
 };
 function doSplit() { markBonus('fling', 'triple_split');
   const s = flying[0]; if (!s) return; split = true; A.split(); vib(10);
@@ -333,7 +336,7 @@ function drawImg(img: CanvasImageSource & { width: number; height: number }, x: 
 function shotImg(): (CanvasImageSource & { width: number; height: number }) | undefined { return shotType === 'boot' ? TINT.boot : shotType === 'triple' ? TINT.triple : IMG.chancla; }
 function trajectory() {
   if (!aiming || Math.hypot(pull.x, pull.y) < 25) return;
-  let x = SLING.x + pull.x, y = SLING.y + pull.y, vx = -pull.x * POWER, vy = -pull.y * POWER;
+  let x = HAND.x, y = HAND.y, vx = -pull.x * POWER, vy = -pull.y * POWER;
   const g = engine.gravity.y * 0.001 * (1000 / 60) ** 2;
   ctx.fillStyle = 'rgba(255,214,140,.8)';
   for (let i = 0; i < 40; i++) { for (let k = 0; k < 2; k++) { vy += g; x += vx; y += vy; } ctx.globalAlpha = 1 - i / 40; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
@@ -359,7 +362,7 @@ function frameBody(now: number) {
     settledFor = settled() ? settledFor + dt : 0;
     checkFlow();
   }
-  abuelaKick = Math.max(0, abuelaKick - dt * 3); shake = Math.max(0, shake - dt * 34);
+  abuelaKick = Math.max(0, abuelaKick - dt * 3); relT = Math.max(0, relT - dt); shake = Math.max(0, shake - dt * 34);
   const area = AREAS[LEVELS[level].area];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#140a24'; ctx.fillRect(0, 0, VW, VH);
@@ -373,16 +376,15 @@ function frameBody(now: number) {
   ctx.fillStyle = gg; ctx.fillRect(-W, GROUND, W * 3, H - GROUND + 200);
   ctx.fillStyle = '#ff9f1c'; for (let i = 0; i < 40; i++) { ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc((i * 97) % (W + 200) - 100, GROUND + 8 + (i * 37) % 60, 4, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
   for (const cx of [60, 420, 1080]) { const r = ctx.createRadialGradient(cx, GROUND - 10, 2, cx, GROUND - 10, 60 + Math.sin(t * 7 + cx) * 4); r.addColorStop(0, 'rgba(255,170,60,.55)'); r.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = r; ctx.fillRect(cx - 70, GROUND - 80, 140, 140); ctx.fillStyle = '#fbf3d5'; ctx.fillRect(cx - 4, GROUND - 22, 8, 22); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(cx, GROUND - 28, 4, 7, 0, 0, 7); ctx.fill(); }
-  ctx.strokeStyle = '#5b3a1e'; ctx.lineWidth = 14; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(SLING.x, GROUND); ctx.lineTo(SLING.x, SLING.y + 60); ctx.lineTo(SLING.x - 22, SLING.y); ctx.moveTo(SLING.x, SLING.y + 60); ctx.lineTo(SLING.x + 22, SLING.y); ctx.stroke();
-  if (IMG.abuela) drawImg(IMG.abuela, SLING.x - 62, GROUND - 95 + Math.sin(t * 2) * 2, 190, -0.08 - abuelaKick * 0.25);
-  const lp = { x: SLING.x + pull.x, y: SLING.y + pull.y };
+  { // Abuela: wind-up pose while loaded/aiming, release pose right after a throw
+    const rel = relT > 0 && IMG.abuelaRel, im = rel ? IMG.abuelaRel! : IMG.abuela;
+    if (im) { const h = rel ? REL.h : WIND.h, w = h * (im.width / im.height), bob = rel ? 0 : Math.sin(t * 2) * 1.5; ctx.drawImage(im, ABU.x - w / 2, ABU.ground - h + bob, w, h); }
+  }
   const loaded = playing && !ended && !flying.length && shotsLeft > 0;
-  if (loaded) {
-    ctx.strokeStyle = '#2b1a10'; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(SLING.x - 22, SLING.y); ctx.lineTo(lp.x, lp.y); ctx.lineTo(SLING.x + 22, SLING.y); ctx.stroke();
-    const si = shotImg(); if (si) drawImg(si, lp.x, lp.y, SHOT_INFO[shotType].r * 1.9, -0.4);
-    if (!aiming) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 4); ctx.strokeStyle = '#ffd68c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(SLING.x, SLING.y, 50, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+  if (loaded && relT <= 0) {
+    // special shots: show the loaded ammo in her raised hand (the gold chancla is already in the art)
+    if (shotType !== 'chancla') { const si = shotImg(); if (si) drawImg(si, WIND.hand.x, WIND.hand.y, SHOT_INFO[shotType].r * 1.9, -0.4); }
+    if (!aiming) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 4); ctx.strokeStyle = '#ffd68c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(HAND.x, HAND.y, 50, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
   }
   trajectory();
   for (const b of Composite.allBodies(world)) {
