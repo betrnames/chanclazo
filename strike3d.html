@@ -20,6 +20,8 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.9);backdr
 .sp{flex:1}
 #wind{position:absolute;top:58px;left:50%;transform:translateX(-50%);font:800 12px system-ui;color:#ffd23f;text-shadow:0 1px 3px #000;z-index:5;pointer-events:none}
 #hint{position:absolute;bottom:56px;left:0;right:0;text-align:center;font:800 13px system-ui;color:#fff;text-shadow:0 1px 4px #000;z-index:5;pointer-events:none;opacity:.9}
+#toast{position:absolute;top:96px;left:50%;transform:translate(-50%,-8px);max-width:86%;text-align:center;z-index:6;pointer-events:none;background:rgba(20,6,28,.82);border:2px solid #ffb347;border-radius:14px;padding:8px 14px;color:#fff;font:700 13px system-ui;opacity:0;transition:opacity .35s,transform .35s}#toast.show{opacity:1;transform:translate(-50%,0)}#toast b{display:block;color:#ffd23f;font-weight:900}#toast span{display:block;margin-top:2px;font-style:italic}
+.pill.coin{color:#ffd23f}.pill.coin.pop{animation:ammopop .3s ease-out}
 #warn{position:absolute;top:40%;left:0;right:0;text-align:center;font:400 34px LilitaOne,system-ui;color:#ff4d6d;text-shadow:0 3px 0 #2a0010;z-index:6;pointer-events:none;display:none}
 .screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,3,15,.78);z-index:10;padding:16px}
 .hidden{display:none!important}
@@ -48,11 +50,11 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.9);backdr
 <div id="stage">
   <div class="hud">
     <a href="/choose" aria-label="Back to game selection">← Games</a>
-    <span class="pill" id="stat">1/5 · 0</span><span class="sp"></span><span class="pill ammo">🩴 <span id="ammo">0</span></span><span class="pill" id="hearts">❤❤❤</span>
+    <span class="pill" id="stat">1/5 · 0</span><span class="sp"></span><span class="pill coin">🪙 <span id="coins">0</span></span><span class="pill ammo">🩴 <span id="ammo">0</span></span><span class="pill" id="hearts">❤❤❤</span>
     <button id="mute" aria-label="Sound on or off">🔊</button>
   </div>
   <div id="wind"></div>
-  <div id="warn">DODGE!</div>
+  <div id="toast"></div><div id="warn">DODGE!</div>
   <div id="hint">Swipe up to throw · left/right to dodge</div>
   <div class="screen hidden" id="end"><div class="card">
     <h1 id="endTitle">¡Chanclazo!</h1>

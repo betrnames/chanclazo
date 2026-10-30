@@ -340,25 +340,49 @@ function addPickup(d: number, lane: number) {
   scene.add(g); pickups.push({ g, d, lane, alive: true, t: Math.random() * 3 });
 }
 type Pin = { m: THREE.Mesh; d: number; lane: number; alive: boolean; t: number };
-type Crate = { body: CANNON.Body; mesh: THREE.Mesh; home: CANNON.Vec3; down: boolean; d: number; lane: number };
+type Crate = { body: CANNON.Body; mesh: THREE.Mesh; home: CANNON.Vec3; down: boolean; d: number; lane: number; gone?: boolean };
+const crateGeo = new THREE.BoxGeometry(1, 1, 1);
 type Shot = { body: CANNON.Body; mesh: THREE.Group; age: number; prev: THREE.Vector3 };
 type Spit = { m: THREE.Mesh; from: THREE.Vector3; d: number; lane: number; t: number };
 let skulls: Skull[] = [], pins: Pin[] = [], crates: Crate[] = [], shots: Shot[] = [], spits: Spit[] = [], statics: CANNON.Body[] = [];
 const candy: { m: THREE.Mesh; v: THREE.Vector3; life: number }[] = [];
 const LANES = [-2, 0, 2];
-const crateMat = [new THREE.MeshStandardMaterial({ color: 0x5c2d14, roughness: 0.9 }), new THREE.MeshStandardMaterial({ color: 0x7a3e18, roughness: 0.9 })];
+// procedural wooden crate faces (canvas): planks w/ grain + seams, dark edge trim, diagonal brace, nails/metal corners. Night-toned.
+function crateTex(tone: number, braceDir: number) {
+  return canvasTex(256, 256, (c) => {
+    let sd = 13 + tone * 7; const r = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+    const base = tone ? [104, 66, 38] : [88, 54, 30];
+    for (let k = 0; k < 5; k++) { // planks
+      const y0 = k * 51.2, v = (r() - 0.5) * 22; c.fillStyle = `rgb(${base[0] + v},${base[1] + v * 0.7},${base[2] + v * 0.4})`; c.fillRect(0, y0, 256, 51.2);
+      for (let g = 0; g < 9; g++) { c.strokeStyle = `rgba(30,14,6,${0.18 + r() * 0.22})`; c.lineWidth = 1 + r() * 1.5; c.beginPath(); const yy = y0 + 4 + r() * 43; c.moveTo(0, yy); for (let x = 0; x <= 256; x += 16) c.lineTo(x, yy + Math.sin(x / 30 + g + k) * 2.5); c.stroke(); }
+      if (r() < 0.6) { const kx = 40 + r() * 176, ky = y0 + 12 + r() * 26; c.fillStyle = 'rgba(40,18,8,.55)'; c.beginPath(); c.ellipse(kx, ky, 7, 4, 0, 0, Math.PI * 2); c.fill(); }
+      c.fillStyle = 'rgba(16,7,3,.9)'; c.fillRect(0, y0 + 49.2, 256, 2.4); // seam
+    }
+    c.save(); c.translate(128, 128); c.rotate(braceDir * Math.PI / 4); c.fillStyle = '#3e2412'; c.fillRect(-180, -15, 360, 30); c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(-180, 12, 360, 3); c.restore(); // brace
+    c.strokeStyle = '#2a170b'; c.lineWidth = 26; c.strokeRect(13, 13, 230, 230); c.strokeStyle = 'rgba(0,0,0,.45)'; c.lineWidth = 3; c.strokeRect(27, 27, 202, 202); // trim
+    for (const [x, y] of [[0, 0], [206, 0], [0, 206], [206, 206]]) { c.fillStyle = '#4a4f57'; c.fillRect(x, y, 50, 50); c.fillStyle = '#2c3036'; c.fillRect(x + 4, y + 4, 42, 42); c.fillStyle = '#6a707a'; c.fillRect(x + 4, y + 4, 42, 4); } // metal corners
+    c.fillStyle = '#9aa0a8'; for (const [x, y] of [[25, 25], [231, 25], [25, 231], [231, 231], [128, 13], [128, 243], [13, 128], [243, 128]]) { c.beginPath(); c.arc(x, y, 3.2, 0, Math.PI * 2); c.fill(); } // nails
+  });
+}
+const crateMat = [crateTex(0, 1), crateTex(1, -1)].map((t) => new THREE.MeshLambertMaterial({ map: t, emissiveMap: t, emissive: 0x8a7468 })); // dim self-lit so the grain reads at night
+const splinterMat = [new THREE.MeshLambertMaterial({ color: 0x5a3519 }), new THREE.MeshLambertMaterial({ color: 0x3a2210 })];
+const splinters: { m: THREE.Mesh; v: THREE.Vector3; w: THREE.Vector3; life: number }[] = [];
+function breakCrate(c: Crate) {
+  const p = c.mesh.position.clone(), sc = c.mesh.scale.x; scene.remove(c.mesh); world.removeBody(c.body);
+  for (let i = 0; i < 16; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.06 + rnd() * 0.06, 0.04, 0.3 + rnd() * 0.4).scale(sc, sc, sc), splinterMat[i % 2]); m.position.copy(p).add(new THREE.Vector3((rnd() - 0.5) * 0.5, (rnd() - 0.5) * 0.5, (rnd() - 0.5) * 0.5)); scene.add(m); splinters.push({ m, v: new THREE.Vector3((rnd() - 0.5) * 7, 2 + rnd() * 5, (rnd() - 0.5) * 7), w: new THREE.Vector3(rnd() * 14, rnd() * 14, rnd() * 14), life: 1.6 }); }
+  spark(p, 10, 4, 0.3); shake = Math.max(shake, 0.25); beep(160, 0.12, 'square', 0.08);
+}
 
-function barricade(d: number, lane: number, n: number) {
+function barricade(d: number, lane: number, n: number, sz = 0.8) {
   const f = frameAt(d), p = at(d, LANES[lane]);
   const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().lookAt(new THREE.Vector3(), f.t.clone().setY(0).normalize().negate(), UP));
   const base = new CANNON.Body({ mass: 0, shape: new CANNON.Box(new CANNON.Vec3(3, 0.1, 3)), position: new CANNON.Vec3(p.x, p.y - 0.1, p.z) }); world.addBody(base); statics.push(base);
   for (let k = 0; k < n; k++) {
-    const off = k < 2 ? (k - 0.5) * 0.85 : 0, y = k < 2 ? 0.4 : 1.2;
+    const off = n === 1 ? 0 : k < 2 ? (k - 0.5) * (sz + 0.05) : 0, y = k < 2 ? sz / 2 : sz * 1.5 + (k - 2) * sz;
     const pos = p.clone().addScaledVector(f.side, off).add(new THREE.Vector3(0, y, 0));
-    const body = new CANNON.Body({ mass: 0.7, shape: new CANNON.Box(new CANNON.Vec3(0.4, 0.4, 0.4)), position: new CANNON.Vec3(pos.x, pos.y, pos.z) });
+    const body = new CANNON.Body({ mass: 0.7, shape: new CANNON.Box(new CANNON.Vec3(sz / 2, sz / 2, sz / 2)), position: new CANNON.Vec3(pos.x, pos.y, pos.z) });
     body.quaternion.set(q.x, q.y, q.z, q.w); body.allowSleep = true; body.sleep(); world.addBody(body);
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), crateMat[k % 2]);
-    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0xffb347 })));
+    const mesh = new THREE.Mesh(crateGeo, crateMat[(k + lane) % 2]); mesh.scale.setScalar(sz);
     scene.add(mesh); crates.push({ body, mesh, home: body.position.clone(), down: false, d, lane });
   }
 }
@@ -369,28 +393,67 @@ function addPin(d: number, lane: number) { const m = new THREE.Mesh(new THREE.Pl
 type Stage = { from: number; to: number; ammo: number; wind: number; spit: boolean; build: (a: number, b: number) => void };
 const S = (k: number) => (LEN - 12) * k;
 const STAGES: Stage[] = [
-  { from: 0, to: S(0.2), ammo: 8, wind: 0, spit: false, build: (a, b) => { const r = b - a; addSkull(a + r * 0.4, 1); addSkull(a + r * 0.6, 0); barricade(a + r * 0.75, 2, 3); addSkull(a + r * 0.9, 1); } },
-  { from: S(0.2), to: S(0.4), ammo: 9, wind: 0, spit: true, build: (a, b) => { const r = b - a; addSkull(a + r * 0.3, 0); addSkull(a + r * 0.45, 2); barricade(a + r * 0.6, 1, 3); addSkull(a + r * 0.8, 1); addSkull(a + r * 0.9, 0); } },
-  { from: S(0.4), to: S(0.6), ammo: 9, wind: 1.6, spit: true, build: (a, b) => { const r = b - a; addSkull(a + r * 0.3, 2); barricade(a + r * 0.5, 0, 3); barricade(a + r * 0.5, 2, 2); addSkull(a + r * 0.7, 1); addSkull(a + r * 0.9, 0); } },
-  { from: S(0.6), to: S(0.8), ammo: 10, wind: -1.2, spit: true, build: (a, b) => { const r = b - a; addPin(a + r * 0.35, 1); addSkull(a + r * 0.5, 0); addSkull(a + r * 0.6, 2); addPin(a + r * 0.75, 0); barricade(a + r * 0.85, 1, 3); } },
-  { from: S(0.8), to: S(1), ammo: 11, wind: 2, spit: true, build: (a, b) => { const r = b - a; addSkull(a + r * 0.25, 0); addSkull(a + r * 0.35, 2); addPin(a + r * 0.5, 1); barricade(a + r * 0.6, 0, 3); addSkull(a + r * 0.75, 1); addSkull(a + r * 0.85, 2); addPin(a + r * 0.9, 2); } },
+  { from: 0, to: S(0.2), ammo: 8, wind: 0, spit: false, build: (a, b) => { const r = b - a; barricade(a + r * 0.25, 0, 1); addSkull(a + r * 0.4, 1); barricade(a + r * 0.5, 2, 2, 0.7); addSkull(a + r * 0.6, 0); barricade(a + r * 0.75, 2, 3); addSkull(a + r * 0.9, 1); coinLine(a + 6, 1, 14); coinSwitch(a + r * 0.45, 1, 2, 12); coinArc(a + r * 0.25, 0, 1); coinLine(a + r * 0.62, 1, 12); coinArc(a + r * 0.75, 2, 1); } },
+  { from: S(0.2), to: S(0.4), ammo: 9, wind: 0, spit: true, build: (a, b) => { const r = b - a; barricade(a + r * 0.15, 2, 1, 0.9); addSkull(a + r * 0.3, 0); addSkull(a + r * 0.45, 2); barricade(a + r * 0.6, 1, 3); barricade(a + r * 0.7, 0, 2, 0.7); addSkull(a + r * 0.8, 1); addSkull(a + r * 0.9, 0); coinLine(a + 2, 1, 16); coinArc(a + r * 0.15, 2, 1); coinSwitch(a + r * 0.5, 0, 1, 10); coinArc(a + r * 0.6, 1, 2); coinLine(a + r * 0.82, 2, 12); } },
+  { from: S(0.4), to: S(0.6), ammo: 9, wind: 1.6, spit: true, build: (a, b) => { const r = b - a; barricade(a + r * 0.15, 1, 1); addSkull(a + r * 0.3, 2); barricade(a + r * 0.5, 0, 3); barricade(a + r * 0.5, 2, 2); barricade(a + r * 0.8, 1, 2, 0.7); addSkull(a + r * 0.7, 1); addSkull(a + r * 0.9, 0); coinLine(a + 2, 0, 18); coinArc(a + r * 0.15, 1, 0); coinLine(a + r * 0.42, 1, 14); coinSwitch(a + r * 0.75, 2, 1, 10); coinArc(a + r * 0.8, 1, 0); } },
+  { from: S(0.6), to: S(0.8), ammo: 10, wind: -1.2, spit: true, build: (a, b) => { const r = b - a; barricade(a + r * 0.18, 0, 2, 0.7); addPin(a + r * 0.35, 1); addSkull(a + r * 0.5, 0); addSkull(a + r * 0.6, 2); barricade(a + r * 0.65, 1, 1, 0.9); addPin(a + r * 0.75, 0); barricade(a + r * 0.85, 1, 3); coinLine(a + 2, 2, 16); coinArc(a + r * 0.18, 0, 1); coinSwitch(a + r * 0.42, 2, 1, 12); coinArc(a + r * 0.65, 1, 2); coinLine(a + r * 0.88, 0, 10); } },
+  { from: S(0.8), to: S(1), ammo: 11, wind: 2, spit: true, build: (a, b) => { const r = b - a; barricade(a + r * 0.12, 2, 2, 0.7); addSkull(a + r * 0.25, 0); addSkull(a + r * 0.35, 2); addPin(a + r * 0.5, 1); barricade(a + r * 0.6, 0, 3); barricade(a + r * 0.68, 2, 1, 0.9); addSkull(a + r * 0.75, 1); addSkull(a + r * 0.85, 2); addPin(a + r * 0.9, 2); coinLine(a + 2, 1, 20); coinArc(a + r * 0.12, 2, 1); coinSwitch(a + r * 0.62, 1, 2, 10); coinArc(a + r * 0.68, 2, 1); } },
 ];
 let si = 0, score = 0, stageScore = 0, ammo = 0, hearts = 3, lostHeart = false, playing = false, lane = 1, laneX = 0, dist = 0, kills = 0, total = 0;
-const SPEED = 5.2;
+const SPEED = 6.8; // was 5.2 (+31%)
+const END = S(1);
 function clearStage() {
   for (const s of skulls) scene.remove(s.g); for (const p of pins) scene.remove(p.m); for (const k of pickups) scene.remove(k.g); pickups = [];
-  for (const c of crates) { scene.remove(c.mesh); world.removeBody(c.body); } for (const b of statics) world.removeBody(b);
+  for (const c of crates) if (!c.gone) { scene.remove(c.mesh); world.removeBody(c.body); } for (const b of statics) world.removeBody(b);
   for (const s of shots) { scene.remove(s.mesh); world.removeBody(s.body); } for (const s of spits) scene.remove(s.m);
   skulls = []; pins = []; crates = []; shots = []; spits = []; statics = [];
 }
+// one continuous run: every section is built up front; crossing a section boundary just updates wind/spit, tops up ammo + a heart
+// and flashes that section's story line as a non-blocking toast (no stop, no screen).
 function startStage(i: number) {
-  si = i; clearStage(); const st = STAGES[i]; st.build(st.from, st.to); for (let q = 0; q < 3; q++) addPickup(st.from + (st.to - st.from) * (0.2 + q * 0.27), (q + i) % 3);
-  total = skulls.length + pins.length + crates.length; kills = 0; stageScore = 0;
-  turnT = 0; runPh = 0; ammo = st.ammo; hearts = 3; lostHeart = false; lane = 1; laneX = 0; dist = st.from; playing = true;
-  $('wind').textContent = st.wind === 0 ? '' : `Wind ${st.wind > 0 ? '→' : '←'} ${Math.abs(st.wind).toFixed(1)}`;
-  $('end').classList.add('hidden'); hud();
+  clearStage(); clearCoins();
+  for (let j = i; j < STAGES.length; j++) { const st = STAGES[j]; st.build(st.from, st.to); for (let q = 0; q < 3; q++) addPickup(st.from + (st.to - st.from) * (0.2 + q * 0.27), (q + j) % 3); }
+  buildCoins();
+  total = skulls.length + pins.length + crates.length; kills = 0; stageScore = 0; coins = 0;
+  turnT = 0; runPh = 0; ammo = STAGES[i].ammo; hearts = 3; lostHeart = false; lane = 1; laneX = 0; dist = STAGES[i].from; playing = true;
+  si = i; setSection(i, false); $('end').classList.add('hidden'); hud();
 }
-function hud() { $('stat').textContent = `${si + 1}/5 · ${score}`; $('ammo').textContent = String(Math.max(0, ammo)); $('hearts').textContent = '❤'.repeat(hearts) + '♡'.repeat(3 - hearts); }
+function setSection(i: number, toastIt: boolean) {
+  si = i; const st = STAGES[i];
+  $('wind').textContent = st.wind === 0 ? '' : `Wind ${st.wind > 0 ? '→' : '←'} ${Math.abs(st.wind).toFixed(1)}`;
+  if (toastIt) { ammo += 3; hearts = Math.min(3, hearts + 1); const pn = STORY[`l${i + 1}`]?.[0]; if (pn) toast(pn.cap, pn.bubbles?.[0]?.text); hud(); }
+}
+let toastT = 0;
+function toast(cap: string, line?: string) { const t = $('toast'); t.innerHTML = `<b>${cap}</b>${line ? `<span>“${line}”</span>` : ''}`; t.classList.add('show'); clearTimeout(toastT); toastT = window.setTimeout(() => t.classList.remove('show'), 3200); }
+// ---------- coin lines (one InstancedMesh) ----------
+type Coin = { d: number; x: number; y: number; alive: boolean };
+let coinList: Coin[] = [], coins = 0, coinIM: THREE.InstancedMesh | null = null;
+const coinFace = canvasTex(128, 128, (c) => {
+  const g = c.createRadialGradient(52, 48, 6, 64, 64, 64); g.addColorStop(0, '#fff1a8'); g.addColorStop(0.55, '#f2b320'); g.addColorStop(1, '#a8650c'); c.fillStyle = g; c.beginPath(); c.arc(64, 64, 63, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#7a4606'; c.lineWidth = 7; c.beginPath(); c.arc(64, 64, 52, 0, Math.PI * 2); c.stroke(); c.strokeStyle = '#ffe27a'; c.lineWidth = 2; c.beginPath(); c.arc(64, 64, 47, 0, Math.PI * 2); c.stroke();
+  c.fillStyle = '#9a5a08'; c.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 14 : 32, a = -Math.PI / 2 + k * Math.PI / 5; c.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); } c.fill(); // star emboss
+  c.fillStyle = '#ffe48a'; c.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 11 : 27, a = -Math.PI / 2 + k * Math.PI / 5; c.lineTo(62 + Math.cos(a) * r, 62 + Math.sin(a) * r); } c.fill();
+});
+const coinGeo = new THREE.CylinderGeometry(0.19, 0.19, 0.05, 18).rotateX(Math.PI / 2);
+const coinMat = [new THREE.MeshBasicMaterial({ color: 0xa8650c, fog: false }), new THREE.MeshBasicMaterial({ map: coinFace, fog: false }), new THREE.MeshBasicMaterial({ map: coinFace, fog: false })];
+const COIN_GAP = 1.3, COIN_Y = 0.75;
+function coinLine(d: number, ln: number, n: number) { for (let k = 0; k < n; k++) coinList.push({ d: d + k * COIN_GAP, x: LANES[ln], y: COIN_Y, alive: true }); }
+function coinSwitch(d: number, a: number, b: number, n: number) { for (let k = 0; k < n; k++) { const t = THREE.MathUtils.smoothstep(k / (n - 1), 0.25, 0.75); coinList.push({ d: d + k * COIN_GAP, x: THREE.MathUtils.lerp(LANES[a], LANES[b], t), y: COIN_Y, alive: true }); } }
+// arc around an obstacle in lane `ob`: swings out to lane `to` over the crate's d and back (there is no jump, so arcs go around, lifted a little)
+function coinArc(d: number, ob: number, to: number) { const n = 9; for (let k = 0; k < n; k++) { const t = k / (n - 1), sw = Math.sin(t * Math.PI); coinList.push({ d: d - 5 + t * 10, x: THREE.MathUtils.lerp(LANES[ob], LANES[to], Math.min(1, sw * 1.6)), y: COIN_Y + sw * 0.9, alive: true }); } }
+function clearCoins() { if (coinIM) { scene.remove(coinIM); coinIM.dispose(); coinIM = null; } coinList = []; }
+function buildCoins() { coinIM = new THREE.InstancedMesh(coinGeo, coinMat, coinList.length); coinIM.frustumCulled = false; scene.add(coinIM); }
+const cDummy = new THREE.Object3D();
+function updateCoins(dt: number) {
+  if (!coinIM) return; void dt;
+  coinList.forEach((c, i) => {
+    if (c.alive && playing && Math.abs(c.d - dist) < 0.55 && Math.abs(c.x - laneX) < 0.9 && c.y < 1.9) { c.alive = false; coins++; addScore(5); if (coins % 5 === 0) beep(1320, 0.05, 'triangle', 0.04); const e = $('coins').parentElement!; e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop'); spark(at(c.d, c.x, c.y), 3, 2, 0.2); }
+    if (!c.alive || c.d < dist - 3 || c.d > dist + 60) cDummy.scale.setScalar(0); else { cDummy.position.copy(at(c.d, c.x, c.y + Math.sin(clock * 4 + i * 0.5) * 0.05)); cDummy.rotation.set(0, clock * 4 + i * 0.4, 0); cDummy.scale.setScalar(1); }
+    cDummy.updateMatrix(); coinIM!.setMatrixAt(i, cDummy.matrix);
+  });
+  coinIM.instanceMatrix.needsUpdate = true;
+}
+function hud() { $('stat').textContent = `${si + 1}/5 · ${score}`; $('coins').textContent = String(coins); $('ammo').textContent = String(Math.max(0, ammo)); $('hearts').textContent = '❤'.repeat(hearts) + '♡'.repeat(3 - hearts); }
 function addScore(n: number) { score += n; stageScore += n; hud(); }
 function endStage(win: boolean) {
   playing = false;
@@ -403,7 +466,7 @@ function endStage(win: boolean) {
   const show = () => $('end').classList.remove('hidden');
   if (win && si === 4) setTimeout(() => playStory('outro', show), 600); else setTimeout(show, 500);
 }
-$('retry').onclick = () => { score -= stageScore; startStage(si); };
+$('retry').onclick = () => { score = 0; startStage(0); };
 $('next').onclick = () => { const n = si === 4 ? 0 : si + 1; if (n === 0) score = 0; $('end').classList.add('hidden'); playStory(`l${n + 1}`, () => startStage(n)); };
 
 // ---------- chancla ----------
@@ -530,8 +593,9 @@ function frame(now: number) {
   world.step(1 / 120, dt, 6);
   const st = STAGES[si];
   const running = heroFrame(dt);
-  if (playing && running) dist = Math.min(st.to, dist + SPEED * dt);
-  laneX += (LANES[lane] - laneX) * Math.min(1, dt * 10);
+  if (playing && running) dist = Math.min(END, dist + SPEED * dt);
+  if (playing && si < STAGES.length - 1 && dist >= STAGES[si].to) setSection(si + 1, true);
+  laneX += (LANES[lane] - laneX) * Math.min(1, dt * 13); // was dt*10: snappier lane change for the faster run
   const me = at(dist, laneX, 1.2);
   setBright(THREE.MathUtils.smoothstep(dist / LEN, 0.55, 1));
   // shots
@@ -547,19 +611,23 @@ function frame(now: number) {
   for (const c of crates) {
     c.mesh.position.set(c.body.position.x, c.body.position.y, c.body.position.z); c.mesh.quaternion.set(c.body.quaternion.x, c.body.quaternion.y, c.body.quaternion.z, c.body.quaternion.w);
     if (!c.down && c.body.position.distanceTo(c.home) > 0.6) { c.down = true; kills++; addScore(25); }
+    if (c.down && !c.gone) { c.gone = true; breakCrate(c); }
   }
   // skulls float toward you, jaws chomping
   for (const k of skulls) {
     if (!k.alive) continue; k.t += dt;
     if (k.d - dist < 30) k.d -= dt * 1.4;
-    k.g.position.copy(at(k.d, LANES[k.lane] + Math.sin(k.t * 0.9) * 0.3, 1.5 + Math.sin(k.t * 2.2) * 0.25));
+    k.g.position.copy(at(k.d, LANES[k.lane] + Math.sin(k.t * 0.9) * 0.3, 0.72 + Math.sin(k.t * 2.2) * 0.06)); // was 1.5±0.25: now hovering just off the cobbles
     k.g.lookAt(camera.position); jawOpen(k.jaw, Math.max(0, Math.sin(k.t * 7)));
     if (playing && st.spit && k.d - dist > 7 && k.d - dist < 26) { k.spitT -= dt; if (k.spitT <= 0) { k.spitT = 3.5 + rnd() * 3; spit(k); } }
     if (playing && Math.abs(k.d - dist) < 0.8) { k.alive = false; scene.remove(k.g); if (Math.abs(LANES[k.lane] - laneX) < 1) hurt(); else addScore(20); }
   }
   for (const p of pins) { if (!p.alive) continue; p.t += dt; p.m.position.copy(at(p.d, LANES[p.lane] + Math.sin(p.t * 1.3) * 0.5, 3.2)); p.m.lookAt(tmp.copy(camera.position).setY(p.m.position.y)); p.m.rotation.z = Math.sin(p.t * 1.3) * 0.15; }
   // barricade collisions
-  for (const c of crates) if (playing && !c.down && Math.abs(c.d - dist) < 0.6 && lane === c.lane) { c.down = true; hurt(); c.body.wakeUp(); c.body.velocity.set(0, 4, 0); }
+  for (const c of crates) if (playing && !c.down && Math.abs(c.d - dist) < 0.6 && lane === c.lane) { c.down = true; hurt(); c.body.wakeUp(); }
+  for (const sp of splinters) { sp.life -= dt; sp.v.y -= 9.8 * dt; sp.m.position.addScaledVector(sp.v, dt); sp.m.rotation.x += sp.w.x * dt; sp.m.rotation.y += sp.w.y * dt; sp.m.rotation.z += sp.w.z * dt; if (sp.m.position.y < at(dist, 0).y - 2) sp.life = 0; }
+  for (let i = splinters.length - 1; i >= 0; i--) if (splinters[i].life <= 0) { scene.remove(splinters[i].m); splinters.splice(i, 1); }
+  updateCoins(dt);
   // spit projectiles
   for (const s of spits) { s.t += dt / 1.4; const k = Math.min(1, s.t); const to = at(dist + 0.5, LANES[s.lane], 1.2); s.m.position.lerpVectors(s.from, to, k); s.m.position.y += Math.sin(k * Math.PI) * 1.5; s.m.rotation.x += dt * 12;
     if (k >= 1) { if (Math.abs(laneX - LANES[s.lane]) < 1) hurt(); else addScore(20); } }
@@ -576,7 +644,7 @@ function frame(now: number) {
   decoChanclas.forEach((c, i) => { c.material.rotation = clock * (0.6 + i * 0.07); c.position.y = c.userData.y + Math.sin(clock + i) * 0.6; });
   lantern.position.copy(at(dist + 3, laneX * 0.5, 2.2));
   updateSmoke(me, dt);
-  if (playing) { if (hearts <= 0) endStage(false); else if (dist >= st.to - 0.01) endStage(true); }
+  if (playing) { if (hearts <= 0) endStage(false); else if (dist >= END - 0.01) endStage(true); }
   // camera behind & above, looking down the hill
   const f = frameAt(dist), back = at(dist - 4.5, laneX * 0.85, 3.4), look = at(dist + 9, laneX * 0.5, 0.4);
   void f;
@@ -615,7 +683,7 @@ function heroFrame(dt: number) {
 
 (window as unknown as Record<string, unknown>).__s3d = {
   throwChancla, dodge, startStage, spit: () => skulls.find((k) => k.alive) && spit(skulls.find((k) => k.alive)!),
-  state: () => ({ si, score, ammo, hearts, lane, playing, dist: +dist.toFixed(1), to: +STAGES[si].to.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills, total }),
+  state: () => ({ si, score, coins, coinTotal: coinList.length, crates: crates.length, ammo, hearts, lane, playing, dist: +dist.toFixed(1), to: +STAGES[si].to.toFixed(1), skulls: skulls.filter((k) => k.alive).map((k) => [k.lane, +(k.d - dist).toFixed(1)]), pins: pins.filter((p) => p.alive).map((p) => [p.lane, +(p.d - dist).toFixed(1)]), kills, total }),
   jump: (d: number) => { dist = d; },
   story: (k: string) => { localStorage.removeItem(SKIP_KEY); playStory(k, () => {}); },
   smoke: (v: boolean) => smoke.forEach((m) => (m.s.visible = v)),
@@ -624,7 +692,7 @@ function heroFrame(dt: number) {
   bd: (v: boolean) => { const b = camera.children.find((c) => (c as THREE.Mesh).geometry?.type === 'PlaneGeometry' && (c as THREE.Mesh).position.z === -185); if (b) b.visible = v; },
   cam: () => [camera.position.toArray(), camera.getWorldDirection(new THREE.Vector3()).toArray(), at(20, 0, 0).toArray(), camera.children.length],
   cob: () => (cobble.image as HTMLCanvasElement).toDataURL(),
-  pose: (t: number) => { turnT = t; paused = true; }, unpause: () => { paused = false; },
+  pose: (t: number) => { turnT = t; paused = true; }, unpause: () => { paused = false; }, free: () => { camOverride = null; paused = false; },
   hero: () => ({ turnT: +turnT.toFixed(2), frame: hero.material === RUN.mat ? 'run' + runI : 'turn', off: (hero.material as THREE.MeshBasicMaterial).map!.offset.x }),
   heroRect: () => { const r = stage.getBoundingClientRect(); const pts = [[-0.5, -0.5], [0.5, 0.5]].map(([x, y]) => { const v = new THREE.Vector3(x, y, 0); hero.localToWorld(v); v.project(camera); return [r.left + (v.x + 1) / 2 * r.width, r.top + (1 - v.y) / 2 * r.height]; }); return pts; },
 };
