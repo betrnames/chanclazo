@@ -174,14 +174,14 @@ function ofrenda(d: number, x: number) {
 const picCols = [0xe2197a, 0xff9f1c, 0x1ec8c8, 0xb04bff, 0x8ae234, 0xffd23f];
 const flagGeo = new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-0.2, 0.24), new THREE.Vector2(0.2, 0.24), new THREE.Vector2(0.2, -0.16), new THREE.Vector2(0.1, -0.24), new THREE.Vector2(0, -0.16), new THREE.Vector2(-0.1, -0.24), new THREE.Vector2(-0.2, -0.16)]));
 const flagSpots: { p: THREE.Vector3; t: THREE.Vector3; c: number }[] = [], bulbSpots: THREE.Vector3[] = [];
-function papel(d: number) {
+function papel(d: number, flags: boolean) {
   const a = at(d, -4.75), b = at(d, 4.75); // strung wall to wall across the alley
-  for (const [hgt, n, sag] of [[5.3, 20, 0.55], [4.7, 16, 0.4]] as [number, number, number][]) for (let k = 0; k < n; k++) {
+  if (flags) for (const [hgt, n, sag] of [[6.0, 20, 0.45], [5.45, 16, 0.3]] as [number, number, number][]) for (let k = 0; k < n; k++) {
     const t = (k + 0.5) / n, p = a.clone().lerp(b, t); p.y += hgt - Math.sin(t * Math.PI) * sag; flagSpots.push({ p, t: frameAt(d).t, c: picCols[(k + Math.floor(d)) % 6] });
   }
   for (let k = 0; k < 12; k++) { const t = (k + 0.5) / 12, p = a.clone().lerp(b, t); p.y += 4.3 - Math.sin(t * Math.PI) * 0.7; bulbSpots.push(p); }
 }
-for (let d = 8; d < LEN - 8; d += 7) papel(d);
+for (let d = 8, i = 0; d < LEN - 8; d += 8, i++) papel(d, i % 2 === 0); // banners every 16u, string lights every 8u
 const flagIM = new THREE.InstancedMesh(flagGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), flagSpots.length);
 flagSpots.forEach((f, i) => flagIM.setColorAt(i, new THREE.Color(f.c).multiplyScalar(0.75))); flagIM.frustumCulled = false; scene.add(flagIM);
 const bulbIM = new THREE.InstancedMesh(new THREE.SphereGeometry(0.06, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffd98a, fog: false }), bulbSpots.length);
@@ -200,13 +200,18 @@ for (let d = 6; d < LEN - 10; d += 7) { const s = rnd() < 0.5 ? -1 : 1; if (rnd(
   type B = { m: THREE.Matrix4; c: number };
   const walls: B[] = [], parapets: B[] = [], doors: THREE.Matrix4[] = [], wins: B[] = [], frames: B[] = [], balcs: B[] = [], plants: THREE.Matrix4[] = [], pots: THREE.Matrix4[] = [], cand: THREE.Matrix4[] = [], lights: B[] = [], rails: THREE.Matrix4[] = [], skDec: THREE.Matrix4[] = [], glows: THREE.Matrix4[] = [];
   const o = new THREE.Object3D(), M = (fn: () => void) => { o.position.set(0, 0, 0); o.rotation.set(0, 0, 0); o.scale.set(1, 1, 1); fn(); o.updateMatrix(); return o.matrix.clone(); };
-  const pts = curve.getSpacedPoints(400), clear = (p: THREE.Vector3, r: number) => pts.every((q) => Math.hypot(q.x - p.x, q.z - p.z) > r);
   for (const s of [-1, 1]) for (let d = -6; d < LEN + 30;) {
-    const w = 2.6 + br() * 1.8, h = 5 + br() * 3.2, dep = 2.4, gap = 0.02 + br() * 0.12, dc = d + w / 2, off = 4.85 + br() * 0.25;
-    const f = frameAt(dc), base = at(dc, s * (off + dep / 2), -2.5);
-    d += w + gap;
-    if (![-w / 2, 0, w / 2].every((dx) => clear(at(dc + dx, s * off, 0), off - 0.35))) continue; // inner side of a bend: skip rather than intrude on the road
-    const yaw = Math.atan2(-s * f.side.x, -s * f.side.z); // local +z faces the road
+    // facade placed on the chord of the wall line (constant offset from the road): consecutive buildings share endpoints,
+    // so outside bends stay closed and inside bends never bulge toward the road (chord lies behind the wall arc).
+    let w = 2.6 + br() * 1.8; const h = 5 + br() * 3.2, dep = 2.4, off = 4.95;
+    const wl = (dd: number) => at(dd, s * off, 0), p0 = wl(d);
+    let d1 = d + w; for (let it = 0; it < 4; it++) d1 = d + (d1 - d) * (w / Math.max(0.2, p0.distanceTo(wl(d1))));
+    const p1 = wl(d1); w = p0.distanceTo(p1) + 0.12; // tiny overlap hides seams
+    const mid = p0.clone().lerp(p1, 0.5), chord = p1.clone().sub(p0).setY(0).normalize(), n = new THREE.Vector3(chord.z, 0, -chord.x);
+    if (n.dot(frameAt((d + d1) / 2).side) * s < 0) n.negate(); // n points away from the road
+    d = d1;
+    const base = mid.clone().addScaledVector(n, dep / 2).setY(Math.min(p0.y, p1.y) - 2.5);
+    const yaw = Math.atan2(-n.x, -n.z); // local +z faces the road
     const P = new THREE.Matrix4().compose(base, new THREE.Quaternion().setFromAxisAngle(UP, yaw), new THREE.Vector3(1, 1, 1));
     const add = (arr: { push: (x: never) => void }, m: THREE.Matrix4, c?: number) => { const g = P.clone().multiply(m); arr.push((c === undefined ? g : { m: g, c }) as never); };
     const wc = WALL[Math.floor(br() * WALL.length)], tc = TRIM[Math.floor(br() * TRIM.length)], H = h + 2.5, fz = dep / 2;
@@ -613,6 +618,7 @@ function heroFrame(dt: number) {
   jump: (d: number) => { dist = d; },
   story: (k: string) => { localStorage.removeItem(SKIP_KEY); playStory(k, () => {}); },
   smoke: (v: boolean) => smoke.forEach((m) => (m.s.visible = v)),
+  flags: (v: boolean) => { flagIM.visible = v; },
   look: (d: number, x: number, y: number, tx: number, ty: number, tz: number) => { paused = true; camOverride = [d, x, y, tx, ty, tz]; },
   bd: (v: boolean) => { const b = camera.children.find((c) => (c as THREE.Mesh).geometry?.type === 'PlaneGeometry' && (c as THREE.Mesh).position.z === -185); if (b) b.visible = v; },
   cam: () => [camera.position.toArray(), camera.getWorldDirection(new THREE.Vector3()).toArray(), at(20, 0, 0).toArray(), camera.children.length],
