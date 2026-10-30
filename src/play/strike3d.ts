@@ -453,7 +453,7 @@ function barricade(d: number, lane: number, n: number, sz = 0.8) {
   }
 }
 const skullGlowMat = new THREE.SpriteMaterial({ map: flame, color: 0x9fd8ff, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.85 });
-function addSkull(d: number, lane: number, h = 0) { const s = makeSkull(); s.g.scale.multiplyScalar(0.62); const glow = new THREE.Sprite(skullGlowMat); glow.scale.setScalar(2.1); glow.position.z = -0.05; s.g.add(glow); skulls.push({ g: s.g, jaw: s.jawPivot, d, lane, alive: true, t: rnd() * 6, h }); }
+function addSkull(d: number, lane: number, h = 0) { const s = makeSkull(); s.g.scale.multiplyScalar(0.38); const glow = new THREE.Sprite(skullGlowMat); glow.scale.setScalar(1.3); glow.position.z = -0.05; s.g.add(glow); skulls.push({ g: s.g, jaw: s.jawPivot, d, lane, alive: true, t: rnd() * 6, h }); }
 // ---------- adobe / brick wall blockers ----------
 type Wall = { bricks: THREE.Mesh[]; d: number; lane: number; breakable: boolean; alive: boolean; top: number };
 let walls: Wall[] = [];
@@ -756,9 +756,9 @@ function frame(now: number) {
   // calaveras: glowing collectibles sitting along the route (ground, car roofs, mid-air over ramps)
   for (const k of skulls) {
     if (!k.alive) continue; k.t += dt;
-    k.g.position.copy(at(k.d, LANES[k.lane], k.h + 0.5 + Math.sin(k.t * 2.2) * 0.08));
+    k.g.position.copy(at(k.d, LANES[k.lane], k.h + 0.32 + Math.sin(k.t * 2.2) * 0.05));
     k.g.lookAt(camera.position); jawOpen(k.jaw, Math.max(0, Math.sin(k.t * 3)) * 0.4);
-    if (playing && Math.abs(k.d - dist) < 0.9 && Math.abs(LANES[k.lane] - laneX) < 0.9 && k.h + 0.5 > heroY - 0.3 && k.h + 0.5 < heroY + 1.9) { k.alive = false; scene.remove(k.g); addScore(PTS.skull); spark(k.g.position, 24, 4, 0.4); beep(1180, 0.1, 'triangle', 0.07); }
+    if (playing && Math.abs(k.d - dist) < 0.75 && Math.abs(LANES[k.lane] - laneX) < 0.75 && k.h + 0.32 > heroY - 0.3 && k.h + 0.32 < heroY + 1.9) { k.alive = false; scene.remove(k.g); addScore(PTS.skull); spark(k.g.position, 24, 4, 0.4); beep(1180, 0.1, 'triangle', 0.07); }
   }
   for (const w of walls) if (playing && w.alive && Math.abs(w.d - dist) < 0.45 && Math.abs(LANES[w.lane] - laneX) < 1.1 && heroY < w.top - 0.1) crash();
   for (const p of pins) { if (!p.alive) continue; p.t += dt; p.m.position.copy(at(p.d, LANES[p.lane] + Math.sin(p.t * 1.3) * 0.5, 3.2)); p.m.lookAt(tmp.copy(camera.position).setY(p.m.position.y)); p.m.rotation.z = Math.sin(p.t * 1.3) * 0.15; }
