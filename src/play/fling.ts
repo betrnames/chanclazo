@@ -377,7 +377,7 @@ function frameBody(now: number) {
   ctx.fillStyle = '#ff9f1c'; for (let i = 0; i < 40; i++) { ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc((i * 97) % (W + 200) - 100, GROUND + 8 + (i * 37) % 60, 4, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
   for (const cx of [60, 420, 1080]) { const r = ctx.createRadialGradient(cx, GROUND - 10, 2, cx, GROUND - 10, 60 + Math.sin(t * 7 + cx) * 4); r.addColorStop(0, 'rgba(255,170,60,.55)'); r.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = r; ctx.fillRect(cx - 70, GROUND - 80, 140, 140); ctx.fillStyle = '#fbf3d5'; ctx.fillRect(cx - 4, GROUND - 22, 8, 22); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(cx, GROUND - 28, 4, 7, 0, 0, 7); ctx.fill(); }
   { // Abuela: wind-up pose while loaded/aiming, release pose right after a throw
-    const rel = relT > 0 && IMG.abuelaRel, im = rel ? IMG.abuelaRel! : IMG.abuela;
+    const rel = (relT > 0 || flying.length > 0) && IMG.abuelaRel, im = rel ? IMG.abuelaRel! : IMG.abuela;
     if (im) { const h = rel ? REL.h : WIND.h, w = h * (im.width / im.height), bob = rel ? 0 : Math.sin(t * 2) * 1.5; ctx.drawImage(im, ABU.x - w / 2, ABU.ground - h + bob, w, h); }
   }
   const loaded = playing && !ended && !flying.length && shotsLeft > 0;
