@@ -13,7 +13,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #ui.hide{display:none}
 #ui img.title{width:min(88vw,620px);height:auto}
 .ribbon{background:#24093a;color:#ffd23f;border:2px solid #ffd23f;border-radius:6px;padding:5px 14px;font-weight:800;font-size:clamp(12px,3.4vw,17px);letter-spacing:.5px;text-align:center}
-.cast{display:flex;align-items:flex-end;justify-content:center;gap:6px}#ui img.hero{height:min(30vh,250px);width:auto}#ui img.side{height:min(20vh,165px);width:auto;max-width:24vw;object-fit:contain}#ui img.hero{max-width:44vw;object-fit:contain}#ui img.ll{height:min(18vh,150px)}
+.cast{display:flex;align-items:flex-end;justify-content:center;gap:6px}#ui img.hero{height:min(30vh,250px);width:auto}#ui img.side{height:min(20vh,165px);width:auto;max-width:24vw;object-fit:contain}#ui img.hero{max-width:44vw;object-fit:contain}#ui img.ll{height:min(15vh,120px)}
 #play{background:linear-gradient(#ffe066,#ffb703);color:#3a0d5c;border:0;border-radius:999px;font-weight:900;font-size:clamp(26px,7vw,40px);padding:14px 64px;box-shadow:0 6px 0 #b86b00,0 0 30px rgba(255,210,63,.6);cursor:pointer;letter-spacing:2px}
 #play:active{transform:translateY(3px);box-shadow:0 3px 0 #b86b00}
 .small{display:flex;gap:10px}
@@ -36,7 +36,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div id="ui">
  <img class="title" src="/lp/lander-title.webp" alt="Chanclazo">
  <div class="ribbon">One abuela. One chancla. A lot of calaveras.</div>
- <div class="cast"><img class="side" src="/s3d/kid.webp" alt="Sidro"><img class="hero" src="/s3d/abuela.webp" alt="Abuela"><img class="side ll" src="/s3d/llama.webp" alt="Llama piñata"></div>
+ <div class="cast"><img class="side" src="/play/luchador_sprite.webp" alt="Luchador"><img class="hero" src="/play/abuela_sprite.webp" alt="Abuela"><img class="side ll" src="/play/t_pinata.webp" alt="Llama piñata"></div>
  <div id="msg" class="ribbon" style="display:none"></div>
  <button id="play">▶ PLAY</button>
  <div class="small"><button id="howB">How to Play</button><button id="sndB">Sound: On</button></div>
@@ -47,7 +47,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 (()=>{
 const cv=document.getElementById('c'),cx=cv.getContext('2d');
 const L=s=>{const i=new Image();i.src=s;return i};
-const IM={bg:L('/play/night_bg.webp'),hero:L('/s3d/abuela.webp'),skull:L('/s3d/skull.webp'),walk:L('/play/calaca_sprite.webp'),ch:L('/s3d/chancla_gold.webp'),llama:L('/s3d/llama.webp'),lucha:L('/s3d/kid.webp')};
+const IM={bg:L('/play/night_bg.webp'),hero:L('/s3d/abuela.webp'),skull:L('/s3d/skull.webp'),ch:L('/s3d/chancla_gold.webp'),llama:L('/s3d/llama.webp'),lucha:L('/s3d/kid.webp')};
 let W,H,sc,ox,oy,portrait;
 function layout(){const d=Math.min(devicePixelRatio||1,2);cv.width=innerWidth*d;cv.height=innerHeight*d;portrait=innerHeight>innerWidth;W=portrait?540:960;H=portrait?960:540;sc=Math.min(cv.width/W,cv.height/H);ox=(cv.width-W*sc)/2;oy=(cv.height-H*sc)/2}
 addEventListener('resize',layout);layout();
@@ -80,14 +80,14 @@ const UPS=[
 ];
 let run=false,picking=false,P,E,S,Pt,score,wave,toSpawn,spawnT,cd,waveT,last=0,flash=0,T=0;
 const tombs=[];for(let i=0;i<10;i++)tombs.push([Math.random(),Math.random(),.7+Math.random()*.6]);
-function start(){P={x:W/2,y:H/2,f:1,hp:3,inv:0,rate:.42,spread:1,pierce:0,spd:220,lucha:0,w:portrait?64:54,h:portrait?84:72};E=[];S=[];Pt=[];score=0;wave=0;cd=0;picking=false;nextWave();run=true;ui.classList.add('hide');up.style.display='none';beep(660,.15)}
+function start(){P={x:W/2,y:H/2,f:1,hp:3,inv:0,tA:9,pend:0,rate:.42,spread:1,pierce:0,spd:220,lucha:0,w:portrait?47:40,h:portrait?100:86};E=[];S=[];Pt=[];score=0;wave=0;cd=0;picking=false;nextWave();run=true;ui.classList.add('hide');up.style.display='none';beep(660,.15)}
 function nextWave(){wave++;toSpawn=4+wave*2;spawnT=.3;waveT=1.5;beep(880,.2,'triangle')}
 function pick(){run=false;picking=true;const opts=UPS.filter(u=>u.ok()).sort(()=>Math.random()-.5).slice(0,3);const c=up.querySelector('.cards');c.innerHTML='';
  for(const u of opts){const b=document.createElement('button');b.innerHTML='<b>'+u.n+'</b>'+u.d;b.onclick=()=>{u.f();up.style.display='none';picking=false;run=true;nextWave();beep(990,.12,'triangle')};c.appendChild(b)}
  up.querySelector('h2').textContent='Wave '+wave+' cleared! Pick one';up.style.display='flex';beep(700,.2,'triangle')}
 function over(){run=false;const b=+localStorage.getItem('arc_best')||0;if(score>b)localStorage.setItem('arc_best',score);msg.style.display='block';msg.textContent='Game over! Score '+score+' · Wave '+wave+(score>b?' · New high score!':'');document.getElementById('play').textContent='▶ PLAY AGAIN';showBest();ui.classList.remove('hide');beep(160,.4,'sawtooth')}
 function spawn(){const side=Math.random()*4|0,walk=Math.random()<.4;let x,y;if(side<2){x=Math.random()*W;y=side?H+40:-40}else{y=Math.random()*H;x=side==2?-40:W+40}
- const sp=(28+wave*7)*(.85+Math.random()*.3)*(walk?.8:1);E.push({t:walk?'w':'s',x,y,sp,r:walk?24:22,hp:walk&&wave>2?2:1,ph:Math.random()*6})}
+ const sp=(28+wave*7)*(.85+Math.random()*.3)*(walk?.8:1);E.push({t:walk?'w':'s',c:COL[Math.random()*COL.length|0],x,y,sp,r:walk?20:22,hp:walk&&wave>2?2:1,ph:Math.random()*6})}
 function burst(x,y,n,c){for(let i=0;i<n;i++)Pt.push({x,y,vx:(Math.random()-.5)*360,vy:(Math.random()-.5)*360,l:.5,c})}
 function nearest(){let b=null,bd=1e9;for(const e of E){const d=Math.hypot(e.x-P.x,e.y-P.y);if(d<bd){bd=d;b=e}}return b}
 function upd(dt){T+=dt;
@@ -98,7 +98,8 @@ function upd(dt){T+=dt;
  if(as[2]){ax=as[0];ay=as[1];fire=true}else if(kx||ky){ax=kx;ay=ky;fire=true}else if(mouse){ax=mouse[0]-P.x;ay=mouse[1]-(P.y-P.h/2);fire=mdown||K.Space}
  if(window.__autoaim){const n=nearest();if(n){ax=n.x-P.x;ay=n.y-P.y;fire=true}}
  if(ax)P.f=Math.sign(ax);
- cd-=dt;if(fire&&cd<=0&&(ax||ay)){cd=P.rate;const a0=Math.atan2(ay,ax);for(let i=0;i<P.spread;i++){const a=a0+(i-(P.spread-1)/2)*.22;S.push({x:P.x,y:P.y-P.h/2,vx:Math.cos(a)*560,vy:Math.sin(a)*560,a:0,l:1.2,hit:new Set()})}beep(1200,.03)}
+ cd-=dt;P.tA+=dt;if(P.pend&&P.tA>=Math.min(.15,P.rate*.8)){const a0=P.pend;P.pend=0;for(let i=0;i<P.spread;i++){const a=a0+(i-(P.spread-1)/2)*.22;S.push({x:P.x,y:P.y-P.h/2,vx:Math.cos(a)*560,vy:Math.sin(a)*560,a:0,l:1.2,hit:new Set()})}beep(1200,.03)}
+ if(fire&&cd<=0&&(ax||ay)){cd=P.rate;P.pend=Math.atan2(ay,ax);P.tA=0;P.f=ax>=0?1:-1}
  for(const s of S){s.x+=s.vx*dt;s.y+=s.vy*dt;s.a+=dt*18;s.l-=dt}
  if(waveT>0)waveT-=dt;else if(toSpawn>0){spawnT-=dt;if(spawnT<=0){spawn();toSpawn--;spawnT=Math.max(.3,1.5-wave*.1)}}else if(!E.length){return pick()}
  P.inv-=dt;
@@ -111,6 +112,20 @@ function upd(dt){T+=dt;
  E=E.filter(e=>!e.dead);S=S.filter(s=>s.l>0&&s.x>-50&&s.x<W+50&&s.y>-50&&s.y<H+50);
  for(const p of Pt){p.x+=p.vx*dt;p.y+=p.vy*dt;p.l-=dt}Pt=Pt.filter(p=>p.l>0);flash-=dt}
 function img(i,x,y,w,h,f){if(!i.complete||!i.naturalWidth)return;cx.save();cx.translate(x,y);if(f<0)cx.scale(-1,1);cx.drawImage(i,-w/2,-h,w,h);cx.restore()}
+const COL=[['#ff4fd8','#ffd23f'],['#3be8ff','#ff4fd8'],['#7dff5a','#ff8a00'],['#ff8a00','#3be8ff'],['#b46bff','#7dff5a'],['#ff3b6b','#ffd23f']];
+function chibi(e){const r=e.r,x=e.x,y=e.y+r*1.1,w=Math.sin(e.ph*2.2),bw=r*1.5,bh=r*1.6;cx.save();cx.lineWidth=3;cx.strokeStyle='#1a0a26';cx.lineJoin='round';
+ cx.translate(x,y);cx.rotate(w*.08);
+ cx.fillStyle='#2b1640';for(const s of[-1,1]){cx.beginPath();cx.roundRect(s*bw*.22-6,-bh*.38+(s*w>0?-5:0),12,bh*.38,5);cx.fill();cx.stroke()}
+ cx.fillStyle='#f4ecd8';for(const s of[-1,1]){cx.beginPath();cx.ellipse(s*bw*.55,-bh*.62+s*w*4,6,9,s*.6,0,7);cx.fill();cx.stroke()}
+ cx.fillStyle=e.c[0];cx.beginPath();cx.moveTo(-bw*.5,-bh*.3);cx.lineTo(-bw*.3,-bh*.95);cx.lineTo(bw*.3,-bh*.95);cx.lineTo(bw*.5,-bh*.3);cx.closePath();cx.fill();cx.stroke();
+ cx.strokeStyle=e.c[1];cx.lineWidth=4;cx.beginPath();cx.moveTo(-bw*.42,-bh*.48);cx.lineTo(bw*.42,-bh*.48);cx.stroke();
+ cx.fillStyle=e.c[1];for(const s of[-1,0,1]){cx.beginPath();cx.arc(s*bw*.28,-bh*.36,2.5,0,7);cx.fill()}
+ const hh=r*2.4;img(IM.skull,0,-bh*.85,hh*.88,hh,1);cx.restore()}
+function hero(){const t=P.tA,k=Math.min(.15,P.rate*.8),f=P.f;let rot=0,sx=1,sy=1,dx=0;
+ if(t<k){const q=t/k;rot=-.22*q;sx=1+.08*q;sy=1-.07*q;dx=-6*q}
+ else if(t<k+.07){const q=(t-k)/.07;rot=-.22+.5*q;sx=1.08-.16*q;sy=.93+.17*q;dx=-6+14*q}
+ else if(t<k+.22){const q=(t-k-.07)/.15,e=1-q;rot=.28*e;sx=1-.08*e;sy=1+.1*e;dx=8*e}
+ if(!IM.hero.naturalWidth)return;cx.save();cx.translate(P.x+dx*f,P.y);cx.scale(f,1);cx.rotate(rot);cx.scale(sx,sy);cx.drawImage(IM.hero,-P.w/2,-P.h,P.w,P.h);cx.restore()}
 function shadow(x,y,r){cx.fillStyle='rgba(0,0,0,.35)';cx.beginPath();cx.ellipse(x,y,r,r*.35,0,0,7);cx.fill()}
 function draw(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#1a0833';cx.fillRect(0,0,cv.width,cv.height);cx.setTransform(sc,0,0,sc,ox,oy);
  if(IM.bg.naturalWidth){const r=Math.max(W/1280,H/720);cx.drawImage(IM.bg,(W-1280*r)/2,(H-720*r)/2,1280*r,720*r)}
@@ -120,8 +135,8 @@ function draw(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#1a0833';cx.fillRect(
  for(const t of tombs){const x=t[0]*W,y=40+t[1]*(H-80),s=t[2];cx.fillStyle='#4b2a75';cx.beginPath();cx.roundRect(x-14*s,y-30*s,28*s,30*s,[12*s,12*s,2,2]);cx.fill();cx.fillStyle='#ffb703';cx.beginPath();cx.arc(x,y+2,4*s,0,7);cx.fill()}
  img(IM.llama,W-50,H-20,56,106,-1);
  if(!P)return;
- const items=E.map(e=>({y:e.y,d:()=>{shadow(e.x,e.y+e.r,e.r*.8);e.t==='s'?img(IM.skull,e.x,e.y+e.r,e.r*2,e.r*2.27,1):img(IM.walk,e.x,e.y+e.r*1.4,e.r*1.3,e.r*2.8,1)}}));
- items.push({y:P.y,d:()=>{shadow(P.x,P.y,P.w*.45);if(P.inv<=0||(P.inv*10|0)%2)img(IM.hero,P.x,P.y,P.w,P.h,P.f)}});
+ const items=E.map(e=>({y:e.y,d:()=>{shadow(e.x,e.y+e.r,e.r*.8);e.t==='s'?img(IM.skull,e.x,e.y+e.r,e.r*2,e.r*2.27,1):chibi(e)}}));
+ items.push({y:P.y,d:()=>{shadow(P.x,P.y,P.w*.45);if(P.inv<=0||(P.inv*10|0)%2)hero()}});
  for(let i=0;i<P.lucha;i++){const a=T*2.4+i*Math.PI,bx=P.x+Math.cos(a)*85,by=P.y-P.h/2+Math.sin(a)*85;items.push({y:by+30,d:()=>{shadow(bx,by+30,18);img(IM.lucha,bx,by+30,36,64,Math.cos(a)>0?1:-1)}})}
  items.sort((a,b)=>a.y-b.y).forEach(i=>i.d());
  for(const s of S){cx.save();cx.translate(s.x,s.y);cx.rotate(s.a);cx.shadowColor=P.pierce?'#fff6a0':'#ffd23f';cx.shadowBlur=P.pierce?26:16;if(IM.ch.naturalWidth)cx.drawImage(IM.ch,-17,-17,34,34);cx.restore()}
