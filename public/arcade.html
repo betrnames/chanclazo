@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2a0f4a">
+<title>Chancla Arcade · Chanclazo</title>
+<meta name="description" content="One abuela. One chancla. A lot of calaveras. Free single-screen arcade shooter.">
+<link rel="icon" href="/cruise/logo_chancla.webp">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#1a0833;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;background:radial-gradient(ellipse at center,rgba(42,15,74,.55),rgba(20,5,40,.92));z-index:5}
+#ui.hide{display:none}
+#ui img.title{width:min(88vw,620px);height:auto}
+.ribbon{background:#24093a;color:#ffd23f;border:2px solid #ffd23f;border-radius:6px;padding:5px 14px;font-weight:800;font-size:clamp(12px,3.4vw,17px);letter-spacing:.5px;text-align:center}
+.cast{display:flex;align-items:flex-end;justify-content:center;gap:6px}#ui img.hero{height:min(30vh,250px);width:auto}#ui img.side{height:min(20vh,165px);width:auto;max-width:24vw;object-fit:contain}#ui img.hero{max-width:44vw;object-fit:contain}#ui img.ll{height:min(15vh,120px)}
+#play{background:linear-gradient(#ffe066,#ffb703);color:#3a0d5c;border:0;border-radius:999px;font-weight:900;font-size:clamp(26px,7vw,40px);padding:14px 64px;box-shadow:0 6px 0 #b86b00,0 0 30px rgba(255,210,63,.6);cursor:pointer;letter-spacing:2px}
+#play:active{transform:translateY(3px);box-shadow:0 3px 0 #b86b00}
+.small{display:flex;gap:10px}
+.small button{background:rgba(80,40,120,.6);color:#d9c8f0;border:1px solid #6b4a94;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}
+#how{max-width:420px;color:#e8dcf8;font-size:13px;text-align:center;line-height:1.45;display:none}
+#best{color:#bba6d8;font-size:12px}
+#ctrl{position:fixed;left:0;right:0;bottom:0;display:none;justify-content:space-between;padding:10px 12px calc(10px + env(safe-area-inset-bottom));z-index:4;pointer-events:none}
+#ctrl div{display:flex;gap:10px}
+#ctrl button{pointer-events:auto;width:68px;height:68px;border-radius:50%;border:2px solid #ffd23f;background:rgba(36,9,58,.7);color:#ffd23f;font-size:24px;font-weight:900}
+#ctrl button.big{width:80px;height:80px;background:rgba(255,183,3,.85);color:#3a0d5c}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="ctrl"><div><button id="bL">◀</button><button id="bR">▶</button></div><div><button id="bJ">⤒</button><button id="bT" class="big">🩴</button></div></div>
+<div id="ui">
+ <img class="title" src="/lp/lander-title.webp" alt="Chanclazo">
+ <div class="ribbon">One abuela. One chancla. A lot of calaveras.</div>
+ <div class="cast"><img class="side" src="/play/luchador_sprite.webp" alt="Luchador"><img class="hero" src="/play/abuela_sprite.webp" alt="Abuela"><img class="side ll" src="/play/t_pinata.webp" alt="Llama piñata"></div>
+ <div id="msg" class="ribbon" style="display:none"></div>
+ <button id="play">▶ PLAY</button>
+ <div class="small"><button id="howB">How to Play</button><button id="sndB">Sound: On</button></div>
+ <div id="how">Move with ◀ ▶ (arrows or A/D). Jump with ⤒ (Up, W). Throw the chancla with 🩴 (Space or J). Knock out calaveras and piñatas before they reach you. You have 3 hearts. Survive the waves and beat your high score!</div>
+ <div id="best"></div>
+</div>
+<script>
+(()=>{
+const cv=document.getElementById('c'),cx=cv.getContext('2d');
+const L=s=>{const i=new Image();i.src=s;return i};
+const IM={bg:L('/play/night_bg.webp'),hero:L('/play/abuela_sprite.webp'),skull:L('/play/t_skull.webp'),pin:L('/play/calaca_sprite.webp'),llama:L('/play/t_pinata.webp'),lucha:L('/play/luchador_sprite.webp'),ch:L('/play/t_chancla.webp')};
+let W,H,portrait,plats=[],sc=1;
+function layout(){const d=Math.min(devicePixelRatio||1,2);cv.width=innerWidth*d;cv.height=innerHeight*d;portrait=innerHeight>innerWidth;
+ W=portrait?540:960;H=portrait?960:540;sc=Math.min(cv.width/W,cv.height/H);
+ const g=portrait?H-170:H-40;
+ plats=portrait?[[0,g,W],[40,g-170,180],[W-220,g-170,180],[170,g-340,200],[30,g-500,150],[W-180,g-500,150]]
+ :[[0,g,W],[90,g-120,220],[W-310,g-120,220],[370,g-230,220],[60,g-330,170],[W-230,g-330,170]];}
+addEventListener('resize',layout);layout();
+const K={};let tl=0,tr=0,tj=0,tt=0;
+addEventListener('keydown',e=>{K[e.code]=1;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(!run&&(e.code==='Enter'))start()});
+addEventListener('keyup',e=>K[e.code]=0);
+const hold=(id,f)=>{const b=document.getElementById(id);b.addEventListener('pointerdown',e=>{e.preventDefault();f(1)});['pointerup','pointercancel','pointerleave'].forEach(t=>b.addEventListener(t,()=>f(0)))};
+hold('bL',v=>tl=v);hold('bR',v=>tr=v);hold('bJ',v=>tj=v);hold('bT',v=>tt=v);
+let snd=localStorage.getItem('arc_snd')!=='0',AC;
+const beep=(f,d=.08,t='square',v=.05)=>{if(!snd)return;try{AC=AC||new AudioContext();const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}};
+const ui=document.getElementById('ui'),ctrl=document.getElementById('ctrl'),msg=document.getElementById('msg'),bestEl=document.getElementById('best');
+const showBest=()=>bestEl.textContent='High score: '+(+localStorage.getItem('arc_best')||0);showBest();
+document.getElementById('howB').onclick=()=>{const h=document.getElementById('how');h.style.display=h.style.display==='block'?'none':'block'};
+const sb=document.getElementById('sndB');const sl=()=>sb.textContent='Sound: '+(snd?'On':'Off');sl();sb.onclick=()=>{snd=!snd;localStorage.setItem('arc_snd',snd?1:0);sl()};
+document.getElementById('play').onclick=start;
+let run=false,P,E,S,Pt,score,hearts,wave,toSpawn,spawnT,cd,inv,waveT,last=0,flash=0;
+function start(){P={x:W/2,y:plats[0][1],vx:0,vy:0,on:true,f:1,w:portrait?70:60,h:portrait?92:80};E=[];S=[];Pt=[];score=0;hearts=3;wave=0;cd=0;inv=0;nextWave();run=true;ui.classList.add('hide');ctrl.style.display=matchMedia('(pointer:coarse)').matches||portrait?'flex':'none';beep(660,.15)}
+function nextWave(){wave++;toSpawn=3+wave*2;spawnT=.5;waveT=1.6;beep(880,.2,'triangle')}
+function over(){run=false;const b=+localStorage.getItem('arc_best')||0;if(score>b)localStorage.setItem('arc_best',score);msg.style.display='block';msg.textContent='Game over! Score '+score+' · Wave '+wave+(score>b?' · New high score!':'');document.getElementById('play').textContent='▶ PLAY AGAIN';showBest();ui.classList.remove('hide');ctrl.style.display='none';beep(160,.4,'sawtooth')}
+function spawn(){const fly=Math.random()<.45+Math.min(wave*.03,.2),side=Math.random()<.5;const sp=(40+wave*9)*(.8+Math.random()*.5);
+ if(fly)E.push({t:'s',x:side?-40:W+40,y:60+Math.random()*(plats[0][1]-260),vx:side?sp:-sp,ph:Math.random()*6,r:28,hp:1});
+ else{const p=plats[Math.floor(Math.random()*plats.length)];E.push({t:'p',x:p[0]+Math.random()*p[2],y:-40,vy:0,vx:(Math.random()<.5?-1:1)*sp*.8,r:30,hp:wave>3?2:1})}}
+function ground(o,h){for(const p of plats){if(o.vy>=0&&o.x>p[0]-5&&o.x<p[0]+p[2]+5&&o.y>=p[1]-2&&o.y-o.vy*0.02<=p[1]+12){o.y=p[1];o.vy=0;return true}}return false}
+function burst(x,y,n,c){for(let i=0;i<n;i++)Pt.push({x,y,vx:(Math.random()-.5)*400,vy:(Math.random()-.8)*400,l:.6,c})}
+function upd(dt){
+ const lft=K.ArrowLeft||K.KeyA||tl,rgt=K.ArrowRight||K.KeyD||tr,jmp=K.ArrowUp||K.KeyW||tj,thr=K.Space||K.KeyJ||tt;
+ P.vx=(rgt-lft)*320;if(P.vx)P.f=Math.sign(P.vx);if(jmp&&P.on){P.vy=-760;P.on=false;beep(520,.06)}
+ P.vy+=1900*dt;P.x+=P.vx*dt;P.y+=P.vy*dt;P.x=Math.max(P.w/2,Math.min(W-P.w/2,P.x));P.on=ground(P,1);if(P.y>H)P.y=plats[0][1];
+ cd-=dt;if(thr&&cd<=0){cd=.28;S.push({x:P.x+P.f*20,y:P.y-P.h*.6,vx:P.f*620,vy:-60,a:0,l:1.4});beep(1200,.04)}
+ for(const s of S){s.x+=s.vx*dt;s.vy+=200*dt;s.y+=s.vy*dt;s.a+=dt*18;s.l-=dt}
+ if(waveT>0)waveT-=dt;else if(toSpawn>0){spawnT-=dt;if(spawnT<=0){spawn();toSpawn--;spawnT=Math.max(.35,1.3-wave*.09)}}
+ else if(!E.length)nextWave();
+ inv-=dt;
+ for(const e of E){if(e.t==='s'){e.ph+=dt*3;e.x+=e.vx*dt;e.y+=Math.sin(e.ph)*40*dt;const dx=P.x-e.x;if(Math.abs(dx)<W*.6)e.vx+=Math.sign(dx)*30*dt*(1+wave*.1);e.y+=Math.sign(P.y-P.h/2-e.y)*(45+wave*5)*dt}
+  else{e.vy+=1500*dt;e.y+=e.vy*dt;e.x+=e.vx*dt;ground(e);if(e.x<20||e.x>W-20)e.vx*=-1;if(e.y>H+50){e.y=-40;e.x=Math.random()*W}}
+  for(const s of S)if(s.l>0&&Math.hypot(s.x-e.x,s.y-e.y)<e.r+18){s.l=0;e.hp--;burst(e.x,e.y,8,'#ffd23f');if(e.hp<=0){e.dead=1;score+=e.t==='s'?10*wave:15*wave;flash=.08;burst(e.x,e.y,18,e.t==='s'?'#fff':'#ff4fd8');beep(300+Math.random()*200,.1,'square')}}
+  if(!e.dead&&inv<=0&&Math.abs(e.x-P.x)<P.w/2+e.r*.6&&Math.abs(e.y-(P.y-P.h/2))<P.h/2+e.r*.6){hearts--;inv=1.3;e.dead=1;burst(P.x,P.y-40,20,'#ff3b3b');beep(120,.25,'sawtooth');if(hearts<=0)return over()}}
+ E=E.filter(e=>!e.dead&&e.x>-120&&e.x<W+120);S=S.filter(s=>s.l>0&&s.x>-50&&s.x<W+50);
+ for(const p of Pt){p.x+=p.vx*dt;p.vy+=900*dt;p.y+=p.vy*dt;p.l-=dt}Pt=Pt.filter(p=>p.l>0);flash-=dt}
+function img(i,x,y,w,h,f){if(!i.complete||!i.naturalWidth)return;cx.save();cx.translate(x,y);if(f<0)cx.scale(-1,1);cx.drawImage(i,-w/2,-h,w,h);cx.restore()}
+function draw(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#1a0833';cx.fillRect(0,0,cv.width,cv.height);
+ cx.setTransform(sc,0,0,sc,(cv.width-W*sc)/2,(cv.height-H*sc)/2);
+ if(IM.bg.complete&&IM.bg.naturalWidth){const r=Math.max(W/1280,H/720);cx.drawImage(IM.bg,(W-1280*r)/2,(H-720*r)/2,1280*r,720*r)}
+ cx.fillStyle='rgba(42,15,74,.55)';cx.fillRect(0,0,W,H);
+ for(const p of plats){cx.fillStyle='#ffb703';cx.fillRect(p[0],p[1],p[2],8);cx.fillStyle='#5a2a8a';cx.fillRect(p[0],p[1]+8,p[2],p===plats[0]?H-p[1]:10);for(let x=p[0]+6;x<p[0]+p[2];x+=22){cx.fillStyle=['#ff4fd8','#3be8ff','#7dff5a','#ffd23f'][(x/22|0)%4];cx.fillRect(x,p[1]+10,12,6)}}
+ img(IM.llama,plats[4][0]+40,plats[4][1],44,64,1);img(IM.lucha,plats[5][0]+plats[5][2]-40,plats[5][1],56,70,-1);
+ if(!run&&!P)return;
+ for(const e of E)e.t==='s'?img(IM.skull,e.x,e.y+e.r,e.r*2,e.r*2.27):img(IM.pin,e.x,e.y,e.r*1.4,e.r*2.94,1);
+ if(P&&(inv<=0||(inv*10|0)%2))img(IM.hero,P.x,P.y,P.w,P.h,P.f);
+ for(const s of S){cx.save();cx.translate(s.x,s.y);cx.rotate(s.a);cx.shadowColor='#ffd23f';cx.shadowBlur=18;if(IM.ch.naturalWidth)cx.drawImage(IM.ch,-20,-14,40,29);cx.restore()}
+ for(const p of Pt){cx.globalAlpha=Math.max(p.l/.6,0);cx.fillStyle=p.c;cx.fillRect(p.x-3,p.y-3,6,6)}cx.globalAlpha=1;
+ if(flash>0){cx.fillStyle='rgba(255,210,63,.15)';cx.fillRect(0,0,W,H)}
+ if(P){cx.font='900 26px system-ui';cx.textBaseline='top';cx.fillStyle='#ffd23f';cx.textAlign='left';cx.fillText('SCORE '+score,14,14);cx.textAlign='right';cx.fillText('WAVE '+wave,W-14,14);cx.textAlign='center';cx.fillStyle='#ff3b6b';cx.fillText('♥'.repeat(Math.max(hearts,0))+'♡'.repeat(3-Math.max(hearts,0)),W/2,14);
+  if(run&&waveT>0){cx.font='900 54px system-ui';cx.fillStyle='#ffd23f';cx.strokeStyle='#3a0d5c';cx.lineWidth=8;cx.strokeText('WAVE '+wave,W/2,H*.35);cx.fillText('WAVE '+wave,W/2,H*.35)}}}
+function loop(t){const dt=Math.min((t-last)/1000,.033);last=t;if(run)upd(dt);draw();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+window.__arc=()=>({run,score,wave,hearts,enemies:E?E.length:0});
+})();
+</script></body></html>
