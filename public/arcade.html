@@ -166,7 +166,7 @@ function melee(){if(!run||P.mcd>0)return;P.mcd=1.2;P.mel=.35;shake=Math.max(shak
 const LV=[
  {n:'Level 1: The Plaza',t:'The calaveras crashed the fiesta. Abuela laces up her chanclas.',bg:'/play/night_bg.webp',f:['#3a1d5e','#341a55'],boss:'The Big Calavera'},
  {n:'Level 2: The Market',t:'They raided the mercado! Abuela grabs her golden chancla.',bg:'/play/mercado_bg.webp',f:['#4a2340','#40203a'],boss:'The Calavera Chef'},
- {n:'Level 3: The Cemetery',t:'The Calavera King wakes up. One abuela. One chancla. No mercy.',bg:'/play/cata_bg.webp',f:['#24304e','#1f2a46'],boss:'The Calavera King'}];
+ {n:'Level 3: The Cemetery',t:'El Rey de los Muertos stirs. One abuela. One chancla. No mercy.',bg:'/play/cata_bg.webp',f:['#24304e','#1f2a46'],boss:'El Rey de los Muertos'}];
 const WAVES=4;
 const UPS=[
  {n:'Fast Hands',d:'Throw chanclas faster',ok:()=>P.rate>.12,f:()=>P.rate*=.75},
@@ -185,17 +185,17 @@ function start(){const ch=CH[SAVE.sel]||CH.abuela,u=SAVE.u;const hh=portrait?150
 function showStory(n){lvl=n;run=false;storyOn=true;const L=LV[n-1];story.querySelector('h2').textContent=L.n;story.querySelector('p').textContent=L.t;story.querySelector('img.bg').src=L.bg;story.style.display='flex';beep(520,.15,'triangle')}
 function storyGo(){if(!storyOn)return;storyOn=false;story.style.display='none';mkWorld();U=[];EP=[];C=[];endT=0;P.x=WW/2;P.y=WH/2;cam.x=P.x-W/2;cam.y=P.y-H/2;E=[];S=[];Pt=[];boss=null;wv=0;cd=0;P.inv=1;nextWave();run=true}
 story.addEventListener('click',storyGo);
-function nextWave(){wv++;toSpawn=5+wv*2+lvl*2;spawnT=.3;waveT=1.6;banner='WAVE '+wv+' / '+WAVES;bannerT=1.6;beep(880,.2,'triangle')}
+function nextWave(){bannerSub='';wv++;toSpawn=5+wv*2+lvl*2;spawnT=.3;waveT=1.6;banner='WAVE '+wv+' / '+WAVES;bannerT=1.6;beep(880,.2,'triangle')}
 function pick(){run=false;picking=true;const opts=UPS.filter(u=>u.ok()).sort(()=>Math.random()-.5).slice(0,3);const c=up.querySelector('.cards');c.innerHTML='';
  for(const u of opts){const b=document.createElement('button');b.innerHTML='<b>'+u.n+'</b>'+u.d;b.onclick=()=>{u.f();up.style.display='none';picking=false;afterPick()};c.appendChild(b)}
  up.querySelector('h2').textContent=(boss===false?'Boss down! ':'Wave '+wv+' cleared! ')+'Pick one';up.style.display='flex';beep(700,.2,'triangle')}
-let afterPick=()=>{};const kill=e=>{pop(e);dropLoot(e);const n=e.t==='b'?25*lvl:(e.t==='gordo'?4:e.t==='mari'?2:1);for(let i=0;i<n;i++)C.push({x:e.x+(Math.random()-.5)*40,y:e.y+(Math.random()-.5)*40,l:12,b:Math.random()*6})};
+let afterPick=()=>{},bannerSub='';const kill=e=>{pop(e);dropLoot(e);const n=e.t==='b'?25*lvl:(e.t==='gordo'?4:e.t==='mari'?2:1);for(let i=0;i<n;i++)C.push({x:e.x+(Math.random()-.5)*40,y:e.y+(Math.random()-.5)*40,l:12,b:Math.random()*6})};
 function pop(e){const n=e.t==='b'?60:14;for(let i=0;i<n;i++){const a=Math.random()*6.28,v=120+Math.random()*320,k=Math.random();Pt.push({x:e.x,y:e.y-e.r,vx:Math.cos(a)*v,vy:Math.sin(a)*v-120,l:.7+Math.random()*.4,g:1,c:k<.35?['#ff8a00','#ffb703','#ff4fd8','#3be8ff'][i%4]:k<.6?'#f4ecd8':null,petal:k<.35,bone:k>=.35&&k<.6,frag:k>=.6,fx:Math.random()*.7,fy:Math.random()*.7,rot:Math.random()*6})}}
 function waveDone(){if(wv<WAVES){afterPick=()=>{run=true;nextWave()};pick()}else if(boss===null&&!ofWait){
  if(lvl===3&&!ofDone()){ofWait=true;sayRaw("The ofrenda isn't ready yet, mijo.",3);setTimeout(()=>{ofWait=false;if(run)endRun('The ofrenda is '+ofN()+'/3. Finish it to face the final boss!')},3000)}
- else if(lvl===3){ofWait=true;sayRaw("The ofrenda is complete — now they come for us.",3);setTimeout(()=>{ofWait=false;if(run)spawnBoss()},2600)}
+ else if(lvl===3){ofWait=true;sayRaw("The ofrenda is complete — El Rey de los Muertos is coming, mijo.",3);setTimeout(()=>{ofWait=false;if(run)spawnBoss()},2600)}
  else spawnBoss()}}
-function spawnBoss(){const a=Math.random()*6.28;const fin=lvl===3;boss={t:'b',fin,x:Math.max(100,Math.min(WW-100,P.x+Math.cos(a)*600)),y:Math.max(100,Math.min(WH-100,P.y+Math.sin(a)*600)),r:(portrait?78:62)*(fin?1.45:1),hp:fin?220:45*lvl,mx:fin?220:45*lvl,sp:fin?70:55+lvl*10,c:fin?['#111111','#ffd23f']:['#3a0d5c','#ffd23f'],ph:0,st:'walk',stT:3,sum:5};E.push(boss);banner=(fin?'FINAL BOSS: ':'')+LV[lvl-1].boss.toUpperCase()+'!';bannerT=2;shake=.5;beep(90,.6,'sawtooth',.08)}
+function spawnBoss(){const a=Math.random()*6.28;const fin=lvl===3;boss={t:'b',fin,x:Math.max(100,Math.min(WW-100,P.x+Math.cos(a)*600)),y:Math.max(100,Math.min(WH-100,P.y+Math.sin(a)*600)),r:(portrait?78:62)*(fin?1.45:1),hp:fin?220:45*lvl,mx:fin?220:45*lvl,sp:fin?70:55+lvl*10,c:fin?['#111111','#ffd23f']:['#3a0d5c','#ffd23f'],ph:0,st:'walk',stT:3,sum:5};E.push(boss);banner=fin?'El Rey de los Muertos':LV[lvl-1].boss.toUpperCase()+'!';bannerSub=fin?'The King of the Dead':'';bannerT=fin?3:2;shake=.5;beep(90,.6,'sawtooth',.08)}
 function bossDead(){score+=500*lvl;boss=false;if(lvl===2)addOf('flor');if(!SAVE.ch.luchador){SAVE.ch.luchador=1;save();unlockLine('luchador')}burst(P.x,P.y-80,40,'#ffd23f');const a=Math.random()*6.28;U.push({k:'llama',x:Math.max(120,Math.min(WW-120,P.x+Math.cos(a)*160)),y:Math.max(140,Math.min(WH-120,P.y+Math.sin(a)*160)),b:0});banner='A GOLDEN LLAMA APPEARED!';bannerT=2;endT=9}
 function endRun(t){run=false;const b=+localStorage.getItem('arc_best')||0;if(score>b)localStorage.setItem('arc_best',score);msg.style.display='block';msg.textContent=t+' Score '+score+' · Level '+lvl+(score>b?' · New high score!':'');$('play').textContent='▶ PLAY AGAIN';showBest();ui.classList.remove('hide')}
 function over(){endRun('Game over!');beep(160,.4,'sawtooth')}
@@ -346,7 +346,7 @@ for(const u of U){items.push({y:u.y,d:()=>drawPick(u)})}
   cx.fillStyle='#ffd23f';cx.beginPath();cx.arc(48,by+bh/2,38,0,7);cx.fill();cx.save();cx.beginPath();cx.arc(48,by+bh/2,34,0,7);cx.clip();cx.fillStyle='#3a1466';cx.fill();if(IM.hero.naturalWidth)cx.drawImage(IM.hero,150,125,180,200,14,by+bh/2-34,68,76);cx.restore();
   cx.textAlign='left';cx.textBaseline='top';ln.forEach((t,i)=>{cx.fillStyle='#ffd23f';cx.fillText(t,bx+12,by+10+i*22)});cx.restore()}
  if(boss){const bw=W*.6,bx=(W-bw)/2,by=50;cx.fillStyle='#1a0a26';cx.fillRect(bx-3,by-3,bw+6,22);cx.fillStyle='#ff3b3b';cx.fillRect(bx,by,bw*Math.max(boss.hp,0)/boss.mx,16);cx.font='900 14px system-ui';T2(LV[lvl-1].boss,W/2,by+22,'#fff','center')}
- if(bannerT>0){let fz=portrait?40:52;cx.font='900 '+fz+'px system-ui';while(cx.measureText(banner).width>W-30&&fz>16){fz-=2;cx.font='900 '+fz+'px system-ui'}cx.lineWidth=9;cx.strokeStyle='#3a0d5c';cx.textAlign='center';cx.strokeText(banner,W/2,H*.3);cx.fillStyle='#ffd23f';cx.fillText(banner,W/2,H*.3)}
+ if(bannerT>0){let fz=portrait?40:52;cx.font='900 '+fz+'px system-ui';while(cx.measureText(banner).width>W-30&&fz>16){fz-=2;cx.font='900 '+fz+'px system-ui'}cx.lineWidth=9;cx.strokeStyle='#3a0d5c';cx.textAlign='center';cx.strokeText(banner,W/2,H*.3);cx.fillStyle='#ffd23f';cx.fillText(banner,W/2,H*.3);if(bannerSub){cx.font='900 '+Math.round(fz*.5)+'px system-ui';cx.lineWidth=6;cx.strokeText(bannerSub,W/2,H*.3+fz*1.1);cx.fillStyle='#fff';cx.fillText(bannerSub,W/2,H*.3+fz*1.1)}}
  cx.setTransform(1,0,0,1,0,0);const d=cv.width/innerWidth;
  for(const k of['m','a'])if(st[k]){const s=st[k];cx.strokeStyle='rgba(255,210,63,.6)';cx.lineWidth=3*d;cx.beginPath();cx.arc(s.x0*d,s.y0*d,50*d,0,7);cx.stroke();const v=stickV(s);cx.fillStyle='rgba(255,183,3,.7)';cx.beginPath();cx.arc((s.x0+v[0]*50)*d,(s.y0+v[1]*50)*d,22*d,0,7);cx.fill()}
  if(run&&matchMedia('(pointer:coarse)').matches&&!st.m&&!st.a){cx.font=`700 ${13*d}px system-ui`;cx.fillStyle='rgba(255,255,255,.45)';cx.textAlign='center';cx.fillText('drag here to move',innerWidth*.25*d,(innerHeight-40)*d);cx.fillText('drag here to aim',innerWidth*.75*d,(innerHeight-40)*d)}}
