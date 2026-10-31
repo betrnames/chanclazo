@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 ---
 <Base>
 <main class="home">
-  <img id="bg" class="bg" src="/lp/final/bg-2x3.webp" width="1200" height="1800" fetchpriority="high" alt="" />
+  <img id="bg" class="bg" src="/lp/final/bg-9x16.webp" width="1100" height="1956" fetchpriority="high" alt="" />
   <h1 class="ttlwrap"><img id="ttl" src="/lp/lander-title.webp" width="1681" height="363" alt="Chanclazo: the abuela, the llama piñata and the luchador. When words fail, the chanclazo speaks!" /></h1>
   <div id="rib" class="rib">When words fail, the chanclazo speaks!</div>
   <div id="grp" class="grp">
@@ -60,7 +60,7 @@ import Base from '../layouts/Base.astro';
   const PADT = 40;
   const PARTS: [string, number, number, number, number][] = [['earL', 480, 7, 82, 168], ['earR', 554, 18, 73, 101], ['mouth', 613, 243, 73, 52], ['jaw', 613, 243, 73, 52]];
   // background choice by aspect; fy = fraction of image height where the top step (trio's feet) sits
-  const BGS = [{ min: 1.3, src: '/lp/final/bg-16x9.webp', w: 1500, h: 844, fy: 0.76 }, { min: 0.85, src: '/lp/final/bg-1x1.webp', w: 1200, h: 1200, fy: 0.75 }, { min: 0, src: '/lp/final/bg-2x3.webp', w: 1200, h: 1800, fy: 0.66 }];
+  const BGS = [{ min: 1, src: '/lp/final/bg-16x9.webp', w: 1500, h: 844, fy: 0.735 }, { min: 0, src: '/lp/final/bg-9x16.webp', w: 1100, h: 1956, fy: 0.6 }];
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   const bg = $('bg') as HTMLImageElement, ttl = $('ttl'), rib = $('rib'), grp = $('grp'), cta = $('cta');
   const put = (el: HTMLElement, x: number, y: number, w: number, h?: number) => Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, ...(h !== undefined ? { height: `${h}px` } : {}), visibility: 'visible' });
