@@ -70,21 +70,25 @@ import Base from '../layouts/Base.astro';
     if (!bg.src.endsWith(B.src)) bg.src = B.src;
     const s = Math.max(vw / B.w, vh / B.h), oy = (vh - B.h * s) / 2;
     let feet = oy + B.fy * B.h * s;
-    const top0 = ar < 1 ? Math.max(44, vh * 0.05) : Math.max(12, vh * 0.03);
-    const tw = Math.min(vw * 0.9, vh * (ar >= 1 ? 0.62 : 0.6), 720), th = tw * T.h / T.w;
-    put(ttl, (vw - tw) / 2, top0, tw, th);
-    rib.style.fontSize = `${Math.max(11, Math.min(18, tw * 0.042))}px`;
-    rib.style.visibility = 'visible';
-    const rw = rib.offsetWidth, rh = rib.offsetHeight;
-    const ry = top0 + th * 0.92;
-    put(rib, (vw - rw) / 2, ry, rw);
+    const top0 = ar < 1 ? 44 : Math.max(12, vh * 0.03), pad = Math.max(8, vw * 0.03);
     const ctaTop = cta.getBoundingClientRect().top - home.getBoundingClientRect().top;
     feet = Math.min(feet, ctaTop - 6);
-    const avail = feet - (ry + rh + 4);
-    let gh = avail, gw = gh * C.w / C.h;
     const maxW = ar >= 1 ? Math.min(vw * 0.62, 900) : vw * 0.98;
+    let gh = feet - top0, gw = gh * C.w / C.h;
     if (gw > maxW) { gw = maxW; gh = gw * C.h / C.w; }
-    const gx = (vw - gw) / 2, gy = feet - gh, k = gw / C.w;
+    // Live-site rule: title sits just below the trio's waist (over the characters), ribbon right under it.
+    let k = 0, gx = 0, gy = 0, tw = 0, th = 0, ty = 0, rw = 0, rh = 0, ry = 0;
+    for (let n = 0; n < 60; n++) {
+      gx = (vw - gw) / 2; gy = feet - gh; k = gw / C.w;
+      tw = ar >= 1 ? Math.min(gw * 1.08, vw * 0.92) : Math.min(vw - 2 * pad, 640); th = tw * T.h / T.w;
+      ty = gy + (PADT + 880 * 0.62) * k;
+      rib.style.fontSize = `${Math.max(11, Math.min(18, tw * 0.042))}px`; rib.style.visibility = 'visible';
+      rw = rib.offsetWidth; rh = rib.offsetHeight; ry = ty + th * 0.92;
+      if (ry + rh <= ctaTop - 6) break;
+      gh *= 0.97; gw = gh * C.w / C.h;
+    }
+    put(ttl, (vw - tw) / 2, ty, tw, th);
+    put(rib, (vw - rw) / 2, ry, rw);
     put(grp, gx, gy, gw, gh);
     for (const [id, x, y, w, h] of PARTS) put($(id), x * k, y * k, w * k, h * k);
   };
