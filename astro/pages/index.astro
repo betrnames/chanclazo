@@ -29,7 +29,11 @@ import Base from '../layouts/Base.astro';
   .ttlwrap{margin:0;position:absolute;z-index:6;left:0;top:0;line-height:0}
   #ttl{position:absolute;visibility:hidden;max-width:none;animation:glow 3s ease-in-out infinite}
   @keyframes glow{0%,100%{filter:drop-shadow(0 0 6px rgba(255,183,3,.45));transform:scale(1)}50%{filter:drop-shadow(0 0 22px rgba(255,183,3,.9));transform:scale(1.03)}}
-  .rib{position:absolute;z-index:6;visibility:hidden;white-space:nowrap;color:#fff;font:800 16px system-ui,sans-serif;letter-spacing:.2px;padding:6px 26px;background:linear-gradient(#4a1d86,#2a0f52);border-top:2px solid #b07bff;border-bottom:2px solid #b07bff;clip-path:polygon(0 0,100% 0,96% 50%,100% 100%,0 100%,4% 50%);text-shadow:0 2px 0 #0008}
+  .rib{position:absolute;z-index:6;visibility:hidden;white-space:nowrap;color:#f6ead2;font:800 16px Georgia,'Times New Roman',serif;letter-spacing:.3px;padding:.38em 1.6em;text-shadow:0 1px 0 #1a0d14,0 2px 4px rgba(0,0,0,.7);
+    background:radial-gradient(circle at 20% 30%,rgba(255,255,255,.06) 0 1px,transparent 2px) 0 0/9px 7px,radial-gradient(circle at 70% 60%,rgba(0,0,0,.18) 0 1px,transparent 2px) 0 0/11px 9px,linear-gradient(180deg,#5a3a4c 0%,#43283a 45%,#33202e 100%);
+    border-top:1px solid rgba(214,180,150,.35);border-bottom:1px solid rgba(0,0,0,.5);border-radius:3px/40%;box-shadow:inset 0 0 14px rgba(15,5,10,.75),inset 0 2px 0 rgba(255,230,200,.08),0 4px 10px rgba(0,0,0,.45)}
+  .rib::before,.rib::after{content:'';position:absolute;top:-.18em;bottom:-.18em;width:1.1em;border-radius:45%;background:radial-gradient(ellipse at 50% 50%,#22141d 0 22%,#4b2f40 28%,#62424f 55%,#3a2331 80%);box-shadow:inset 0 0 6px rgba(0,0,0,.8),0 3px 6px rgba(0,0,0,.5)}
+  .rib::before{left:-.55em}.rib::after{right:-.55em}
   .grp{position:absolute;z-index:4;visibility:hidden;animation:bob 3.2s ease-in-out infinite;transform-origin:50% 100%}
   @keyframes bob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.2%) scale(1.008,.995)}}
   .herogrp{position:absolute;left:0;top:0;width:100%;height:100%;filter:drop-shadow(0 12px 14px rgba(0,0,0,.55))}
