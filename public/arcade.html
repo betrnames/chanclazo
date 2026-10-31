@@ -73,6 +73,16 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 @media (min-aspect-ratio:1/1){.mm .col{padding-top:5vh}.mm .trio{height:40vh}.mm .boss{height:66vh;top:8vh}}
 @media (prefers-reduced-motion:reduce){.mm *{animation:none!important}}
 
+#tools{position:fixed;top:max(8px,env(safe-area-inset-top));right:8px;z-index:12;display:none;gap:6px;align-items:center}
+#tools.on{display:flex}
+#tools button{background:rgba(20,8,40,.85);color:#fff;border:1px solid #7a5ac8;border-radius:10px;padding:6px 10px;font:800 12px system-ui,sans-serif;cursor:pointer}
+#tools .snd .tr{width:50px}
+#ui.panel{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(10,5,20,.88);padding:20px}
+#ui.panel.hide{display:none}
+.ttl2{width:min(80vw,460px)}
+.rib2{color:#fff;font:800 16px system-ui,sans-serif;text-align:center;max-width:90vw;background:#2a0f52;border:2px solid #ffd23f;border-radius:8px;padding:8px 14px}
+.home2{color:#ffd23f;font:700 13px system-ui,sans-serif}
+#how{z-index:13}
 </style><style>
 #up{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(20,5,40,.88);z-index:6;padding:16px}
 #up h2{color:#ffd23f;margin:0;font-size:clamp(24px,6vw,36px);font-weight:900}
@@ -109,33 +119,14 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <button id="mel" aria-label="Chancla whirl">🌀</button>
 <div id="unl"><i></i><span></span></div>
 <div id="up"><h2></h2><div class="cards"></div></div>
-<div id="ui" class="mm">
- <div class="stars"></div><div class="moon"></div><div class="hills"></div>
- <div class="picado"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
- <img class="boss" src="/play/calavera_gabe.webp" alt="" aria-hidden="true">
- <img class="sk a" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="left:-4vw;bottom:30vh;height:13vh;--r:-10deg;--f:1;animation-delay:-0.65s">
-<img class="sk c" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="left:6vw;bottom:15vh;height:16vh;--r:0deg;--f:1;animation-delay:-0.30s">
-<img class="sk b" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="left:-6vw;bottom:-2vh;height:22vh;--r:8deg;--f:1;animation-delay:-1.30s">
-<img class="sk d" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="left:20vw;bottom:-5vh;height:12vh;--r:-6deg;--f:1;animation-delay:-0.14s">
-<img class="sk b" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="right:-4vw;bottom:32vh;height:12vh;--r:10deg;--f:-1;animation-delay:-1.07s">
-<img class="sk a" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="right:5vw;bottom:14vh;height:17vh;--r:4deg;--f:-1;animation-delay:-0.73s">
-<img class="sk c" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="right:-7vw;bottom:-3vh;height:23vh;--r:0deg;--f:-1;animation-delay:-0.12s">
-<img class="sk d" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="right:21vw;bottom:-6vh;height:11vh;--r:8deg;--f:-1;animation-delay:-1.01s">
-<img class="sk d" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="left:2vw;top:22vh;height:9vh;--r:-14deg;--f:1;animation-delay:-0.07s">
-<img class="sk a" src="/play/calavera_gabe.webp" alt="" aria-hidden="true" style="right:3vw;top:24vh;height:8vh;--r:12deg;--f:-1;animation-delay:-0.87s">
- <i class="spark" style="left:12%;top:23%;animation-delay:-0.22s"></i><i class="spark" style="left:58%;top:11%;animation-delay:-1.98s"></i><i class="spark" style="left:19%;top:68%;animation-delay:-0.54s"></i><i class="spark" style="left:84%;top:45%;animation-delay:-2.27s"></i><i class="spark" style="left:77%;top:45%;animation-delay:-0.95s"></i><i class="spark" style="left:32%;top:10%;animation-delay:-1.34s"></i><i class="spark" style="left:21%;top:26%;animation-delay:-1.01s"></i><i class="spark" style="left:73%;top:15%;animation-delay:-1.37s"></i><i class="spark" style="left:75%;top:60%;animation-delay:-1.64s"></i><i class="spark" style="left:17%;top:45%;animation-delay:-1.37s"></i>
- <div class="col">
-  <img class="ttl" src="/lp/lander-title.webp" alt="Chanclazo">
-  <div class="rib">One abuela. One chancla. A lot of calaveras.</div>
-  <img class="trio" src="/lp/lander-chars.webp" alt="Abuela, the llama piñata and the luchador">
-  <div id="msg" class="rib" style="display:none;margin-top:1vh"></div>
-  <div class="grow"></div>
-  <button id="play" class="playpill">PLAY</button>
-  <div class="sec"><button id="shopB">🛒 Shop</button><button id="howB">📖 How to Play</button></div>
-  <button id="sndB" class="snd" type="button"><span>🔊</span><span class="tr"><b></b></span><span class="lbl">100%</span></button>
-  <div id="best"></div>
- </div>
- <div id="how">Phone: drag the left side of the screen to move and the right side to aim. Abuela throws chanclas nonstop in the direction you aim. Tap the 🌀 button for a spinning chancla whirl that smashes nearby skulls. Computer: move with WASD and aim with the mouse, then click or hold to throw (arrow keys also aim and throw). Right-click or E does the chancla whirl. Sugar skulls swarm in from every side and get bigger every wave. You have 3 hearts. After each wave, pick an upgrade. Beat the boss to clear the level. Smashed skulls drop gold coins; spend them in the Shop on upgrades and new characters. Clear all 3 levels to win!</div>
+<div id="tools"><button id="shopB">🛒 Shop</button><button id="howB">📖 How to Play</button><button id="sndB" class="snd" type="button"><span>🔊</span><span class="tr"><b></b></span><span class="lbl">100%</span></button></div>
+<div id="how">Phone: drag the left side of the screen to move and the right side to aim. Abuela throws chanclas nonstop in the direction you aim. Tap the 🌀 button for a spinning chancla whirl that smashes nearby skulls. Computer: move with WASD and aim with the mouse, then click or hold to throw (arrow keys also aim and throw). Right-click or E does the chancla whirl. Sugar skulls swarm in from every side and get bigger every wave. You have 3 hearts. After each wave, pick an upgrade. Beat the boss to clear the level. Smashed skulls drop gold coins; spend them in the Shop on upgrades and new characters. Clear all 3 levels to win!</div>
+<div id="ui" class="panel hide">
+ <img class="ttl2" src="/lp/lander-title.webp" alt="Chanclazo">
+ <div id="msg" class="rib2" style="display:none"></div>
+ <button id="play" class="playpill">PLAY AGAIN</button>
+ <div id="best"></div>
+ <a class="home2" href="/">← Back to Chanclazo</a>
 </div>
 <script>
 (()=>{
@@ -162,7 +153,7 @@ const ui=$('ui'),msg=$('msg'),bestEl=$('best'),up=$('up'),story=$('story');
 const showBest=()=>bestEl.textContent='High score: '+(+localStorage.getItem('arc_best')||0);showBest();
 $('howB').onclick=()=>{const h=$('how');h.style.display=h.style.display==='block'?'none':'block'};
 const sb=$('sndB');const sl=()=>{sb.classList.toggle('off',!snd);sb.querySelector('.lbl').textContent=snd?'100%':'Off'};sl();sb.onclick=()=>{snd=!snd;localStorage.setItem('arc_snd',snd?1:0);sl()};
-$('play').onclick=start;
+$('play').onclick=start;const tools=$('tools');
 const SAVE=JSON.parse(localStorage.getItem('arc_save')||'{}');SAVE.coins=SAVE.coins||0;SAVE.u=SAVE.u||{rate:0,dmg:0,spread:0,pierce:0};SAVE.ch=SAVE.ch||{abuela:1};SAVE.sel=SAVE.sel||'abuela';SAVE.of=SAVE.of||{};
 const save=()=>localStorage.setItem('arc_save',JSON.stringify(SAVE));
 const CH={abuela:{n:'Abuela',d:'Balanced. 3 hearts.',cost:0,src:[55,125,345,795],hp:3,spd:240,rate:.42},
@@ -237,9 +228,10 @@ const COL=[['#ff4fd8','#ffd23f'],['#3be8ff','#ff4fd8'],['#7dff5a','#ff8a00'],['#
 let run=false,picking=false,storyOn=false,P,E,S,Pt,TB,score,lvl,wv,toSpawn,spawnT,cd,waveT,last=0,flash=0,T=0,cam={x:0,y:0},boss=null,banner='',bannerT=0,shake=0;
 function mkWorld(){WW=Math.round(W*2.4);WH=Math.round(H*2.2);TB=[];let tries=0;while(TB.length<(portrait?16:18)&&tries++<500){const t={x:80+Math.random()*(WW-160),y:80+Math.random()*(WH-160),r:portrait?32:26};if(Math.hypot(t.x-WW/2,t.y-WH/2)<220)continue;if(TB.some(o=>Math.hypot(o.x-t.x,o.y-t.y)<190))continue;TB.push(t)}}
 function push(o,rr){for(const t of TB){const dx=o.x-t.x,dy=o.y-t.y,d=Math.hypot(dx,dy)||1,m=t.r+rr;if(d<m){o.x=t.x+dx/d*m;o.y=t.y+dy/d*m}}o.x=Math.max(rr,Math.min(WW-rr,o.x));o.y=Math.max(rr+20,Math.min(WH-10,o.y))}
+function mkP(){const ch=CH[SAVE.sel]||CH.abuela,u=SAVE.u;const hh=portrait?150:105;P={x:0,y:0,f:1,hp:ch.hp,inv:0,tA:9,pend:0,mcd:0,mel:0,rate:ch.rate*Math.pow(.85,u.rate||0),spread:1+2*(u.spread||0),pierce:u.pierce?1:0,dmg:1+(u.dmg||0),spd:ch.spd,lucha:0,src:ch.src,h:hh,w:hh*ch.src[2]/ch.src[3]};C=[];sessCoins=0;U=[];EP=[];uT=2;P.fx={};}
 function start(){const ch=CH[SAVE.sel]||CH.abuela,u=SAVE.u;const hh=portrait?150:105;P={x:0,y:0,f:1,hp:ch.hp,inv:0,tA:9,pend:0,mcd:0,mel:0,rate:ch.rate*Math.pow(.85,u.rate||0),spread:1+2*(u.spread||0),pierce:u.pierce?1:0,dmg:1+(u.dmg||0),spd:ch.spd,lucha:0,src:ch.src,h:hh,w:hh*ch.src[2]/ch.src[3]};C=[];sessCoins=0;U=[];EP=[];uT=2;P.fx={};score=0;lvl=0;ui.classList.add('hide');up.style.display='none';msg.style.display='none';showStory(1)}
 function showStory(n){lvl=n;run=false;storyOn=true;const L=LV[n-1];story.querySelector('h2').textContent=L.n;story.querySelector('p').textContent=L.t;story.querySelector('img.bg').src=L.bg;story.style.display='flex';beep(520,.15,'triangle')}
-function storyGo(){if(!storyOn)return;storyOn=false;story.style.display='none';mkWorld();U=[];EP=[];C=[];endT=0;P.x=WW/2;P.y=WH/2;cam.x=P.x-W/2;cam.y=P.y-H/2;E=[];S=[];Pt=[];boss=null;wv=0;cd=0;P.inv=1;nextWave();run=true}
+function storyGo(){if(!storyOn)return;if(lvl===1&&score===0)mkP();storyOn=false;story.style.display='none';mkWorld();U=[];EP=[];C=[];endT=0;P.x=WW/2;P.y=WH/2;cam.x=P.x-W/2;cam.y=P.y-H/2;E=[];S=[];Pt=[];boss=null;wv=0;cd=0;P.inv=1;nextWave();run=true}
 story.addEventListener('click',storyGo);
 function nextWave(){bannerSub='';wv++;toSpawn=5+wv*2+lvl*2;spawnT=.3;waveT=1.6;banner='WAVE '+wv+' / '+WAVES;bannerT=1.6;beep(880,.2,'triangle')}
 function pick(){run=false;picking=true;const opts=UPS.filter(u=>u.ok()).sort(()=>Math.random()-.5).slice(0,3);const c=up.querySelector('.cards');c.innerHTML='';
@@ -409,8 +401,8 @@ for(const u of U){items.push({y:u.y,d:()=>drawPick(u)})}
  cx.setTransform(1,0,0,1,0,0);const d=cv.width/innerWidth;
  for(const k of['m','a'])if(st[k]){const s=st[k];cx.strokeStyle='rgba(255,210,63,.6)';cx.lineWidth=3*d;cx.beginPath();cx.arc(s.x0*d,s.y0*d,50*d,0,7);cx.stroke();const v=stickV(s);cx.fillStyle='rgba(255,183,3,.7)';cx.beginPath();cx.arc((s.x0+v[0]*50)*d,(s.y0+v[1]*50)*d,22*d,0,7);cx.fill()}
  if(run&&matchMedia('(pointer:coarse)').matches&&!st.m&&!st.a){cx.font=`700 ${13*d}px system-ui`;cx.fillStyle='rgba(255,255,255,.45)';cx.textAlign='center';cx.fillText('drag here to move',innerWidth*.25*d,(innerHeight-40)*d);cx.fillText('drag here to aim',innerWidth*.75*d,(innerHeight-40)*d)}}
-function loop(t){melB.style.display=run&&(matchMedia('(pointer:coarse)').matches||portrait)?'block':'none';const dt=Math.min((t-last)/1000,.033);last=t;if(run)upd(dt);draw();requestAnimationFrame(loop)}
-requestAnimationFrame(loop);
+function loop(t){tools.classList.toggle('on',!run);melB.style.display=run&&(matchMedia('(pointer:coarse)').matches||portrait)?'block':'none';const dt=Math.min((t-last)/1000,.033);last=t;if(run)upd(dt);draw();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);setTimeout(start,0);
 const DBG=/[?&]debug=1/.test(location.search);if(DBG)window.__arc=()=>({run,picking,storyOn,score,lvl,wave:wv,hp:P&&P.hp,enemies:E?E.length:0,boss:boss?boss.hp:boss,cam:[cam.x|0,cam.y|0]});
 if(DBG)window.__dbg={of:(...k)=>{for(const x of k)addOf(x)},lvl3:()=>{lvl=3},unlock:k=>unlockLine(k),pick:(k,c)=>U.push({k,card:c,x:P.x+(Math.random()-.5)*200,y:P.y+80+Math.random()*60,b:Math.random()*6}),fx:c=>grab({k:'card',card:c,x:P.x,y:P.y}),killBoss:()=>{if(boss){boss.hp=0}},llama:()=>U.push({x:P.x+60,y:P.y,b:0}),mix:()=>{for(const k of['chiq','bail','brin','mari','gordo']){const T0=TY[k];E.push({t:k,c:T0.c,x:P.x-200+Object.keys(TY).indexOf(k)*100,y:P.y-220,sp:0,r:T0.r*(portrait?1.35:1),hp:99,ph:Math.random()*6,z:0,hopT:9,shT:99})}},coins:n=>{SAVE.coins+=n;save()},melee:()=>melee(),boss:()=>{toSpawn=0;E=[];wv=WAVES;spawnBoss()},god:()=>{P.hp=99}};
 })();
