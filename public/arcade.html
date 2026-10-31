@@ -13,7 +13,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #ui.hide{display:none}
 #ui img.title{width:min(88vw,620px);height:auto}
 .ribbon{background:#24093a;color:#ffd23f;border:2px solid #ffd23f;border-radius:6px;padding:5px 14px;font-weight:800;font-size:clamp(12px,3.4vw,17px);letter-spacing:.5px;text-align:center}
-.cast{display:flex;align-items:flex-end;justify-content:center;gap:6px}#ui img.hero{height:min(30vh,250px);width:auto}#ui img.side{height:min(20vh,165px);width:auto;max-width:24vw;object-fit:contain}#ui img.hero{max-width:44vw;object-fit:contain}#ui img.ll{height:min(15vh,120px)}
+.cast{display:flex;align-items:flex-end;justify-content:center;gap:6px}#ui img.hero{height:min(30vh,250px);width:auto}#ui img.side{height:min(20vh,165px);width:auto;max-width:24vw;object-fit:contain}#ui img.hero{max-width:44vw;object-fit:contain}#ui img.ll{height:min(18vh,150px)}
 #play{background:linear-gradient(#ffe066,#ffb703);color:#3a0d5c;border:0;border-radius:999px;font-weight:900;font-size:clamp(26px,7vw,40px);padding:14px 64px;box-shadow:0 6px 0 #b86b00,0 0 30px rgba(255,210,63,.6);cursor:pointer;letter-spacing:2px}
 #play:active{transform:translateY(3px);box-shadow:0 3px 0 #b86b00}
 .small{display:flex;gap:10px}
@@ -36,7 +36,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div id="ui">
  <img class="title" src="/lp/lander-title.webp" alt="Chanclazo">
  <div class="ribbon">One abuela. One chancla. A lot of calaveras.</div>
- <div class="cast"><img class="side" src="/play/luchador_sprite.webp" alt="Luchador"><img class="hero" src="/play/abuela_sprite.webp" alt="Abuela"><img class="side ll" src="/play/t_pinata.webp" alt="Llama piñata"></div>
+ <div class="cast"><img class="side" src="/s3d/kid.webp" alt="Sidro"><img class="hero" src="/s3d/abuela.webp" alt="Abuela"><img class="side ll" src="/s3d/llama.webp" alt="Llama piñata"></div>
  <div id="msg" class="ribbon" style="display:none"></div>
  <button id="play">▶ PLAY</button>
  <div class="small"><button id="howB">How to Play</button><button id="sndB">Sound: On</button></div>
@@ -47,7 +47,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 (()=>{
 const cv=document.getElementById('c'),cx=cv.getContext('2d');
 const L=s=>{const i=new Image();i.src=s;return i};
-const IM={bg:L('/play/night_bg.webp'),hero:L('/play/abuela_sprite.webp'),skull:L('/play/t_skull.webp'),walk:L('/play/calaca_sprite.webp'),ch:L('/play/t_chancla.webp'),llama:L('/play/t_pinata.webp'),lucha:L('/play/luchador_sprite.webp')};
+const IM={bg:L('/play/night_bg.webp'),hero:L('/s3d/abuela.webp'),skull:L('/s3d/skull.webp'),walk:L('/play/calaca_sprite.webp'),ch:L('/s3d/chancla_gold.webp'),llama:L('/s3d/llama.webp'),lucha:L('/s3d/kid.webp')};
 let W,H,sc,ox,oy,portrait;
 function layout(){const d=Math.min(devicePixelRatio||1,2);cv.width=innerWidth*d;cv.height=innerHeight*d;portrait=innerHeight>innerWidth;W=portrait?540:960;H=portrait?960:540;sc=Math.min(cv.width/W,cv.height/H);ox=(cv.width-W*sc)/2;oy=(cv.height-H*sc)/2}
 addEventListener('resize',layout);layout();
@@ -76,7 +76,7 @@ const UPS=[
  {id:'gold',n:'Golden Chancla',d:'Chanclas pierce through skulls',ok:()=>!P.pierce,f:()=>P.pierce=1},
  {id:'heart',n:'+1 Heart',d:'Heal one heart (max 5)',ok:()=>P.hp<5,f:()=>P.hp++},
  {id:'speed',n:'Quick Feet',d:'Move faster',ok:()=>P.spd<330,f:()=>P.spd+=40},
- {id:'lucha',n:'Luchador Buddy',d:'A luchador circles you and smashes skulls',ok:()=>P.lucha<2,f:()=>P.lucha++},
+ {id:'lucha',n:'Sidro Buddy',d:'Sidro circles you and smashes skulls',ok:()=>P.lucha<2,f:()=>P.lucha++},
 ];
 let run=false,picking=false,P,E,S,Pt,score,wave,toSpawn,spawnT,cd,waveT,last=0,flash=0,T=0;
 const tombs=[];for(let i=0;i<10;i++)tombs.push([Math.random(),Math.random(),.7+Math.random()*.6]);
@@ -118,13 +118,13 @@ function draw(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#1a0833';cx.fillRect(
  // plaza floor tiles
  cx.strokeStyle='rgba(255,210,63,.08)';cx.lineWidth=2;for(let x=0;x<W;x+=60){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke()}for(let y=0;y<H;y+=60){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke()}
  for(const t of tombs){const x=t[0]*W,y=40+t[1]*(H-80),s=t[2];cx.fillStyle='#4b2a75';cx.beginPath();cx.roundRect(x-14*s,y-30*s,28*s,30*s,[12*s,12*s,2,2]);cx.fill();cx.fillStyle='#ffb703';cx.beginPath();cx.arc(x,y+2,4*s,0,7);cx.fill()}
- img(IM.llama,W-50,H-20,48,70,-1);
+ img(IM.llama,W-50,H-20,56,106,-1);
  if(!P)return;
  const items=E.map(e=>({y:e.y,d:()=>{shadow(e.x,e.y+e.r,e.r*.8);e.t==='s'?img(IM.skull,e.x,e.y+e.r,e.r*2,e.r*2.27,1):img(IM.walk,e.x,e.y+e.r*1.4,e.r*1.3,e.r*2.8,1)}}));
  items.push({y:P.y,d:()=>{shadow(P.x,P.y,P.w*.45);if(P.inv<=0||(P.inv*10|0)%2)img(IM.hero,P.x,P.y,P.w,P.h,P.f)}});
- for(let i=0;i<P.lucha;i++){const a=T*2.4+i*Math.PI,bx=P.x+Math.cos(a)*85,by=P.y-P.h/2+Math.sin(a)*85;items.push({y:by+30,d:()=>{shadow(bx,by+30,18);img(IM.lucha,bx,by+30,44,56,Math.cos(a)>0?1:-1)}})}
+ for(let i=0;i<P.lucha;i++){const a=T*2.4+i*Math.PI,bx=P.x+Math.cos(a)*85,by=P.y-P.h/2+Math.sin(a)*85;items.push({y:by+30,d:()=>{shadow(bx,by+30,18);img(IM.lucha,bx,by+30,36,64,Math.cos(a)>0?1:-1)}})}
  items.sort((a,b)=>a.y-b.y).forEach(i=>i.d());
- for(const s of S){cx.save();cx.translate(s.x,s.y);cx.rotate(s.a);cx.shadowColor=P.pierce?'#fff6a0':'#ffd23f';cx.shadowBlur=P.pierce?26:16;if(IM.ch.naturalWidth)cx.drawImage(IM.ch,-18,-13,36,26);cx.restore()}
+ for(const s of S){cx.save();cx.translate(s.x,s.y);cx.rotate(s.a);cx.shadowColor=P.pierce?'#fff6a0':'#ffd23f';cx.shadowBlur=P.pierce?26:16;if(IM.ch.naturalWidth)cx.drawImage(IM.ch,-17,-17,34,34);cx.restore()}
  for(const p of Pt){cx.globalAlpha=Math.max(p.l/.5,0);cx.fillStyle=p.c;cx.fillRect(p.x-3,p.y-3,6,6)}cx.globalAlpha=1;
  if(flash>0){cx.fillStyle='rgba(255,210,63,.12)';cx.fillRect(0,0,W,H)}
  cx.font='900 24px system-ui';cx.textBaseline='top';cx.fillStyle='#ffd23f';cx.textAlign='left';cx.fillText('SCORE '+score,14,14);cx.textAlign='right';cx.fillText('WAVE '+wave,W-14,14);cx.textAlign='center';cx.fillStyle='#ff3b6b';cx.fillText('♥'.repeat(Math.max(P.hp,0)),W/2,14);
