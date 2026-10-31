@@ -56,7 +56,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #shopGo{margin-top:8px;background:linear-gradient(#ffe066,#ffb703);color:#3a0d5c;border:0;border-radius:999px;font-weight:900;font-size:22px;padding:10px 40px;cursor:pointer}
 #mel{position:fixed;right:18px;bottom:calc(90px + env(safe-area-inset-bottom));width:64px;height:64px;border-radius:50%;border:3px solid #ffd23f;background:rgba(58,13,92,.8);color:#fff;font-size:28px;z-index:4;display:none}
 #unl{position:fixed;left:50%;top:22%;transform:translateX(-50%);display:none;align-items:center;gap:10px;z-index:9;background:#2a0f4a;border:4px solid #ffd23f;border-radius:18px;padding:10px 16px 10px 10px;width:min(92vw,560px);color:#ffd23f;font-weight:900;font-size:18px;box-shadow:0 8px 30px rgba(0,0,0,.6);pointer-events:none}
-#unl i{width:70px;height:70px;border-radius:50%;border:3px solid #ffd23f;background:#3a1466 url(/lp/lander-chars.webp) -58px -48px/377px auto no-repeat;flex:none}
+#unl i{width:70px;height:70px;border-radius:50%;border:3px solid #ffd23f;background:#3a1466 url(/lp/lander-chars.webp) -56px -66px/377px auto no-repeat;flex:none}
 #story{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:7;padding:18px;background:#1a0833;cursor:pointer}
 #story .panel{position:relative;width:min(92vw,720px);aspect-ratio:16/10;border:5px solid #ffd23f;border-radius:22px;overflow:hidden;box-shadow:0 0 0 6px #3a0d5c,0 10px 40px rgba(0,0,0,.6);background:#2a1446}
 #story .panel img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.75}
@@ -115,7 +115,7 @@ const LLAMA=[400,85,270,830];
 const SH=[{k:'rate',n:'Fast Hands',d:'Throw faster',c:[30,70,140]},{k:'dmg',n:'Heavy Chancla',d:'More damage',c:[40,90,180]},{k:'spread',n:'Multi-Chancla',d:'Throw more at once',c:[60,160]},{k:'pierce',n:'Golden Chancla',d:'Pierces skulls',c:[200]}];
 const shopEl=document.getElementById('shop');let shopCb=null;
 function openShop(cb){shopCb=cb;renderShop();shopEl.style.display='flex'}
-function renderShop(){shopEl.querySelector('.coins').textContent='🪙 '+SAVE.coins+' coins';const g=shopEl.querySelector('.grid');g.innerHTML='';
+function renderShop(){shopEl.querySelector('.coins').textContent='🪙 '+SAVE.coins+(SAVE.coins===1?' coin':' coins');const g=shopEl.querySelector('.grid');g.innerHTML='';
  for(const it of SH){const lv=SAVE.u[it.k]||0,mx=lv>=it.c.length,d=document.createElement('div');d.className='it';d.innerHTML='<b>'+it.n+'</b>'+it.d+'<br>Level '+lv+'/'+it.c.length;const b=document.createElement('button');b.textContent=mx?'Maxed':('🪙 '+it.c[lv]);b.disabled=mx||SAVE.coins<it.c[lv];b.onclick=()=>{SAVE.coins-=it.c[lv];SAVE.u[it.k]=lv+1;save();beep(990,.1,'triangle');renderShop()};d.appendChild(b);g.appendChild(d)}
  {const oc=document.getElementById('ofc'),og=oc.getContext('2d');const dd=()=>{if(!IM.hero.naturalWidth)return setTimeout(dd,200);og.clearRect(0,0,440,273);drawOf(og,0,0,440,true)};dd();shopEl.querySelector('.ofs').textContent=OF.map(o=>(SAVE.of[o[0]]?'✓ ':'○ ')+o[1]).join('   ·   ')+(ofDone()?'  — Complete! The final boss awaits.':'  — Fill all 3 to face the final boss.')}
  const c2=shopEl.querySelector('.chars2');c2.innerHTML='';
@@ -160,13 +160,13 @@ function grab(u){u.got=1;say(u.k==='card'?u.card:u.k);burst(u.x,u.y-20,16,'#ffd2
   else if(c==='rosa'){P.fx.rosa=C0.t;for(const e of E)if(e.t!=='b'&&Math.hypot(e.x-P.x,e.y-P.y)<320)e.charm=C0.t}
   else P.fx[c]=C0.t}}
 function dropLoot(e){if(e.t==='b')return;const r=Math.random();if(r<.05)U.push({k:'card',card:randCard(),x:e.x,y:e.y,b:0});else if(r<.13)U.push({k:'pan',x:e.x,y:e.y,b:0})}
-function finishLevel(){if(lvl<3){afterPick=()=>openShop(()=>showStory(lvl+1));pick()}else win()}
+function finishLevel(){if(lvl<3){run=false;openShop(()=>showStory(lvl+1))}else win()}
 function melee(){if(!run||P.mcd>0)return;P.mcd=1.2;P.mel=.35;shake=Math.max(shake,.2);beep(220,.15,'sawtooth',.06);
  for(const e of E){const d=Math.hypot(e.x-P.x,e.y-(P.y-P.h/2));if(d<130+e.r){e.hp-=3+P.dmg;e.fl=.1;const k=e.t==='b'?10:60;e.x+=(e.x-P.x)/(d||1)*k;e.y+=(e.y-P.y)/(d||1)*k;burst(e.x,e.y,8,'#ffd23f')}}}
 const LV=[
  {n:'Level 1: The Plaza',t:'The calaveras crashed the fiesta. Abuela laces up her chanclas.',bg:'/play/night_bg.webp',f:['#3a1d5e','#341a55'],boss:'The Big Calavera'},
  {n:'Level 2: The Market',t:'They raided the mercado! Abuela grabs her golden chancla.',bg:'/play/mercado_bg.webp',f:['#4a2340','#40203a'],boss:'The Calavera Chef'},
- {n:'Level 3: The Cemetery',t:'El Rey de los Muertos stirs. One abuela. One chancla. No mercy.',bg:'/play/cata_bg.webp',f:['#24304e','#1f2a46'],boss:'El Rey de los Muertos'}];
+ {n:'Level 3: The Cemetery',t:'Something big stirs under the cemetery. One abuela. One chancla. No mercy.',bg:'/play/cata_bg.webp',f:['#24304e','#1f2a46'],boss:'Final Boss'}];
 const WAVES=4;
 const UPS=[
  {n:'Fast Hands',d:'Throw chanclas faster',ok:()=>P.rate>.12,f:()=>P.rate*=.75},
@@ -193,9 +193,9 @@ let afterPick=()=>{},bannerSub='';const kill=e=>{pop(e);dropLoot(e);const n=e.t=
 function pop(e){const n=e.t==='b'?60:14;for(let i=0;i<n;i++){const a=Math.random()*6.28,v=120+Math.random()*320,k=Math.random();Pt.push({x:e.x,y:e.y-e.r,vx:Math.cos(a)*v,vy:Math.sin(a)*v-120,l:.7+Math.random()*.4,g:1,c:k<.35?['#ff8a00','#ffb703','#ff4fd8','#3be8ff'][i%4]:k<.6?'#f4ecd8':null,petal:k<.35,bone:k>=.35&&k<.6,frag:k>=.6,fx:Math.random()*.7,fy:Math.random()*.7,rot:Math.random()*6})}}
 function waveDone(){if(wv<WAVES){afterPick=()=>{run=true;nextWave()};pick()}else if(boss===null&&!ofWait){
  if(lvl===3&&!ofDone()){ofWait=true;sayRaw("The ofrenda isn't ready yet, mijo.",3);setTimeout(()=>{ofWait=false;if(run)endRun('The ofrenda is '+ofN()+'/3. Finish it to face the final boss!')},3000)}
- else if(lvl===3){ofWait=true;sayRaw("The ofrenda is complete — El Rey de los Muertos is coming, mijo.",3);setTimeout(()=>{ofWait=false;if(run)spawnBoss()},2600)}
+ else if(lvl===3){ofWait=true;sayRaw("The ofrenda is complete — here he comes, mijo.",3);setTimeout(()=>{ofWait=false;if(run)spawnBoss()},2600)}
  else spawnBoss()}}
-function spawnBoss(){const a=Math.random()*6.28;const fin=lvl===3;boss={t:'b',fin,x:Math.max(100,Math.min(WW-100,P.x+Math.cos(a)*600)),y:Math.max(100,Math.min(WH-100,P.y+Math.sin(a)*600)),r:(portrait?78:62)*(fin?1.45:1),hp:fin?220:45*lvl,mx:fin?220:45*lvl,sp:fin?70:55+lvl*10,c:fin?['#111111','#ffd23f']:['#3a0d5c','#ffd23f'],ph:0,st:'walk',stT:3,sum:5};E.push(boss);banner=fin?'El Rey de los Muertos':LV[lvl-1].boss.toUpperCase()+'!';bannerSub=fin?'The King of the Dead':'';bannerT=fin?3:2;shake=.5;beep(90,.6,'sawtooth',.08)}
+function spawnBoss(){const a=Math.random()*6.28;const fin=lvl===3;boss={t:'b',fin,x:Math.max(100,Math.min(WW-100,P.x+Math.cos(a)*600)),y:Math.max(100,Math.min(WH-100,P.y+Math.sin(a)*600)),r:(portrait?78:62)*(fin?1.45:1),hp:fin?220:45*lvl,mx:fin?220:45*lvl,sp:fin?70:55+lvl*10,c:fin?['#111111','#ffd23f']:['#3a0d5c','#ffd23f'],ph:0,st:'walk',stT:3,sum:5};E.push(boss);banner=fin?'FINAL BOSS':LV[lvl-1].boss.toUpperCase()+'!';bannerSub='';bannerT=fin?3:2;shake=.5;beep(90,.6,'sawtooth',.08)}
 function bossDead(){score+=500*lvl;boss=false;if(lvl===2)addOf('flor');if(!SAVE.ch.luchador){SAVE.ch.luchador=1;save();unlockLine('luchador')}burst(P.x,P.y-80,40,'#ffd23f');const a=Math.random()*6.28;U.push({k:'llama',x:Math.max(120,Math.min(WW-120,P.x+Math.cos(a)*160)),y:Math.max(140,Math.min(WH-120,P.y+Math.sin(a)*160)),b:0});banner='A GOLDEN LLAMA APPEARED!';bannerT=2;endT=9}
 function endRun(t){run=false;const b=+localStorage.getItem('arc_best')||0;if(score>b)localStorage.setItem('arc_best',score);msg.style.display='block';msg.textContent=t+' Score '+score+' · Level '+lvl+(score>b?' · New high score!':'');$('play').textContent='▶ PLAY AGAIN';showBest();ui.classList.remove('hide')}
 function over(){endRun('Game over!');beep(160,.4,'sawtooth')}
@@ -220,7 +220,7 @@ function upd(dt){T+=dt;
  cam.x+=(P.x-W/2-cam.x)*Math.min(1,dt*6);cam.y+=(P.y-P.h*.4-H/2-cam.y)*Math.min(1,dt*6);cam.x=Math.max(0,Math.min(WW-W,cam.x));cam.y=Math.max(0,Math.min(WH-H,cam.y));
  let ax=0,ay=0,fire=false;const kx=(K.ArrowRight?1:0)-(K.ArrowLeft?1:0),ky=(K.ArrowDown?1:0)-(K.ArrowUp?1:0);
  if(as[2]){ax=as[0];ay=as[1];fire=true}else if(kx||ky){ax=kx;ay=ky;fire=true}else if(mouse){ax=mouse[0]+cam.x-P.x;ay=mouse[1]+cam.y-(P.y-P.h/2);fire=mdown||K.Space}
- if(window.__autoaim){const n=nearest();if(n){ax=n.x-P.x;ay=n.y-P.y;fire=true}}
+ if(DBG&&window.__autoaim){const n=nearest();if(n){ax=n.x-P.x;ay=n.y-P.y;fire=true}}
  cd-=dt;P.tA+=dt;if(P.pend&&P.tA>=Math.min(.15,P.rate*.8)){const a0=P.pend;P.pend=0;for(let i=0;i<P.spread;i++){const a=a0+(i-(P.spread-1)/2)*.22;S.push({x:P.x,y:P.y-P.h/2,vx:Math.cos(a)*600,vy:Math.sin(a)*600,a:0,l:1.1,hit:new Set()})}beep(1200,.03)}
  if(fire&&cd<=0&&(ax||ay)){cd=P.rate*(P.boost&&P.boost.k==='rapid'?.5:1)*(P.fx.diablito?.5:1);P.pend=Math.atan2(ay,ax)||1e-4;P.tA=0;P.f=ax>=0?1:-1}
  for(const s of S){s.x+=s.vx*dt;s.y+=s.vy*dt;s.a+=dt*18;s.l-=dt;for(const t of TB)if(Math.hypot(s.x-t.x,s.y-t.y+t.r*.5)<t.r)s.l=0}
@@ -352,7 +352,7 @@ for(const u of U){items.push({y:u.y,d:()=>drawPick(u)})}
  if(run&&matchMedia('(pointer:coarse)').matches&&!st.m&&!st.a){cx.font=`700 ${13*d}px system-ui`;cx.fillStyle='rgba(255,255,255,.45)';cx.textAlign='center';cx.fillText('drag here to move',innerWidth*.25*d,(innerHeight-40)*d);cx.fillText('drag here to aim',innerWidth*.75*d,(innerHeight-40)*d)}}
 function loop(t){melB.style.display=run&&(matchMedia('(pointer:coarse)').matches||portrait)?'block':'none';const dt=Math.min((t-last)/1000,.033);last=t;if(run)upd(dt);draw();requestAnimationFrame(loop)}
 requestAnimationFrame(loop);
-window.__arc=()=>({run,picking,storyOn,score,lvl,wave:wv,hp:P&&P.hp,enemies:E?E.length:0,boss:boss?boss.hp:boss,cam:[cam.x|0,cam.y|0]});
-window.__dbg={of:(...k)=>{for(const x of k)addOf(x)},lvl3:()=>{lvl=3},unlock:k=>unlockLine(k),pick:(k,c)=>U.push({k,card:c,x:P.x+(Math.random()-.5)*200,y:P.y+80+Math.random()*60,b:Math.random()*6}),fx:c=>grab({k:'card',card:c,x:P.x,y:P.y}),killBoss:()=>{if(boss){boss.hp=0}},llama:()=>U.push({x:P.x+60,y:P.y,b:0}),mix:()=>{for(const k of['chiq','bail','brin','mari','gordo']){const T0=TY[k];E.push({t:k,c:T0.c,x:P.x-200+Object.keys(TY).indexOf(k)*100,y:P.y-220,sp:0,r:T0.r*(portrait?1.35:1),hp:99,ph:Math.random()*6,z:0,hopT:9,shT:99})}},coins:n=>{SAVE.coins+=n;save()},melee:()=>melee(),boss:()=>{toSpawn=0;E=[];wv=WAVES;spawnBoss()},god:()=>{P.hp=99}};
+const DBG=/[?&]debug=1/.test(location.search);if(DBG)window.__arc=()=>({run,picking,storyOn,score,lvl,wave:wv,hp:P&&P.hp,enemies:E?E.length:0,boss:boss?boss.hp:boss,cam:[cam.x|0,cam.y|0]});
+if(DBG)window.__dbg={of:(...k)=>{for(const x of k)addOf(x)},lvl3:()=>{lvl=3},unlock:k=>unlockLine(k),pick:(k,c)=>U.push({k,card:c,x:P.x+(Math.random()-.5)*200,y:P.y+80+Math.random()*60,b:Math.random()*6}),fx:c=>grab({k:'card',card:c,x:P.x,y:P.y}),killBoss:()=>{if(boss){boss.hp=0}},llama:()=>U.push({x:P.x+60,y:P.y,b:0}),mix:()=>{for(const k of['chiq','bail','brin','mari','gordo']){const T0=TY[k];E.push({t:k,c:T0.c,x:P.x-200+Object.keys(TY).indexOf(k)*100,y:P.y-220,sp:0,r:T0.r*(portrait?1.35:1),hp:99,ph:Math.random()*6,z:0,hopT:9,shT:99})}},coins:n=>{SAVE.coins+=n;save()},melee:()=>melee(),boss:()=>{toSpawn=0;E=[];wv=WAVES;spawnBoss()},god:()=>{P.hp=99}};
 })();
 </script></body></html>
