@@ -1,0 +1,7 @@
+Chanclazo arcade 3D credits
+- KayKit Character Pack: Skeletons 1.0 by Kay Lousberg (kaylousberg.com), CC0 1.0
+  https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0  (models trimmed; sugar-skull heads replaced at runtime by Gabe's calavera art)
+- KayKit Halloween Bits 1.0 by Kay Lousberg, CC0 1.0
+  https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0
+- three.js r170 (MIT), vendored in /vendor/three (see LICENSE there)
+Characters (Abuela, luchador, llama), chancla and calavera art: Chanclazo / Gabe Mariscal. Houses, ground, papel picado, walls: drawn in code.
