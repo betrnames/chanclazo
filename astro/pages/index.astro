@@ -84,7 +84,7 @@ import Base from '../layouts/Base.astro';
       gx = (vw - gw) / 2; gy = feet - gh; k = gw / C.w;
       tw = ar >= 1 ? Math.min(gw * 1.08, vw * 0.92) : Math.min(vw - 2 * pad, 640); th = tw * T.h / T.w;
       ty = gy + (PADT + 880 * 0.62) * k;
-      rib.style.fontSize = `${Math.max(11, Math.min(24, tw * 0.046))}px`; rib.style.visibility = 'visible';
+      rib.style.fontSize = `${Math.max(11, Math.min(24, tw * 0.046, vw * 0.04))}px`; rib.style.visibility = 'visible';
       rw = rib.offsetWidth; rh = rib.offsetHeight; ry = ty + th * 0.92;
       if (ry + rh <= ctaTop - 6) break;
       gh *= 0.97; gw = gh * C.w / C.h;
