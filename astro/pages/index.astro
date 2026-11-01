@@ -7,7 +7,7 @@ import Base from '../layouts/Base.astro';
   <h1 class="ttlwrap"><img id="ttl" src="/lp/lander-title.webp" width="1681" height="363" alt="Chanclazo: the abuela, the llama piñata and the luchador. When words fail, the chanclazo speaks!" /></h1>
   <div id="rib" class="rib">When words fail, the chanclazo speaks!</div>
   <div id="grp" class="grp">
-    <img class="herogrp" src="/lp/lander-chars.webp" width="943" height="920" alt="" aria-hidden="true" />
+    <img class="herogrp" src="/lp/lander-chars-chibi.webp" width="943" height="920" alt="" aria-hidden="true" />
     <img class="lpart ear" id="earL" src="/lp/llama_earL.webp" alt="" aria-hidden="true" />
     <img class="lpart ear" id="earR" src="/lp/llama_earR.webp" alt="" aria-hidden="true" />
     <img class="lpart" id="mouth" src="/lp/llama_mouth.webp" alt="" aria-hidden="true" />
@@ -29,12 +29,9 @@ import Base from '../layouts/Base.astro';
   .ttlwrap{margin:0;position:absolute;z-index:6;left:0;top:0;line-height:0}
   #ttl{position:absolute;visibility:hidden;max-width:none;animation:glow 3s ease-in-out infinite}
   @keyframes glow{0%,100%{filter:drop-shadow(0 0 6px rgba(255,183,3,.45));transform:scale(1)}50%{filter:drop-shadow(0 0 22px rgba(255,183,3,.9));transform:scale(1.03)}}
-  .rib{position:absolute;z-index:6;visibility:hidden;white-space:nowrap;color:#f3dfa8;font:800 16px Georgia,'Times New Roman',serif;letter-spacing:.4px;padding:.5em 1.4em;
-    text-shadow:0 -1px 0 rgba(0,0,0,.95),0 -2px 2px rgba(0,0,0,.6),0 1px 0 rgba(255,240,220,.25);
-    background:radial-gradient(circle at 15% 25%,rgba(255,255,255,.07) 0 1px,transparent 2px) 0 0/7px 6px,radial-gradient(circle at 60% 70%,rgba(0,0,0,.25) 0 1.2px,transparent 2px) 0 0/10px 8px,radial-gradient(ellipse at 30% 20%,#6b5470,transparent 60%),linear-gradient(170deg,#76627c 0%,#5f4e68 50%,#4a3b52 100%);
-    clip-path:polygon(2% 8%,9% 0,24% 4%,41% 0,58% 3%,77% 0,93% 5%,99% 0,100% 30%,98% 62%,100% 94%,90% 100%,72% 96%,51% 100%,33% 97%,14% 100%,3% 95%,0 70%,1.5% 40%);
-    box-shadow:inset 0 2px 0 rgba(255,235,255,.18),inset 0 -3px 0 rgba(0,0,0,.45),inset 3px 0 0 rgba(255,235,255,.08),inset -3px 0 0 rgba(0,0,0,.3);filter:drop-shadow(0 5px 6px rgba(0,0,0,.6))}
-  .rib::before,.rib::after{content:none}
+  .rib{position:absolute;z-index:7;visibility:hidden;white-space:nowrap;color:#ffe7a8;font:800 16px system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.3px;padding:.42em 1.4em;
+    background:linear-gradient(180deg,#6a22a8 0%,#4d1585 55%,#3a0f66 100%);border:2px solid #f2c94c;border-radius:999px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 14px rgba(0,0,0,.55);text-shadow:0 2px 0 #2a0a48,0 0 6px rgba(0,0,0,.4)}
   .grp{position:absolute;z-index:4;visibility:hidden;animation:bob 3.2s ease-in-out infinite;transform-origin:50% 100%}
   @keyframes bob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.2%) scale(1.008,.995)}}
   .herogrp{position:absolute;left:0;top:0;width:100%;height:100%;filter:drop-shadow(0 12px 14px rgba(0,0,0,.55))}
@@ -87,7 +84,7 @@ import Base from '../layouts/Base.astro';
       gx = (vw - gw) / 2; gy = feet - gh; k = gw / C.w;
       tw = ar >= 1 ? Math.min(gw * 1.08, vw * 0.92) : Math.min(vw - 2 * pad, 640); th = tw * T.h / T.w;
       ty = gy + (PADT + 880 * 0.62) * k;
-      rib.style.fontSize = `${Math.max(11, Math.min(18, tw * 0.042))}px`; rib.style.visibility = 'visible';
+      rib.style.fontSize = `${Math.max(11, Math.min(24, tw * 0.046))}px`; rib.style.visibility = 'visible';
       rw = rib.offsetWidth; rh = rib.offsetHeight; ry = ty + th * 0.92;
       if (ry + rh <= ctaTop - 6) break;
       gh *= 0.97; gw = gh * C.w / C.h;
