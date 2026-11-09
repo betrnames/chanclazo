@@ -1,0 +1,45 @@
+{
+  "frameWidth": 387,
+  "frameHeight": 744,
+  "frames": {
+    "abuela_smile": {
+      "x": 0,
+      "y": 0,
+      "w": 387,
+      "h": 744,
+      "content": {
+        "x": 12,
+        "y": 12,
+        "w": 362,
+        "h": 720
+      },
+      "label": "Abuela (smiling)"
+    },
+    "abuela_angry": {
+      "x": 387,
+      "y": 0,
+      "w": 387,
+      "h": 744,
+      "content": {
+        "x": 12,
+        "y": 12,
+        "w": 363,
+        "h": 720
+      },
+      "label": "Abuela (angry)"
+    },
+    "sidro": {
+      "x": 774,
+      "y": 0,
+      "w": 387,
+      "h": 744,
+      "content": {
+        "x": 41,
+        "y": 12,
+        "w": 304,
+        "h": 720
+      },
+      "label": "Sidro"
+    }
+  }
+}
