@@ -19,6 +19,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/match.html': 'Chanclazo Match',
   '/slots': 'Piñata Slots',
   '/slots.html': 'Piñata Slots',
+  '/crash': 'Chancla Crash',
+  '/crash.html': 'Chancla Crash',
   '/lore': 'Lore',
   '/lore.html': 'Lore',
 };
@@ -59,7 +61,7 @@ export function sendPageView(pathname = location.pathname): void {
   });
 }
 
-type Game = 'home' | 'fling' | 'match' | 'slots' | 'lore';
+type Game = 'home' | 'fling' | 'match' | 'slots' | 'lore' | 'crash';
 
 export function track(event: string, params: Record<string, string | number | boolean | undefined> = {}): void {
   if (!GA_ID || !window.gtag) return;
@@ -74,6 +76,7 @@ export function gameFromPath(pathname = location.pathname): Game {
   if (p === '/match') return 'match';
   if (p === '/slots') return 'slots';
   if (p === '/lore') return 'lore';
+  if (p === '/crash') return 'crash';
   return 'home';
 }
 

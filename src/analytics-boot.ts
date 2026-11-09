@@ -11,6 +11,7 @@ if (gameFromPath() === 'home') {
     if ((href.startsWith('/chancla-strike') || href.startsWith('/fling'))) markLandingCard('fling');
     else if (href.startsWith('/match')) markLandingCard('match');
     else if (href.startsWith('/slots')) markLandingCard('slots');
+    else if (href.startsWith('/crash')) markLandingCard('crash');
     else if (href.startsWith('/lore')) markLandingCard('lore');
   }, true);
 }
