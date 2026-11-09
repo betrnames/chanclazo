@@ -76,8 +76,8 @@ const house=new THREE.Group();S.add(house);
  // papel picado string
  const cols=[0xff4fd8,0xffd23f,0x3be8ff,0x7dff5a,0xff8a00,0xb46bff];
  for(let i=0;i<10;i++){const f=new THREE.Mesh(new THREE.PlaneGeometry(.42,.32),new THREE.MeshStandardMaterial({color:cols[i%6],side:THREE.DoubleSide,emissive:cols[i%6],emissiveIntensity:.25}));f.position.set(HOUSE_X+.6,2.05-.12*Math.sin(i/9*Math.PI),-3.1+i*.69);f.rotation.y=Math.PI/2;house.add(f)}}
-const abuela=new THREE.Sprite(new THREE.SpriteMaterial({map:tex('/play/abuela_sprite.webp'),transparent:true,alphaTest:.2}));
-abuela.center.set(.5,0);abuela.scale.set(1.3*387/512,1.3,1);abuela.position.set(HOUSE_X+.95,.02,-3.25);S.add(abuela);
+const abuela=new THREE.Sprite(new THREE.SpriteMaterial({map:tex('/play/v2/abuela_angry.webp'),transparent:true,alphaTest:.2}));
+abuela.center.set(.5,0);abuela.scale.set(1.45*365/720,1.45,1);abuela.position.set(HOUSE_X+.95,.02,-3.25);S.add(abuela);
 
 // highlight cursor
 const hl=new THREE.Mesh(new THREE.BoxGeometry(T,.1,T),new THREE.MeshBasicMaterial({color:0xffd23f,transparent:true,opacity:.35}));hl.visible=false;S.add(hl);

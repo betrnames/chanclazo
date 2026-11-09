@@ -3,16 +3,17 @@ import Base from '../layouts/Base.astro';
 ---
 <Base>
 <main class="home">
-  <img id="bg" class="bg" src="/lp/final/bg-9x16.webp" width="1100" height="1956" fetchpriority="high" alt="" />
-  <h1 class="ttlwrap"><img id="ttl" src="/lp/lander-title.webp" width="1681" height="363" alt="Chanclazo: the abuela, the llama piñata and the luchador. When words fail, the chanclazo speaks!" /></h1>
+  <!-- Two landers in one route: wide plaza art on landscape screens, tall plaza art on portrait (phones). -->
+  <picture>
+    <source media="(max-aspect-ratio: 1/1)" type="image/webp" srcset="/lp/v2/lander-mobile-720.webp 720w, /lp/v2/lander-mobile-1008.webp 1008w" sizes="100vw" />
+    <source media="(max-aspect-ratio: 1/1)" srcset="/lp/v2/lander-mobile-720.jpg" />
+    <source type="image/webp" srcset="/lp/v2/lander-desktop-1280.webp 1280w, /lp/v2/lander-desktop-1792.webp 1792w" sizes="100vw" />
+    <img id="bg" class="bg" src="/lp/v2/lander-desktop-1280.jpg" width="1792" height="1008" fetchpriority="high"
+      alt="A Day of the Dead plaza at night: a sugar skull boy and a Catrina on stone pedestals, little skeletons dancing around a stage lit by candles." />
+  </picture>
+  <div id="glows" class="glows" aria-hidden="true"></div>
+  <h1 class="ttlwrap"><img id="ttl" src="/lp/lander-title.webp" width="1681" height="363" alt="Chanclazo" /></h1>
   <div id="rib" class="rib">When words fail, the chanclazo speaks!</div>
-  <div id="grp" class="grp">
-    <img class="herogrp" src="/lp/lander-chars-chibi.webp" width="943" height="920" alt="" aria-hidden="true" />
-    <img class="lpart ear" id="earL" src="/lp/llama_earL.webp" alt="" aria-hidden="true" />
-    <img class="lpart ear" id="earR" src="/lp/llama_earR.webp" alt="" aria-hidden="true" />
-    <img class="lpart" id="mouth" src="/lp/llama_mouth.webp" alt="" aria-hidden="true" />
-    <img class="lpart" id="jaw" src="/lp/llama_jaw.webp" alt="" aria-hidden="true" />
-  </div>
   <div class="cta" id="cta">
     <a class="play" href="/choose" id="playNow">PLAY NOW</a>
     <p class="fine">Free play only · No real money · <a href="/lore">Lore</a> · <a href="/arcade">Arcade</a></p>
@@ -22,9 +23,18 @@ import Base from '../layouts/Base.astro';
 </Base>
 
 <style is:global>
-  html,body{margin:0;background:#0b0420;overflow:hidden}
-  .home{position:relative;height:100svh;width:100vw;overflow:hidden;font-family:LilitaOne,system-ui,sans-serif}
+  html,body{margin:0;background:#04020c;overflow:hidden}
+  .home{position:relative;height:100svh;width:100vw;overflow:hidden;font-family:LilitaOne,system-ui,sans-serif;
+    background:radial-gradient(120% 60% at 50% 100%,#140a1e 0%,#05030f 70%) #04020c}
+  /* default: cover (JS refines it so Sidro and the Catrina are never cropped off the sides) */
   .home .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
+  .home .bg.fit{inset:auto;object-fit:fill;max-width:none;max-height:none}
+  .home .bg.fadeY{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 6%,#000 88%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 6%,#000 88%,transparent 100%)}
+  .home .bg.fadeX{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 5%,#000 95%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 5%,#000 95%,transparent 100%)}
+  .glows{position:absolute;inset:0;z-index:2;pointer-events:none}
+  .glows i{position:absolute;border-radius:50%;transform:translate(-50%,-50%);mix-blend-mode:screen;
+    background:radial-gradient(circle,rgba(255,190,90,.55) 0%,rgba(255,140,40,.18) 40%,rgba(255,120,30,0) 70%);animation:flick var(--d,2.3s) ease-in-out infinite alternate}
+  @keyframes flick{0%{opacity:.55;transform:translate(-50%,-50%) scale(.92)}35%{opacity:.85}60%{opacity:.6;transform:translate(-50%,-52%) scale(1.04)}100%{opacity:.9;transform:translate(-50%,-50%) scale(.98)}}
   .lmusic{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;z-index:20;font:600 12px system-ui,sans-serif;color:#ffe9c2;background:rgba(20,5,40,.6);border:1px solid rgba(255,210,63,.5);border-radius:999px;padding:5px 10px;cursor:pointer}
   .ttlwrap{margin:0;position:absolute;z-index:6;left:0;top:0;line-height:0}
   #ttl{position:absolute;visibility:hidden;max-width:none;animation:glow 3s ease-in-out infinite}
@@ -32,20 +42,8 @@ import Base from '../layouts/Base.astro';
   .rib{position:absolute;z-index:7;visibility:hidden;white-space:nowrap;color:#ffe7a8;font:800 16px system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.3px;padding:.42em 1.4em;
     background:linear-gradient(180deg,#6a22a8 0%,#4d1585 55%,#3a0f66 100%);border:2px solid #f2c94c;border-radius:999px;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 14px rgba(0,0,0,.55);text-shadow:0 2px 0 #2a0a48,0 0 6px rgba(0,0,0,.4)}
-  .grp{position:absolute;z-index:4;visibility:hidden;animation:bob 3.2s ease-in-out infinite;transform-origin:50% 100%}
-  @keyframes bob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.2%) scale(1.008,.995)}}
-  .herogrp{position:absolute;left:0;top:0;width:100%;height:100%;filter:drop-shadow(0 12px 14px rgba(0,0,0,.55))}
-  .lpart{position:absolute;max-width:none;will-change:transform}
-  #mouth,#jaw{z-index:2}
-  #jaw{transform-origin:2% 8%}
-  #earL{transform-origin:34.0% 93.5%;animation:twL 7.3s ease-in-out infinite}
-  #earR{transform-origin:84.6% 89.1%;animation:twR 9.1s ease-in-out 1.7s infinite}
-  @keyframes twL{0%,62%,100%{transform:rotate(0)}66%{transform:rotate(-5deg)}69%{transform:rotate(2deg)}72%{transform:rotate(-3deg)}76%{transform:rotate(0)}88%{transform:rotate(-2deg)}93%{transform:rotate(0)}}
-  @keyframes twR{0%,48%,100%{transform:rotate(0)}52%{transform:rotate(5deg)}55%{transform:rotate(-2deg)}58%{transform:rotate(3deg)}62%{transform:rotate(0)}84%{transform:rotate(3deg)}90%{transform:rotate(0)}}
-  #jaw.chew{animation:chew 1.8s ease-in-out}
-  @keyframes chew{0%,100%{transform:rotate(0) translateX(0)}9%{transform:rotate(7.5deg) translateX(-1.5%)}18%{transform:rotate(.5deg) translateX(1.5%)}28%{transform:rotate(7deg) translateX(1.5%)}37%{transform:rotate(.5deg) translateX(-1.5%)}47%{transform:rotate(7.5deg) translateX(-1.5%)}56%{transform:rotate(.5deg) translateX(1.5%)}66%{transform:rotate(6.5deg) translateX(1.5%)}75%{transform:rotate(.5deg) translateX(-1%)}85%{transform:rotate(6deg) translateX(0)}93%{transform:rotate(0) translateX(0)}}
-  .cta{position:absolute;z-index:7;left:0;right:0;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 30px);display:flex;flex-direction:column;align-items:center;gap:8px}
-  .play{font-size:clamp(26px,4.2vh,42px);color:#3b1a5c;text-decoration:none;letter-spacing:.02em;
+  .cta{position:absolute;z-index:7;left:0;right:0;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 26px);display:flex;flex-direction:column;align-items:center;gap:8px}
+  .play{font-size:clamp(24px,4.2vh,40px);color:#3b1a5c;text-decoration:none;letter-spacing:.02em;
     background:linear-gradient(180deg,#fff2a8 0%,#ffd23f 45%,#f4a000 100%);border:4px solid #3b1a5c;border-radius:999px;padding:10px 54px;
     box-shadow:0 7px 0 #3b1a5c,0 0 28px rgba(255,200,60,.6),inset 0 3px 0 rgba(255,255,255,.7);text-shadow:0 2px 0 rgba(255,255,255,.6);animation:pp 1.5s ease-in-out infinite;position:relative;overflow:hidden;transition:filter .15s}
   .play:hover{filter:brightness(1.08)}
@@ -58,48 +56,57 @@ import Base from '../layouts/Base.astro';
   @media (prefers-reduced-motion:reduce){.home *{animation:none!important}}
 </style>
 <script>
-  const T = { w: 1681, h: 363 }, C = { w: 943, h: 920 };
-  const PADT = 40;
-  const PARTS: [string, number, number, number, number][] = [['earL', 480, 7, 82, 168], ['earR', 554, 18, 73, 101], ['mouth', 613, 243, 73, 52], ['jaw', 613, 243, 73, 52]];
-  // background choice by aspect; fy = fraction of image height where the top step (trio's feet) sits
-  const BGS = [{ min: 1, src: '/lp/final/bg-16x9.webp', w: 1500, h: 844, fy: 0.735 }, { min: 0, src: '/lp/final/bg-9x16.webp', w: 1100, h: 1956, fy: 0.6 }];
+  // Art layout in image fractions. safe = x-span that must stay on screen (the boy's pedestal to the Catrina's flowers).
+  // title = centre/width of the empty band for the logo; candles = flame spots for the code-drawn glow.
+  type Art = { W: number; H: number; safe: [number, number]; ay: number; title: { cx: number; cy: number; w: number }; candles: [number, number, number][] };
+  const DESK: Art = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, title: { cx: 0.5, cy: 0.34, w: 0.42 },
+    candles: [[.152, .875, 1], [.291, .865, 1], [.38, .865, 1], [.407, .825, 1], [.553, .76, .9], [.6, .865, .9], [.627, .835, 1], [.627, .93, 1], [.748, .835, 1], [.845, .875, 1]] };
+  const MOB: Art = { W: 1008, H: 1792, safe: [0.025, 0.985], ay: 0.35, title: { cx: 0.5, cy: 0.095, w: 0.86 },
+    candles: [[.05, .68, 1], [.243, .67, 1], [.39, .67, 1], [.425, .64, 1], [.615, .61, .9], [.685, .66, .9], [.735, .655, 1], [.735, .695, 1], [.912, .655, 1], [.98, .7, 1]] };
+  const T = { w: 1681, h: 363 };
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
-  const bg = $('bg') as HTMLImageElement, ttl = $('ttl'), rib = $('rib'), grp = $('grp'), cta = $('cta');
+  const home = document.querySelector('.home') as HTMLElement, bg = $('bg') as HTMLImageElement, ttl = $('ttl'), rib = $('rib'), cta = $('cta'), glows = $('glows');
+  const portrait = matchMedia('(max-aspect-ratio: 1/1)');
   const put = (el: HTMLElement, x: number, y: number, w: number, h?: number) => Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, ...(h !== undefined ? { height: `${h}px` } : {}), visibility: 'visible' });
+  let glowMode = '';
   const place = () => {
-    const home = document.querySelector('.home') as HTMLElement, vw = home.clientWidth, vh = home.clientHeight, ar = vw / vh;
-    const B = BGS.find((b) => ar >= b.min)!;
-    if (!bg.src.endsWith(B.src)) bg.src = B.src;
-    const s = Math.max(vw / B.w, vh / B.h), oy = (vh - B.h * s) / 2;
-    let feet = oy + B.fy * B.h * s;
-    const top0 = ar < 1 ? 44 : Math.max(12, vh * 0.03), pad = Math.max(8, vw * 0.03);
-    const ctaTop = cta.getBoundingClientRect().top - home.getBoundingClientRect().top;
-    feet = Math.min(feet, ctaTop - 6);
-    const maxW = ar >= 1 ? Math.min(vw * 0.62, 900) : vw * 0.98;
-    let gh = feet - top0, gw = gh * C.w / C.h;
-    if (gw > maxW) { gw = maxW; gh = gw * C.h / C.w; }
-    // Live-site rule: title sits just below the trio's waist (over the characters), ribbon right under it.
-    let k = 0, gx = 0, gy = 0, tw = 0, th = 0, ty = 0, rw = 0, rh = 0, ry = 0;
-    for (let n = 0; n < 60; n++) {
-      gx = (vw - gw) / 2; gy = feet - gh; k = gw / C.w;
-      tw = ar >= 1 ? Math.min(gw * 1.08, vw * 0.92) : Math.min(vw - 2 * pad, 640); th = tw * T.h / T.w;
-      ty = gy + (PADT + 880 * 0.62) * k;
-      rib.style.fontSize = `${Math.max(11, Math.min(24, tw * 0.046, vw * 0.04))}px`; rib.style.visibility = 'visible';
-      rw = rib.offsetWidth; rh = rib.offsetHeight; ry = ty + th * 0.92;
-      if (ry + rh <= ctaTop - 6) break;
-      gh *= 0.97; gw = gh * C.w / C.h;
+    const vw = home.clientWidth, vh = home.clientHeight, A = portrait.matches ? MOB : DESK;
+    const sw = (A.safe[1] - A.safe[0]) * A.W, cx = (A.safe[0] + A.safe[1]) / 2;
+    const s = Math.min(Math.max(vw / A.W, vh / A.H), vw / sw);
+    const iw = A.W * s, ih = A.H * s;
+    let ix = vw / 2 - cx * iw; ix = Math.min(0, Math.max(vw - iw, ix)); if (iw < vw) ix = (vw - iw) / 2;
+    let iy = (vh - ih) * A.ay; if (ih > vh) iy = (vh - ih) * 0.5;
+    bg.classList.add('fit'); bg.classList.toggle('fadeY', ih < vh - 2); bg.classList.toggle('fadeX', iw < vw - 2);
+    put(bg, ix, iy, iw, ih);
+    const X = (f: number) => ix + f * iw, Y = (f: number) => iy + f * ih;
+    // logo in the empty band (top of the dark sky on phones, centre band between the pedestals on desktop)
+    const topMin = portrait.matches ? 44 : 12, pad = Math.max(10, vw * 0.04);
+    let tw = Math.min(A.title.w * iw, vw - 2 * pad, 760), th = tw * T.h / T.w;
+    let ty = Math.max(topMin, Y(A.title.cy) - th / 2);
+    rib.style.fontSize = `${Math.max(12, Math.min(24, tw * 0.05, vw * 0.039))}px`; rib.style.visibility = 'visible';
+    const rw = rib.offsetWidth, rh = rib.offsetHeight;
+    let ry = ty + th + Math.max(6, th * 0.08);
+    if (portrait.matches) {
+      // phones: tagline sits on the dark floor just above the Play button, clear of the dancing skeletons
+      const ctaTop = cta.getBoundingClientRect().top - home.getBoundingClientRect().top;
+      ry = Math.max(Y(0.74), Math.min(ctaTop - rh - 14, Y(0.8)));
+      if (ry + rh > ctaTop - 8) ry = ctaTop - rh - 8;
     }
     put(ttl, (vw - tw) / 2, ty, tw, th);
     put(rib, (vw - rw) / 2, ry, rw);
-    put(grp, gx, gy, gw, gh);
-    for (const [id, x, y, w, h] of PARTS) put($(id), x * k, y * k, w * k, h * k);
+    const key = `${A === MOB}|${Math.round(iw)}|${Math.round(ix)}|${Math.round(iy)}`;
+    if (key !== glowMode) {
+      glowMode = key; glows.textContent = '';
+      for (const [fx, fy, k] of A.candles) {
+        const g = document.createElement('i'), d = Math.max(26, iw * 0.05 * k);
+        Object.assign(g.style, { left: `${X(fx)}px`, top: `${Y(fy)}px`, width: `${d}px`, height: `${d}px` });
+        g.style.setProperty('--d', `${(1.6 + Math.random() * 1.6).toFixed(2)}s`); g.style.animationDelay = `${(-Math.random() * 2).toFixed(2)}s`;
+        glows.appendChild(g);
+      }
+    }
   };
   place(); addEventListener('resize', place); bg.addEventListener('load', place); document.fonts?.ready.then(place);
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const jaw = $('jaw');
-    const chew = () => { jaw.classList.remove('chew'); void jaw.offsetWidth; jaw.classList.add('chew'); setTimeout(chew, 1800 + 4000 + Math.random() * 4000); };
-    setTimeout(chew, 2000 + Math.random() * 1000);
-  }
+  portrait.addEventListener?.('change', place);
   import { initLanderMusic } from '../../src/play/music';
   initLanderMusic($('lmusic') as HTMLButtonElement);
   $('playNow')?.addEventListener('click', () => {

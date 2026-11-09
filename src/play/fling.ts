@@ -11,8 +11,9 @@ const { Engine, Bodies, Composite, Body, Events, Vector, Sleeping } = Matter;
 const W = 1100, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
 // Abuela throws by hand (no slingshot). HAND = her throwing hand in the release pose; launch + aim guide originate here.
 const ABU = { x: 68, ground: 920 };                 // feet centre (same spot the old sprite stood)
-const WIND = { h: 193, hand: { x: 22, y: 739 } }, REL = { h: 190 };
-const HAND = { x: 105, y: 775 };
+// v2 chibi art (front-facing, angry): wind-up = chancla held back on her left; release = same art mirrored, fist out toward the fort, chancla gone (in flight)
+const WIND = { h: 210, hand: { x: 28, y: 802 } }, REL = { h: 210 };
+const HAND = { x: 106, y: 808 };
 const MAXPULL = 140, POWER = 0.21;
 
 const cv = document.createElement('canvas'); (document.body as HTMLElement).insertBefore(cv, document.body.firstChild);
@@ -68,7 +69,7 @@ document.addEventListener('visibilitychange', scheduleLayout);
 fit();
 
 const IMG: Record<string, HTMLImageElement> = {};
-const names = { bg: '/play/night_bg.webp', bgMercado: '/play/mercado_bg.webp', bgCata: '/play/cata_bg.webp', abuela: '/play/abuela_windup.webp?v=9724bca5', abuelaRel: '/play/abuela_release.webp?v=f47e24e0', lucha: '/play/t_lucha.webp', calaca: '/play/t_skull.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
+const names = { bg: '/play/night_bg.webp', bgMercado: '/play/mercado_bg.webp', bgCata: '/play/cata_bg.webp', abuela: '/play/v2/abuela_angry.webp', abuelaRel: '/play/v2/abuela_throw.webp', lucha: '/play/t_lucha.webp', calaca: '/play/t_skull.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
 const TINT: Record<string, HTMLCanvasElement> = {};
 function tintImg(img: HTMLImageElement, color: string, a: number) {
   const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d')!;
@@ -378,7 +379,13 @@ function frameBody(now: number) {
   for (const cx of [60, 420, 1080]) { const r = ctx.createRadialGradient(cx, GROUND - 10, 2, cx, GROUND - 10, 60 + Math.sin(t * 7 + cx) * 4); r.addColorStop(0, 'rgba(255,170,60,.55)'); r.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = r; ctx.fillRect(cx - 70, GROUND - 80, 140, 140); ctx.fillStyle = '#fbf3d5'; ctx.fillRect(cx - 4, GROUND - 22, 8, 22); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(cx, GROUND - 28, 4, 7, 0, 0, 7); ctx.fill(); }
   { // Abuela: wind-up pose while loaded/aiming, release pose right after a throw
     const rel = (relT > 0 || flying.length > 0) && IMG.abuelaRel, im = rel ? IMG.abuelaRel! : IMG.abuela;
-    if (im) { const h = rel ? REL.h : WIND.h, w = h * (im.width / im.height), bob = rel ? 0 : Math.sin(t * 2) * 1.5; ctx.drawImage(im, ABU.x - w / 2, ABU.ground - h + bob, w, h); }
+    if (im) {
+      const h = rel ? REL.h : WIND.h, w = h * (im.width / im.height), bob = rel ? 0 : Math.sin(t * 2) * 1.5;
+      // pose by code: lean back while winding up (more while aiming), snap forward + mirror on release
+      const lean = rel ? 0.1 * Math.min(1, relT / 0.45 + 0.4) : -0.03 - (aiming ? 0.05 : 0) + Math.sin(t * 2) * 0.01;
+      ctx.save(); ctx.translate(ABU.x, ABU.ground + bob); ctx.rotate(lean); if (rel) ctx.scale(-1, 1);
+      ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
+    }
   }
   const loaded = playing && !ended && !flying.length && shotsLeft > 0;
   if (loaded && relT <= 0) {

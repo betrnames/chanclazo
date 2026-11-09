@@ -4,7 +4,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 // ---------- story text table (one-line name swap) ----------
 const BOY = 'Sidro';
-const A = '/s3d/abuela_warm.webp', AP = '/s3d/abuela_point.webp', AS = '/s3d/abuela_shock.webp', L = '/s3d/kid.webp', P = '/s3d/llama.webp', K = '/play/t_kid.webp', M = '/s3d/kidmask.webp';
+const A = '/play/v2/abuela.webp', AP = '/play/v2/abuela.webp', AS = '/play/v2/abuela_angry.webp', L = '/play/v2/sidro.webp', P = '/s3d/llama.webp', K = '/play/t_kid.webp', M = '/play/v2/sidro_head.webp';
 type Panel = { bg: string; cap: string; imgs?: { src: string; style: string }[]; bubbles?: { text: string; style: string; tx?: string }[]; fx?: string; glow?: boolean };
 const STORY: Record<string, Panel[]> = {
   intro: [

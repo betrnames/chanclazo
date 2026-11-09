@@ -966,13 +966,13 @@ async function boot() {
   A.unlock();
   initAudioControls('slots', (m) => { A.setMuted(m); });
   const loads: Promise<unknown>[] = [
-    loadImg('/lp/abuela_face.webp').then(i => imgs.abuela = i), // full head (tile art crops the bun)
+    loadImg('/play/v2/abuela_head.webp').then(i => imgs.abuela = i), // full head (tile art crops the bun)
     loadImg('/play/night_bg.webp').then(i => imgs.bg = i),
     loadImg('/play/slots/head_llama.webp').then(i => imgs.llama_face = i),
-    loadImg('/play/slots/head_abuela.webp').then(i => imgs.abuela_face = i),
-    loadImg('/play/slots/head_lucha.webp').then(i => imgs.lucha_face = i),
+    loadImg('/play/v2/abuela_head_angry.webp').then(i => imgs.abuela_face = i),
+    loadImg('/play/v2/sidro_head.webp').then(i => imgs.lucha_face = i),
     loadImg('/play/t_skull.webp').then(i => imgs.skull = i),
-    loadImg('/play/t_lucha.webp').then(i => imgs.lucha = i),
+    loadImg('/play/v2/sidro_head.webp').then(i => imgs.lucha = i),
     loadImg('/play/t_chancla.webp').then(i => imgs.chancla = i),
     loadImg('/play/t_bottle.webp').then(i => imgs.bottle = i),
     loadImg('/play/t_pinata.webp').then(i => { imgs.pinata = i; imgs.pinata_llama = i; }),
