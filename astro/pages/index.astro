@@ -44,7 +44,7 @@ import Base from '../layouts/Base.astro';
     background:radial-gradient(circle,rgba(255,190,90,.55) 0%,rgba(255,140,40,.18) 40%,rgba(255,120,30,0) 70%);animation:flick var(--d,2.3s) ease-in-out infinite alternate}
   @keyframes flick{0%{opacity:.55;transform:translate(-50%,-50%) scale(.92)}35%{opacity:.85}60%{opacity:.6;transform:translate(-50%,-52%) scale(1.04)}100%{opacity:.9;transform:translate(-50%,-50%) scale(.98)}}
   .lmusic{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;z-index:20;font:600 12px system-ui,sans-serif;color:#ffe9c2;background:rgba(20,5,40,.6);border:1px solid rgba(255,210,63,.5);border-radius:999px;padding:5px 10px;cursor:pointer}
-  .ttlwrap{margin:0;position:absolute;z-index:6;left:0;top:0;line-height:0}
+  .ttlwrap{margin:0;position:absolute;z-index:3;left:0;top:0;line-height:0}
   #ttl{position:absolute;visibility:hidden;max-width:none;animation:glow 3s ease-in-out infinite}
   @keyframes glow{0%,100%{filter:drop-shadow(0 0 6px rgba(255,183,3,.45));transform:scale(1)}50%{filter:drop-shadow(0 0 22px rgba(255,183,3,.9));transform:scale(1.03)}}
   .rib{position:absolute;z-index:7;visibility:hidden;white-space:nowrap;color:#ffe7a8;font:800 16px system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.3px;padding:.42em 1.4em;
@@ -77,53 +77,73 @@ import Base from '../layouts/Base.astro';
   @media (prefers-reduced-motion:reduce){.home *{animation:none!important}}
 </style>
 <script>
-  // Art layout in image fractions. safe = x-span that must stay on screen (the boy's pedestal to the Catrina's flowers).
-  // gap = open centre between the pedestals (trio max width), feet = floor line the trio stands on, top = logo top.
-  type Art = { W: number; H: number; safe: [number, number]; ay: number; logoW: number; logoTop: number; gap: [number, number]; feet: number; candles: [number, number, number][] };
-  const DESK: Art = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, logoW: 0.33, logoTop: 0.03, gap: [0.235, 0.725], feet: 0.8,
+  // Art layout in image fractions. safe = x-span that must stay on screen; keep = boxes around the side characters
+  // (boy + pedestal top on the left, Catrina + pedestal top on the right) that the hero group must never cover.
+  type Box = [number, number, number, number]; // x0, y0, x1, y1
+  type Art = { W: number; H: number; safe: [number, number]; ay: number; cx: number; feet: number; keep: Box[]; candles: [number, number, number][] };
+  const DESK: Art = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, cx: 0.48, feet: 0.8, keep: [[0.06, 0.15, 0.23, 0.62], [0.738, 0.11, 0.92, 0.62]],
     candles: [[.152, .875, 1], [.291, .865, 1], [.38, .865, 1], [.407, .825, 1], [.553, .76, .9], [.6, .865, .9], [.627, .835, 1], [.627, .93, 1], [.748, .835, 1], [.845, .875, 1]] };
-  const MOB: Art = { W: 1008, H: 1792, safe: [0.025, 0.985], ay: 0.35, logoW: 0.86, logoTop: 0.03, gap: [0.2, 0.8], feet: 0.735,
+  const MOB: Art = { W: 1008, H: 1792, safe: [0.025, 0.985], ay: 0.35, cx: 0.49, feet: 0.75, keep: [[0, 0.3, 0.226, 0.5], [0.748, 0.275, 1, 0.5]],
     candles: [[.05, .68, 1], [.243, .67, 1], [.39, .67, 1], [.425, .64, 1], [.615, .61, .9], [.685, .66, .9], [.735, .655, 1], [.735, .695, 1], [.912, .655, 1], [.98, .7, 1]] };
   const T = { w: 1681, h: 363 }, C = { w: 943, h: 920 };
+  // trio silhouette: opaque x-span (fraction of trio width) per 1/23 height band, ears included
+  const PROF = [[.544,.659],[.527,.662],[.522,.67],[.499,.696],[.492,.715],[.487,.73],[.247,.855],[.2,.88],[.19,.883],[.19,.899],[.196,.915],[.153,.92],[.138,.917],[.139,.903],[.146,.9],[.152,.897],[.232,.894],[.239,.905],[.218,.919],[.2,.919],[.192,.923],[.207,.925],[.223,.913]];
   // llama ear / mouth / jaw layers in trio-canvas pixels (same cut as the original home-page trio)
   const PARTS: [string, number, number, number, number][] = [['earL', 480, 7, 82, 168], ['earR', 554, 18, 73, 101], ['mouth', 613, 243, 73, 52], ['jaw', 613, 243, 73, 52]];
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
   const home = document.querySelector('.home') as HTMLElement, bg = $('bg') as HTMLImageElement, ttl = $('ttl'), rib = $('rib'), cta = $('cta'), glows = $('glows'), grp = $('grp');
   const portrait = matchMedia('(max-aspect-ratio: 1/1)');
   const put = (el: HTMLElement, x: number, y: number, w: number, h?: number) => Object.assign(el.style, { left: `${x}px`, top: `${y}px`, width: `${w}px`, ...(h !== undefined ? { height: `${h}px` } : {}), visibility: 'visible' });
+  const hit = (a: Box, b: Box) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
   let glowMode = '';
   const place = () => {
     const vw = home.clientWidth, vh = home.clientHeight, mob = portrait.matches, A = mob ? MOB : DESK;
-    const sw = (A.safe[1] - A.safe[0]) * A.W, cx = (A.safe[0] + A.safe[1]) / 2;
+    const sw = (A.safe[1] - A.safe[0]) * A.W, scx = (A.safe[0] + A.safe[1]) / 2;
     const s = Math.min(Math.max(vw / A.W, vh / A.H), vw / sw);
     const iw = A.W * s, ih = A.H * s;
-    let ix = vw / 2 - cx * iw; ix = Math.min(0, Math.max(vw - iw, ix)); if (iw < vw) ix = (vw - iw) / 2;
+    let ix = vw / 2 - scx * iw; ix = Math.min(0, Math.max(vw - iw, ix)); if (iw < vw) ix = (vw - iw) / 2;
     let iy = (vh - ih) * A.ay; if (ih > vh) iy = (vh - ih) * 0.5;
     bg.classList.add('fit'); bg.classList.toggle('fadeY', ih < vh - 2); bg.classList.toggle('fadeX', iw < vw - 2);
     put(bg, ix, iy, iw, ih);
     const X = (f: number) => ix + f * iw, Y = (f: number) => iy + f * ih;
+    const m = 6, keep: Box[] = A.keep.map(([a, b, c, d]) => [X(a) - m, Y(b) - m, X(c) + m, Y(d) + m]);
+    const free = (r: Box) => !keep.some((k) => hit(r, k)) && r[0] >= 4 && r[2] <= vw - 4;
     const ctaTop = cta.getBoundingClientRect().top - home.getBoundingClientRect().top;
-    // 1) logo at the top (sky / papel picado band)
-    const pad = Math.max(10, vw * 0.04);
-    let tw = Math.min(A.logoW * iw, vw - 2 * pad, mob ? 640 : 620, vh * (mob ? 0.62 : 0.75)), th = tw * T.h / T.w;
-    const ty = Math.max(mob ? 46 : 14, Y(A.logoTop));
-    rib.style.fontSize = `${Math.max(12, Math.min(mob ? 20 : 22, tw * 0.05, vw * 0.039))}px`; rib.style.visibility = 'visible';
-    const rw = rib.offsetWidth, rh = rib.offsetHeight;
-    // 2) tagline: under the logo on desktop; on phones it sits on the dark floor just above PLAY NOW
-    let ry: number;
-    if (mob) { ry = Math.max(Y(0.745), Math.min(ctaTop - rh - 14, Y(0.8))); if (ry + rh > ctaTop - 8) ry = ctaTop - rh - 8; }
-    else ry = ty + th + Math.max(4, th * 0.06);
-    // 3) trio: stands on the floor in the open centre, between the side characters
-    const top = mob ? ty + th + 10 : ry + rh + 10;
-    const feet = Math.min(Y(A.feet), (mob ? ry : ctaTop) - 6);
-    let gh = feet - top, gw = gh * C.w / C.h;
-    const maxW = (A.gap[1] - A.gap[0]) * iw;
-    if (gw > maxW) { gw = maxW; gh = gw * C.h / C.w; }
-    const gx = X((A.gap[0] + A.gap[1]) / 2) - gw / 2, gy = feet - gh, k = gw / C.w;
-    put(ttl, (vw - tw) / 2, ty, tw, th);
-    put(rib, (vw - rw) / 2, ry, rw);
+    rib.style.visibility = 'visible';
+    const minTop = mob ? 48 : 12, gcx = X(A.cx);
+    // Hero group = CHANCLAZO logo (behind) + trio standing on the floor, centred between the side characters.
+    // Grow the trio as big as its silhouette allows, then the logo as big as fits right above it; shrink the trio if the logo gets too small.
+    let best: any = null;
+    const capW = Math.min(vw - 2 * Math.max(10, vw * 0.035), mob ? Math.min(iw * 0.92, 640) : Math.min(iw * 0.46, 780));
+    // logo wants to be big (target share of the art width); the trio takes the biggest size that still leaves room for it
+    for (let target = capW * (mob ? 0.92 : 0.9); target > 140 && !best; target *= 0.9) {
+      for (let gw = Math.min(iw * 0.62, vw - 8, 900); gw > 80 && !best; gw *= 0.97) {
+        rib.style.fontSize = `${Math.max(12, mob ? Math.min(20, vw * 0.039) : Math.min(24, vw * 0.039, gw * 0.05))}px`;
+        const rh = rib.offsetHeight;
+        const feet = mob ? Math.min(Y(A.feet), Math.min(ctaTop - rh - 14, Y(0.8)) - 8) : Math.min(Y(A.feet), ctaTop - rh - 18);
+        const gh = gw * C.h / C.w, gx = gcx - gw / 2, gy = feet - gh;
+        if (gy < minTop + 40) continue;
+        if (PROF.some(([a, b], i) => !free([gx + a * gw, gy + (i / PROF.length) * gh, gx + b * gw, gy + ((i + 1) / PROF.length) * gh]))) continue;
+        // logo sits right on top of the trio, its lower edge tucked behind the llama's ears; on desktop it stays below the top banner row,
+        // on phones it lifts just enough to clear the side characters' heads
+        for (let w = capW; w >= target && !best; w *= 0.98) {
+          const h = w * T.h / T.w, y0 = gy + h * 0.2 - h;
+          for (let y = y0; y >= (mob ? minTop : Math.max(minTop, Y(0.115), y0 - h * 0.45)); y -= 3) {
+            if (free([gcx - w / 2, y + h * 0.06, gcx + w / 2, y + h * 0.9])) { best = { gw, gh, gx, gy, lw: w, lh: h, ly: y, feet }; break; }
+          }
+        }
+      }
+    }
+    if (!best) return;
+    const { gw, gh, gx, gy, lw, lh, ly, feet } = best, k = gw / C.w;
+    put(ttl, gcx - lw / 2, ly, lw, lh);
     put(grp, gx, gy, gw, gh);
     for (const [id, x, y, w, h] of PARTS) put($(id), x * k, y * k, w * k, h * k);
+    const rw = rib.offsetWidth, rh = rib.offsetHeight;
+    // tagline: on the floor between the trio's feet and PLAY NOW
+    let ry = mob ? Math.max(feet + 10, Math.min(ctaTop - rh - 14, Y(0.8))) : Math.min(feet + 10, ctaTop - rh - 8);
+    if (ry + rh > ctaTop - 6) ry = ctaTop - rh - 6;
+    put(rib, gcx - rw / 2 < 4 ? (vw - rw) / 2 : Math.min(vw - rw - 4, gcx - rw / 2), ry, rw);
     const key = `${mob}|${Math.round(iw)}|${Math.round(ix)}|${Math.round(iy)}`;
     if (key !== glowMode) {
       glowMode = key; glows.textContent = '';
