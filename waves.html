@@ -83,6 +83,8 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 #title .card{padding:28px 22px 24px}
 #title .relic{width:168px;margin:6px auto 4px}
 #title:not(.hidden) ~ .cz-copy{visibility:hidden}
+/* title screen = only the gold chancla and TAP TO PLAY: no HUD, hearts, hint, fire or bomb button until play starts */
+#stage.on-title .hud,#stage.on-title #hearts,#stage.on-title #powers,#stage.on-title #fire,#stage.on-title #hint,#stage.on-title #rapid{display:none!important}
 .card h1{margin:0;font:400 44px LilitaOne,system-ui;color:#ffd23f;-webkit-text-stroke:7px #3b1a5c;paint-order:stroke fill;text-shadow:0 5px 0 #3b1a5c;line-height:1.05}
 .card .sub{margin:8px 0 4px;font:600 14px/1.35 system-ui;color:#ffe9c2}
 .hero{height:150px;display:block;margin:-70px auto 2px;filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))}
@@ -106,7 +108,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 @media (prefers-reduced-motion:reduce){#fire.ready,#fire.ready img,.relic{animation:none}}
 </style>
 </head><body>
-<div id="stage">
+<div id="stage" class="on-title">
   <div class="hud">
     <button class="hbtn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1.5" fill="#3b1a5c"/><rect x="14" y="4" width="5" height="16" rx="1.5" fill="#3b1a5c"/></svg></button>
     <div class="lvlbox"><div id="wave">Wave 1</div><div class="barwrap" role="progressbar" aria-label="Wave progress"><div id="bar"></div></div></div>

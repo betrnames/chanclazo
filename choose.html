@@ -4,82 +4,17 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <meta name="theme-color" content="#14061f" />
-<title>Chanclazo · Pick your game</title>
+<title>Chanclazo · Pick your game on the map</title>
 <link rel="icon" href="/cruise/logo_chancla.webp" />
-<style>
-@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#04020c;overflow:hidden}
-.world{position:relative;width:100vw;height:100svh;overflow:hidden;font-family:LilitaOne,system-ui,sans-serif}
-.bg{position:absolute;object-fit:fill;max-width:none;max-height:none}
-.bg.fadeY{-webkit-mask-image:linear-gradient(180deg,#000 0,#000 88%,transparent 100%);mask-image:linear-gradient(180deg,#000 0,#000 88%,transparent 100%)}
-.home{position:fixed;z-index:8;left:12px;top:max(10px,env(safe-area-inset-top));width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff2a8,#ffd23f 50%,#f4a000);border:3px solid #3b1a5c;border-radius:14px;box-shadow:0 4px 0 #3b1a5c;text-decoration:none}
-.hint{position:absolute;z-index:6;left:50%;transform:translateX(-50%);top:max(12px,env(safe-area-inset-top));margin:0;white-space:nowrap;color:#ffe7a8;font:800 clamp(13px,2.4vw,18px) system-ui,sans-serif;letter-spacing:.02em;padding:.4em 1.1em;background:linear-gradient(180deg,#6a22a8,#3a0f66);border:2px solid #f2c94c;border-radius:999px;box-shadow:0 6px 14px rgba(0,0,0,.55);text-shadow:0 2px 0 #2a0a48}
-.cast{position:absolute;z-index:5;display:flex;align-items:flex-end;justify-content:center;gap:clamp(12px,3vw,48px);pointer-events:none}
-.spot{pointer-events:auto;appearance:none;border:0;background:none;padding:0 0 18px;margin:0;cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;color:inherit;font:inherit}
-.spot img{height:min(42vh,420px);width:auto;max-width:24vw;display:block;filter:drop-shadow(0 16px 12px rgba(0,0,0,.6));transform-origin:50% 100%;transition:transform .18s}
-.spot .plaque{position:absolute;left:50%;bottom:0;transform:translateX(-50%);white-space:nowrap;text-align:center;background:radial-gradient(ellipse at 50% 30%,#4a1f6e,#24092f 72%);border:3px solid #ffd23f;border-radius:16px;padding:5px 12px 7px;box-shadow:0 5px 0 #1a0826,0 0 18px rgba(255,190,60,.35)}
-.spot .who{display:block;font-size:clamp(16px,2.2vw,26px);color:#ffd23f;-webkit-text-stroke:4px #3b1a5c;paint-order:stroke fill;line-height:1}
-.spot .game{display:block;margin-top:2px;font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#ffe9c2}
-.spot:hover img,.spot:focus-visible img{transform:translateY(-10px) scale(1.04)}
-.spot:hover .plaque,.spot:focus-visible .plaque{border-color:#fff2a8;box-shadow:0 5px 0 #1a0826,0 0 26px rgba(255,210,63,.7)}
-.spot:focus-visible{outline:none}
-.spot:active img{transform:translateY(-2px) scale(.98)}
-@media (max-width:700px){.spot img{height:min(26vh,240px);max-width:30vw}.hint{font-size:13px}}
-@media (prefers-reduced-motion:reduce){.spot img{transition:none}}
-</style>
+<link rel="stylesheet" href="/src/choose/map.css" />
 </head>
 <body>
-<main class="world" id="world">
-  <picture>
-    <source media="(max-aspect-ratio: 1/1)" type="image/webp" srcset="/lp/v2/lander-mobile-720.webp" />
-    <img id="bg" class="bg" src="/lp/v2/lander-desktop-1280.webp" alt="" />
-  </picture>
-  <a class="home" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 11.2 12 3.5l9 7.7" fill="none" stroke="#3b1a5c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.6v-5.6h3.8v5.6h4.6V10" fill="none" stroke="#3b1a5c" stroke-width="2.6" stroke-linejoin="round"/></svg></a>
-  <p class="hint">Tap a friend</p>
-  <div class="cast" id="cast">
-    <button class="spot" type="button" data-href="/chancla-strike?start=1">
-      <img src="/play/v2/abuela.webp" alt="" />
-      <span class="plaque"><span class="who">Abuela</span><span class="game">Chancla Strike</span></span>
-    </button>
-    <button class="spot" type="button" data-href="/slots?start=1">
-      <img src="/play/llama_choose.webp" alt="" />
-      <span class="plaque"><span class="who">Llama</span><span class="game">Piñata Slots</span></span>
-    </button>
-    <button class="spot" type="button" data-href="/waves">
-      <img src="/play/v2/sidro.webp" alt="" />
-      <span class="plaque"><span class="who">Sidro</span><span class="game">Chancla Waves</span></span>
-    </button>
-  </div>
-</main>
-<script>
-const DESK = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, gap: [0.22, 0.78], feet: 0.78 };
-const MOB = { W: 1008, H: 1792, safe: [0.02, 0.98], ay: 0.35, gap: [0.08, 0.92], feet: 0.62 };
-const world = document.getElementById('world');
-const bg = document.getElementById('bg');
-const cast = document.getElementById('cast');
-const portrait = matchMedia('(max-aspect-ratio: 1/1)');
-function place() {
-  const vw = world.clientWidth, vh = world.clientHeight, A = portrait.matches ? MOB : DESK;
-  const sw = (A.safe[1] - A.safe[0]) * A.W, cx = (A.safe[0] + A.safe[1]) / 2;
-  const s = Math.min(Math.max(vw / A.W, vh / A.H), vw / sw);
-  const iw = A.W * s, ih = A.H * s;
-  let ix = vw / 2 - cx * iw; ix = Math.min(0, Math.max(vw - iw, ix)); if (iw < vw) ix = (vw - iw) / 2;
-  let iy = (vh - ih) * A.ay; if (ih > vh) iy = (vh - ih) * 0.5;
-  bg.classList.toggle('fadeY', ih < vh - 2);
-  Object.assign(bg.style, { left: ix + 'px', top: iy + 'px', width: iw + 'px', height: ih + 'px' });
-  const feet = Math.min(iy + A.feet * ih, vh - 20);
-  const left = ix + A.gap[0] * iw, width = (A.gap[1] - A.gap[0]) * iw;
-  cast.style.left = (portrait.matches ? vw * 0.03 : left) + 'px';
-  cast.style.width = (portrait.matches ? vw * 0.94 : width) + 'px';
-  cast.style.top = 'auto';
-  cast.style.bottom = (portrait.matches ? 16 : Math.max(8, vh - feet)) + 'px';
-}
-place();
-addEventListener('resize', place);
-bg.addEventListener('load', place);
-portrait.addEventListener?.('change', place);
-document.querySelectorAll('.spot').forEach((b) => b.addEventListener('click', () => { location.href = b.dataset.href; }));
+<!-- vite dev twin of astro/pages/choose.astro: same map from src/choose/map.ts -->
+<div id="czroot"></div>
+<script type="module">
+import { mapHtml, wireMap } from '/src/choose/map.ts';
+document.getElementById('czroot').outerHTML = mapHtml();
+wireMap();
 </script>
 </body>
 </html>

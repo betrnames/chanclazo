@@ -27,7 +27,7 @@ Owner and approver: **Gabe (betrnames)**. Repo: https://github.com/betrnames/cha
 | **Chancla Strike** (main game) | `/chancla-strike` (legacy `/fling` redirects) | `chancla-strike.html`, `src/play/fling.ts`, `flingAudio.ts` | Matter.js 2D fort-topple game, 9 levels in 3 areas. Phones play it in landscape. Throw = pull back the floating gold chancla (or drag anywhere), with a power meter and dotted arc, release to fling. Level select = **Level Map** overlay (HUD button), stars unlock areas. Hooks: `window.__fling`. |
 | Strike 3D (runner) | `/strike3d` | `strike3d.html`, `src/play/strike3d.ts` | Separate endless runner. Not the main Strike. |
 | Landing page | `/` | `astro/pages/index.astro` (production) and `home.html` (vite preview) | Full-bleed plaza. Logo is lowered out of the header. Tagline banner is centered under the logo. Gold relic chancla spins in and floats in the middle. PLAY NOW sits just under the chancla and stays hidden until placed, so it never flashes in the header. No loading screen. No trio overlay. PLAY NOW goes to `/choose`. |
-| Game picker | `/choose` | `astro/pages/choose.astro` and `choose.html` | Character map, not a carousel. Tap Abuela → Chancla Strike, Llama → Piñata Slots, Sidro → Chancla Waves. Crash is not on this screen (still at `/crash`). |
+| Game picker | `/choose` | `src/choose/map.ts` + `src/choose/map.css` (rendered by `astro/pages/choose.astro`, and by `choose.html` in vite dev) | **Mini map**: an illustrated, code-drawn SVG Day of the Dead town at night (papel picado, town silhouette, moon, marigold trail, fountain on phones). Each game is a landmark you tap: **La Ofrenda + Sidro → Chancla Waves** (`/waves`), **El Panteón + floating gold chancla → Chancla Strike** (`/chancla-strike?start=1`), **El Mercado + sugar-skull kids → Chancla Crash** (`/crash`), **El Kiosco + Llama → Piñata Slots** (`/slots?start=1`). Spots pulse, glow and lift on hover/focus. Two layouts (landscape 1600×1000, portrait 800×1700) with `meet` + `overflow:visible`, so spots always fit and the painted background fills any extra space. **No Abuela.** Match and Strike 3D are not on the map. |
 | Others | `/slots`, `/match`, `/lore`, `/arcade` | `slots.ts`, `match.ts`, `lore.html`, `public/arcade*.html` | Not in active work. |
 
 ## Build and run locally
@@ -44,8 +44,12 @@ The `/api/leaderboard` request 404s locally because it is a Cloudflare Pages Fun
 Saved on `feat/chancla-waves`. Not merged to `main`. Gabe has not approved production.
 
 - Homepage: lowered logo, centered tagline, floating gold chancla, PLAY NOW under the chancla. No trio. No loading screen. The play button must not appear in the header on first paint.
-- `/choose` is the character map (Abuela, Llama, Sidro). Do not put Crash back on it unless Gabe asks.
-- Waves title screen is only the gold chancla and TAP TO PLAY.
+- `/choose` is the mini map with four spots: Waves, Strike, Crash, Slots (see the table). Abuela is not on it.
+- Waves title screen is only the gold chancla and TAP TO PLAY. `#stage.on-title` hides the HUD, hearts, hint, fire and bomb buttons until `newGame()` removes the class.
+- Waves boss health bar is a child of the luchador's body mesh, centred on his head (`BOSS_HEAD` in `waves.ts`), so it follows his walk and lean.
+- Waves framing: `resize()` tilts the camera (`camLook.y`) so the front of the ofrenda table sits just above the bottom buttons. No empty band under the table on tall phones.
+- Waves loads every sprite atlas before the first render and before any kid is spawned (`texLoads` in `waves.ts`). That removed the ~100 "Texture marked for update but no image data" warnings. `__waves.ready()` tells tests when art is in.
+- Build stamp: `vite.config.ts` no longer replaces `%%CZ_BUILD%%` with "preview" in builds, so `merge-dist.mjs` stamps every vite game page (Waves, Crash, Strike, Slots...) with `v1.0.0 · <sha>` like the Astro pages. The dev server shows "dev".
 - Waves bomb button stays fixed on the left and ghosted until a bomb is ready.
 - Waves sugar-skull girl is the new flower-crown chibi, cut from Gabe's sprite sheet (keyed, scaled, feet aligned). The video was not used. Boy is the newer chibi sheet.
 
@@ -80,6 +84,4 @@ The flow so far: Strike work lands on `feat/chancla-strike-sling`, is fast-forwa
 - **Polish pass, partly done**: `src/play/fx3d.ts` (rings, sparks, glow, hit-stop) is wired into Crash and Waves. Strike has its own 2D canvas polish (gold trail, impact rings, marigold petals, hit-stop). Remaining (free/permissive only) across Crash, Waves and Strike: impact particles, relic glow, marigold petal bursts
   on hits (no floor confetti), screen shake/hit-stop, better code-generated sounds, smooth UI transitions, mobile performance.
 - The Strike Level Map card on short landscape phones slightly overlaps the footer copyright line.
-- The old Day-of-the-Dead **town map** `/choose` (commit `1d0af71`, Oct 28) was replaced by the carousel in `57f61ba`.
-  Neither production nor the previews has it. Restore it only if Gabe asks.
 - Landing branch `design/astro-landing` and the game branches are separate. Merge them together before any production release.

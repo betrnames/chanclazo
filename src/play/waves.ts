@@ -29,7 +29,8 @@ stage.insertBefore(renderer.domElement, stage.firstChild);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 9 / 16, 0.1, 200);
 const CAM_POS = new THREE.Vector3(0, 5.0, 8.0), CAM_LOOK = new THREE.Vector3(0, 0.6, -2.6);
-camera.position.copy(CAM_POS); camera.lookAt(CAM_LOOK);
+const camLook = CAM_LOOK.clone(); // CAM_LOOK adjusted per screen shape in resize()
+camera.position.copy(CAM_POS); camera.lookAt(camLook);
 const hemi = new THREE.HemisphereLight(0xffffff, 0x222222, 1.6); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(4, 12, 6); sun.target.position.set(0, 0, -5); scene.add(sun, sun.target);
@@ -49,7 +50,18 @@ function resize(): void {
   const hv = 46 * Math.PI / 180, vNeeded = 2 * Math.atan(Math.tan(hv / 2) / aspect) * 180 / Math.PI;
   camera.fov = Math.max(68, Math.min(84, vNeeded)); camera.updateProjectionMatrix();
   // the relic floats ~80% down the screen, a little in front of the ofrenda
-  camera.position.copy(CAM_POS); camera.lookAt(CAM_LOOK); camera.updateMatrixWorld();
+  // Tilt the view so the front of the ofrenda table sits just above the bottom buttons.
+  // On tall phones this removes the empty band under the table: the plaza and lanes fill the screen.
+  const want = -1 + 2 * Math.max(96, h * 0.115) / h; // NDC y for the table's front-bottom edge
+  const front = new THREE.Vector3(0, 0, LINE_Z + 1.7), pv = new THREE.Vector3();
+  let lo = -2.6, hi = 3.5; // CAM_LOOK.y range: higher = look up = table lower on screen
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2; camLook.set(CAM_LOOK.x, mid, CAM_LOOK.z);
+    camera.position.copy(CAM_POS); camera.lookAt(camLook); camera.updateMatrixWorld();
+    if (pv.copy(front).project(camera).y > want) lo = mid; else hi = mid;
+  }
+  camLook.y = Math.min(CAM_LOOK.y + 2.2, Math.max(CAM_LOOK.y, (lo + hi) / 2)); // never look further down than the old framing
+  camera.position.copy(CAM_POS); camera.lookAt(camLook); camera.updateMatrixWorld();
   const d = new THREE.Vector3(0, -0.58, 0.5).unproject(camera).sub(camera.position).normalize();
   LAUNCH.copy(camera.position).addScaledVector(d, 5.0);
 }
@@ -82,7 +94,14 @@ const flames: THREE.Sprite[] = [];
 }
 // ───────────────────────── art ─────────────────────────
 const texLoader = new THREE.TextureLoader();
-function tex(src: string): THREE.Texture { const t = texLoader.load(src); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
+// Every atlas is loaded before the first render and before any kid clones its texture.
+// (Rendering a clone whose image has not arrived yet logs "Texture marked for update but no image data found".)
+const texLoads: Promise<void>[] = [];
+function tex(src: string): THREE.Texture {
+  let done!: () => void; texLoads.push(new Promise<void>((r) => { done = r; }));
+  const t = texLoader.load(src, () => done(), undefined, () => { report(`texture failed: ${src}`); done(); });
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
 // ───────────────────────── art ─────────────────────────
 // Enemy art registry: animated Agent Sprite Forge atlases (public/waves/sprites/<name>-atlas.webp + .json).
 // Each atlas = uniform cells. Default rows: walk 8, hit 3, ko 4. Counts can be shorter (the boy sheet is 6 / 1 / 3).
@@ -167,6 +186,8 @@ function geoFor(kind: string, w: number, h: number, ax = 0.5, ay = 1): THREE.Pla
 const pipTex = canvasTex(32, 32, (g) => { g.fillStyle = '#3b1a5c'; g.beginPath(); g.arc(16, 16, 14, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ff3d9a'; g.beginPath(); g.arc(16, 16, 9, 0, Math.PI * 2); g.fill(); });
 const hpBgTex = canvasTex(128, 24, (g) => { g.fillStyle = '#1a0826'; g.beginPath(); g.roundRect(0, 0, 128, 24, 12); g.fill(); g.strokeStyle = '#ffd23f'; g.lineWidth = 3; g.beginPath(); g.roundRect(2, 2, 124, 20, 10); g.stroke(); });
 const hpFillTex = canvasTex(64, 16, (g) => { const gr = g.createLinearGradient(0, 0, 0, 16); gr.addColorStop(0, '#ff8a5c'); gr.addColorStop(1, '#d6122a'); g.fillStyle = gr; g.fillRect(0, 0, 64, 16); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, 2, 64, 4); });
+// luchador atlas: head centre x and the top of his head (px inside a cell, measured from the walk frames)
+const BOSS_HEAD = { x: 180, top: 12 };
 function bossHp(n: number): number { return 8 + Math.floor(n / 3) * 3; } // wave 3: 11, wave 6: 14, ...
 function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid {
   const variant = 0;
@@ -198,10 +219,11 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
     k.pips = [];
     for (let i = 0; i < k.maxHp; i++) { const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: pipTex, depthWrite: false, fog: false })); p.scale.setScalar(0.3); p.position.set((i - (k.maxHp - 1) / 2) * 0.34, h + 0.16, 0.02); body.add(p); k.pips.push(p); }
   }
-  if (kind === 'lucha') { // boss health bar over his head (always faces the camera)
-    k.hpBar = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpBgTex, depthWrite: false, depthTest: false, fog: false })); k.hpBar.scale.set(1.7, 0.32, 1); k.hpBar.position.set(0, h + 0.3, 0); k.hpBar.renderOrder = 8;
-    k.hpFill = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpFillTex, depthWrite: false, depthTest: false, fog: false })); k.hpFill.center.set(0, 0.5); k.hpFill.scale.set(1.56, 0.18, 1); k.hpFill.position.set(-0.78, h + 0.3, 0); k.hpFill.renderOrder = 9;
-    root.add(k.hpBar, k.hpFill); boss = k;
+  if (kind === 'lucha') { // boss health bar centred over his head. It is a child of the body, so it follows his walk, lean and sway.
+    const headX = (BOSS_HEAD.x - a.ax) / a.cw * w, headY = (a.ay - BOSS_HEAD.top) / a.ch * h + 0.22;
+    k.hpBar = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpBgTex, depthWrite: false, depthTest: false, fog: false })); k.hpBar.scale.set(1.7, 0.32, 1); k.hpBar.position.set(headX, headY, 0.05); k.hpBar.renderOrder = 8;
+    k.hpFill = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpFillTex, depthWrite: false, depthTest: false, fog: false })); k.hpFill.center.set(0, 0.5); k.hpFill.scale.set(1.56, 0.18, 1); k.hpFill.position.set(headX - 0.78, headY, 0.06); k.hpFill.renderOrder = 9;
+    body.add(k.hpBar, k.hpFill); boss = k;
   }
   if (golden) { k.aura = new THREE.Sprite(haloMat.clone()); k.aura.scale.set(w * 2.2, h * 1.5, 1); k.aura.position.y = h * 0.5; k.aura.renderOrder = -1; root.add(k.aura); }
   root.position.set(k.x, 0, k.z);
@@ -538,6 +560,7 @@ function newGame(): void {
   clearField();
   hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; updateBombBtn();
   ['title', 'over', 'pause'].forEach((id) => $(id).classList.add('hidden'));
+  stage.classList.remove('on-title'); // HUD, hearts, fire and bomb buttons only show once play starts
   $('hint').classList.remove('gone');
   setTimeout(() => $('hint').classList.add('gone'), 5000);
   markGameStart('waves');
@@ -559,7 +582,8 @@ function togglePause(): void {
   if (state !== 'play' && state !== 'between') return;
   prevState = state; state = 'paused'; $('pause').classList.remove('hidden');
 }
-$('play').addEventListener('click', () => { sfx.unlockCrashAudio(); sfx.sfxClick(); newGame(); });
+let artReady = false, startWhenReady = false;
+$('play').addEventListener('click', () => { sfx.unlockCrashAudio(); sfx.sfxClick(); if (artReady) newGame(); else startWhenReady = true; });
 $('retry').addEventListener('click', () => { sfx.sfxClick(); newGame(); });
 $('restart').addEventListener('click', () => { sfx.sfxClick(); newGame(); });
 $('resume').addEventListener('click', () => { sfx.sfxClick(); togglePause(); });
@@ -680,7 +704,7 @@ function frame(now: number): void {
 
   shake = Math.max(0, shake - dtReal * 1.6);
   camera.position.set(CAM_POS.x + (Math.random() - 0.5) * shake * 0.4, CAM_POS.y + (Math.random() - 0.5) * shake * 0.3, CAM_POS.z);
-  camera.lookAt(CAM_LOOK);
+  camera.lookAt(camLook);
   renderer.render(scene, camera);
 }
 let lastBar = -1;
@@ -693,13 +717,18 @@ autoUnlockAudio(); wireMute();
 for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener(ev, () => sfx.unlockCrashAudio(), { capture: true, passive: true });
 $('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · or tap the gold chancla' : 'Click or drag at a kid to throw · Space = gold chancla';
 updateHud();
-// title-screen ambience: a few kids already marching in the background
-for (let i = 0; i < 4; i++) { const k = spawnKid(i % 2 ? 'girl' : 'boy', i, 0); k.z = -7.5 + ((i * 5) % 4) * 2.0; }
-if (params.has('start')) newGame();
-requestAnimationFrame(frame);
+Promise.all(texLoads).then(() => {
+  artReady = true;
+  // title-screen ambience: a few kids already marching in the background
+  for (let i = 0; i < 4; i++) { const k = spawnKid(i % 2 ? 'girl' : 'boy', i, 0); k.z = -7.5 + ((i * 5) % 4) * 2.0; }
+  if (params.has('start') || startWhenReady) newGame();
+  prev = performance.now();
+  requestAnimationFrame(frame);
+});
 
 // test / screenshot hooks
 (window as unknown as Record<string, unknown>).__waves = {
+  ready: () => artReady,
   start: newGame,
   state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil, bombs, booms, boss: boss && alive(boss) ? { hp: boss.hp, maxHp: boss.maxHp, z: +boss.root.position.z.toFixed(2) } : null }),
   kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden })),

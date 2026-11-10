@@ -2,12 +2,17 @@ import path from "path"
 import react from "@vitejs/plugin-react"
 import { defineConfig, type Plugin } from "vite"
 
-function htmlEnv() {
+function htmlEnv(): Plugin {
   const site = process.env.VITE_SITE_URL || 'https://chanclazo.com';
+  let serve = false;
   return {
     name: 'html-env',
+    configResolved(c) { serve = c.command === 'serve'; },
+    // In a build, %%CZ_BUILD%% is left in place so scripts/merge-dist.mjs stamps it with "v<version> · <commit>"
+    // (same as the Astro pages). The dev server shows "dev".
     transformIndexHtml(html: string) {
-      return html.replaceAll('%VITE_SITE_URL%', site).replaceAll('%%CZ_BUILD%%', 'preview');
+      const out = html.replaceAll('%VITE_SITE_URL%', site);
+      return serve ? out.replaceAll('%%CZ_BUILD%%', 'dev') : out;
     },
   };
 }
