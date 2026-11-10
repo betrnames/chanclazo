@@ -27,6 +27,7 @@ export default defineConfig({
         slots: path.resolve(__dirname, 'slots.html'),
         strike3d: path.resolve(__dirname, 'strike3d.html'),
         crash: path.resolve(__dirname, 'crash.html'),
+        waves: path.resolve(__dirname, 'waves.html'),
       },
     },
   },
