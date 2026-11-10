@@ -1,6 +1,7 @@
 // Chancla Waves: a Plants-vs-Zombies-style lane defence (three.js).
 // The sugar-skull boy and Catrina girl march on the ofrenda in waves; throw the gold chancla to knock them out.
-// Tap / drag at a kid to throw (aim follows the finger, release throws), or tap the gold chancla button to auto-aim.
+// Slingshot: press anywhere and pull back on the floating gold chancla (it glows, the arc shows), release to throw at the lanes;
+// or tap the gold chancla button to auto-aim the closest kid.
 // Each kid that crosses the marigold line costs a heart. Waves get bigger and faster; there is no last wave.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
@@ -16,6 +17,7 @@ const LANES = [-2.25, -0.75, 0.75, 2.25];
 const SPAWN_Z = -9.5, LINE_Z = 2.0, HEARTS = 5;
 const BEST_KEY = 'cz_waves_best_v1';
 const LAUNCH = new THREE.Vector3();
+const ORIGIN = new THREE.Vector3(); // where the next throw leaves from: the relic, pulled back while aiming
 
 // ───────────────────────── renderer / scene ─────────────────────────
 const stage = $('stage');
@@ -108,7 +110,7 @@ const relic = new THREE.Group(); const relicMesh = makeChancla();
 const relicSole = new THREE.MeshStandardMaterial({ color: 0xffb21a, metalness: 1, roughness: 0.22, emissive: 0x2a1400, emissiveIntensity: 0.5, envMap: goldEnv, envMapIntensity: 1.6 });
 relicMesh.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? relicSole : relicStrap; }); relicMesh.scale.setScalar(0.85); relic.add(relicMesh);
 const relicHalo = new THREE.Sprite(haloMat.clone()); relicHalo.scale.setScalar(1.7); relicHalo.renderOrder = -1; relic.add(relicHalo);
-relic.position.copy(LAUNCH); scene.add(relic);
+relic.position.copy(LAUNCH); scene.add(relic); ORIGIN.copy(LAUNCH);
 let relicKick = 0;
 
 // aim preview: dotted arc + ground ring
@@ -225,9 +227,9 @@ function checkWaveDone(): void {
 // ───────────────────────── throwing ─────────────────────────
 const shotProto = makeChancla(); shotProto.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? relicSole : relicStrap; });
 const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
-function flightTime(to: THREE.Vector3): number { return THREE.MathUtils.clamp(LAUNCH.distanceTo(to) / 17, 0.32, 0.85); }
+function flightTime(to: THREE.Vector3): number { return THREE.MathUtils.clamp(ORIGIN.distanceTo(to) / 17, 0.32, 0.85); }
 function velFor(to: THREE.Vector3, T: number, out: THREE.Vector3): THREE.Vector3 {
-  return out.set((to.x - LAUNCH.x) / T, (to.y - LAUNCH.y + 0.5 * G * T * T) / T, (to.z - LAUNCH.z) / T);
+  return out.set((to.x - ORIGIN.x) / T, (to.y - ORIGIN.y + 0.5 * G * T * T) / T, (to.z - ORIGIN.z) / T);
 }
 /** Where a kid will be after t seconds. */
 function predict(k: Kid, t: number, out: THREE.Vector3): THREE.Vector3 {
@@ -247,8 +249,8 @@ function throwAt(to: THREE.Vector3, target?: Kid): boolean {
   const T = flightTime(to);
   const v = velFor(to, T, new THREE.Vector3());
   const obj = shotProto.clone(); scene.add(obj);
-  obj.position.copy(LAUNCH);
-  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target, born: clock });
+  obj.position.copy(ORIGIN);
+  shots.push({ obj, p: ORIGIN.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target, born: clock });
   lastThrow = clock; thrown++; relicKick = 1;
   if (thrown === 1) { markFirstAction('waves', 'throw'); $('hint').classList.add('gone'); }
   if (clock < rapidUntil) { sfx.sfxRapidShot(); sfx.buzz(8); } else { sfx.sfxFire(); sfx.sfxWhoosh(); sfx.buzz(14); }
@@ -267,40 +269,52 @@ function autoThrow(): boolean {
   return throwAt(to, k);
 }
 
-// ───────────────────────── input: tap / drag at a kid ─────────────────────────
-const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-const aimPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.75);
-let aiming = false, aimKid: Kid | undefined;
-const aimPt = new THREE.Vector3();
-function pointerAim(e: PointerEvent): void {
-  const r = renderer.domElement.getBoundingClientRect();
-  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-  ray.setFromCamera(ndc, camera);
-  const hits = ray.intersectObjects(kids.filter(alive).map((k) => k.body), false);
-  aimKid = hits.length ? kids.find((k) => k.body === hits[0].object) : undefined;
-  if (!aimKid) {
-    // generous assist: snap to a kid whose screen position is near the finger
-    let bestD = 0.13;
-    for (const k of kids) { if (!alive(k)) continue; const s = kidCenter(k, tmpV).project(camera); const d = Math.hypot((s.x - ndc.x) * camera.aspect, s.y - ndc.y); if (d < bestD) { bestD = d; aimKid = k; } }
-  }
+// ───────────────────────── input: slingshot (press anywhere, pull back, release) ─────────────────────────
+let aiming = false, aimKid: Kid | undefined, pullId = -1, pullPow = 0;
+const aimPt = new THREE.Vector3(), pull = new THREE.Vector2(), pullFrom = new THREE.Vector2();
+let pullMoved = 0;
+/** Pull back = farther up the street; pull left = aim right (and vice versa). Snaps to the kid nearest the aim point. */
+function pullAim(): void {
+  const r = canvas.getBoundingClientRect();
+  const nx = pull.x / r.width, ny = Math.max(0, pull.y) / r.height;
+  pullPow = Math.min(1, Math.hypot(nx, ny) / 0.32);
+  const near = LINE_Z - 0.6, far = SPAWN_Z + 0.8;
+  const gz = near - THREE.MathUtils.clamp(ny / 0.3, 0, 1) * (near - far);
+  const gx = THREE.MathUtils.clamp((-nx / 0.2) * 3.0, -3.3, 3.3);
+  aimPt.set(gx, 0.75, gz); aimKid = undefined;
+  let bestD = 1.15;
+  for (const k of kids) { if (!alive(k)) continue; leadPoint(k, tmpV); const d = Math.hypot(tmpV.x - gx, (tmpV.z - gz) * 0.45); if (d < bestD) { bestD = d; aimKid = k; } }
   if (aimKid) leadPoint(aimKid, aimPt);
-  else if (!ray.ray.intersectPlane(aimPlane, aimPt)) aimPt.set(0, 0.75, -6);
   aimPt.z = Math.min(aimPt.z, LINE_Z + 0.5);
 }
 const canvas = renderer.domElement;
 canvas.addEventListener('pointerdown', (e) => {
   if (state !== 'play' && state !== 'between') return;
   sfx.unlockCrashAudio();
-  aiming = true; holding = true; canvas.setPointerCapture?.(e.pointerId); pointerAim(e);
-  if (clock < rapidUntil) throwAt(aimPt.clone(), aimKid);
+  aiming = true; holding = true; pullId = e.pointerId; pullFrom.set(e.clientX, e.clientY); pull.set(0, 0); pullMoved = 0; pullPow = 0;
+  canvas.setPointerCapture?.(e.pointerId); pullAim();
 });
-canvas.addEventListener('pointermove', (e) => { if (aiming) pointerAim(e); });
+canvas.addEventListener('pointermove', (e) => {
+  if (!aiming || e.pointerId !== pullId) return;
+  pull.set(e.clientX - pullFrom.x, e.clientY - pullFrom.y); pullMoved = Math.max(pullMoved, pull.length()); pullAim();
+});
 const endAim = (e: PointerEvent) => {
-  if (!aiming) return; aiming = false; holding = false; pointerAim(e);
-  if (state === 'play' || state === 'between') { if (aimKid) leadPoint(aimKid, aimPt); throwAt(aimPt.clone(), aimKid); }
+  if (!aiming || e.pointerId !== pullId) return;
+  aiming = false; holding = false;
+  if ((state === 'play' || state === 'between') && pullMoved > 14) { pullAim(); throwAt(aimPt.clone(), aimKid); }
+  pull.set(0, 0); pullPow = 0;
 };
 canvas.addEventListener('pointerup', endAim);
-canvas.addEventListener('pointercancel', () => { aiming = false; holding = false; });
+canvas.addEventListener('pointercancel', () => { aiming = false; holding = false; pull.set(0, 0); pullPow = 0; });
+// slingshot bands + the two gold nubs they hang from
+const bandMat = new THREE.MeshBasicMaterial({ color: 0xffc83a, fog: false });
+const bands = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1, 6), bandMat); scene.add(m); return m; });
+const nubs = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 8), relicStrap); scene.add(m); return m; });
+const Y_UP = new THREE.Vector3(0, 1, 0), tA = new THREE.Vector3(), tB = new THREE.Vector3();
+function stretch(m: THREE.Mesh, a: THREE.Vector3, b: THREE.Vector3): void {
+  tA.subVectors(b, a); const len = tA.length();
+  m.position.copy(a).addScaledVector(tA, 0.5); m.scale.set(1, Math.max(0.001, len), 1); m.quaternion.setFromUnitVectors(Y_UP, tA.normalize());
+}
 
 const fireBtn = $('fire') as HTMLButtonElement;
 let fireHeld = false;
@@ -466,7 +480,7 @@ function frame(now: number): void {
   // rapid fire: holding the button or the field keeps spraying
   if (clock < rapidUntil && (state === 'play' || state === 'between')) {
     if (fireHeld) autoThrow();
-    else if (holding && aiming) throwAt(aimPt.clone().add(tmpV2.set((Math.random() - 0.5) * 0.4, 0, 0)), aimKid);
+    else if (holding && aiming && pullMoved > 8) { pullAim(); throwAt(aimPt.clone().add(tmpV2.set((Math.random() - 0.5) * 0.4, 0, 0)), aimKid); }
     ($('rapid') as HTMLElement).style.setProperty('--p', String((rapidUntil - clock) / 5));
   } else if (!$('rapid').classList.contains('hidden')) { $('rapid').classList.add('hidden'); if (rapidUntil) sfx.sfxRapidEnd(); rapidUntil = 0; }
 
@@ -534,16 +548,29 @@ function frame(now: number): void {
 
   // relic: floats and bobs; kicks back when a chancla leaves
   relicKick = Math.max(0, relicKick - dtReal * 5);
-  relic.position.set(LAUNCH.x, LAUNCH.y + Math.sin(s * 2.2) * 0.08 - relicKick * 0.18, LAUNCH.z + relicKick * 0.25);
-  relicMesh.rotation.set(0.95 + Math.sin(s * 1.7) * 0.08 - relicKick * 0.6, Math.PI / 2 + Math.sin(s * 0.9) * 0.35, Math.sin(s * 1.3) * 0.1, 'YXZ');
-  relicHalo.material.opacity = 0.22 + Math.sin(s * 3) * 0.08 + relicKick * 0.4;
+  const pk = aiming ? pullPow : 0, cr = canvas.getBoundingClientRect();
+  const ox = aiming ? THREE.MathUtils.clamp((pull.x / cr.width) * 1.5, -0.45, 0.45) : 0;
+  const oy = aiming ? -Math.min(0.3, (Math.max(0, pull.y) / cr.height) * 1.0) : 0;
+  relic.position.set(LAUNCH.x + ox, LAUNCH.y + oy + Math.sin(s * 2.2) * (aiming ? 0.02 : 0.08) - relicKick * 0.18, LAUNCH.z + pk * 0.35 + relicKick * 0.25);
+  if (pk > 0.95) relic.position.x += (Math.random() - 0.5) * 0.015;
+  relicMesh.rotation.set(0.95 + Math.sin(s * 1.7) * 0.08 - relicKick * 0.6 - pk * 0.3, Math.PI / 2 + Math.sin(s * 0.9) * (aiming ? 0.1 : 0.35) - ox * 0.8, Math.sin(s * 1.3) * 0.1, 'YXZ');
+  relicHalo.material.opacity = 0.22 + Math.sin(s * 3) * 0.08 + relicKick * 0.4 + pk * 0.55;
+  relicHalo.scale.setScalar(1.7 + pk * 0.9);
+  ORIGIN.copy(relic.position);
+  for (const [i, sx] of [[0, -1], [1, 1]] as const) {
+    tB.set(LAUNCH.x + sx * 0.62, LAUNCH.y - 0.05, LAUNCH.z - 0.1); nubs[i].position.copy(tB);
+    nubs[i].visible = state === 'play' || state === 'between';
+    bands[i].visible = aiming && pk > 0.02 && nubs[i].visible;
+    if (bands[i].visible) stretch(bands[i], tB, relic.position);
+  }
 
   // aim preview while dragging
-  const showAim = aiming && (state === 'play' || state === 'between');
+  const showAim = aiming && pullMoved > 8 && (state === 'play' || state === 'between');
   dotGroup.visible = ring.visible = showAim;
   if (showAim) {
     const T = flightTime(aimPt); const v = velFor(aimPt, T, tmpV);
-    dots.forEach((d, i) => { const t = (i + 1) / (dots.length + 1) * T; d.position.set(LAUNCH.x + v.x * t, LAUNCH.y + v.y * t - 0.5 * G * t * t, LAUNCH.z + v.z * t); d.material.opacity = 0.9; });
+    dots.forEach((d, i) => { const t = (i + 1) / (dots.length + 1) * T; d.position.set(ORIGIN.x + v.x * t, ORIGIN.y + v.y * t - 0.5 * G * t * t, ORIGIN.z + v.z * t); d.material.opacity = 0.9; d.scale.setScalar(0.16 + pk * 0.06); });
+    dotMat.color.setRGB(1, 1 - pk * 0.3, 1 - pk * 0.75);
     ring.position.set(aimPt.x, 0.03, aimPt.z); ring.scale.setScalar(0.9 + Math.sin(s * 8) * 0.08);
     (ring.material as THREE.MeshBasicMaterial).color.setHex(aimKid ? 0xffffff : 0xb0a0c0);
   }
@@ -567,7 +594,7 @@ addEventListener('resize', resize);
 resize();
 autoUnlockAudio(); wireMute();
 for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener(ev, () => sfx.unlockCrashAudio(), { capture: true, passive: true });
-$('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · or tap the gold chancla' : 'Click or drag at a kid to throw · Space = gold chancla';
+$('hint').textContent = isTouch ? 'Pull back the gold chancla & let go · or tap the button' : 'Drag back to pull the chancla, release to throw · Space = auto-throw';
 updateHud();
 // title-screen ambience: a few kids already marching in the background
 for (let i = 0; i < 4; i++) { const k = spawnKid(i % 2 ? 'girl' : 'boy', i, 0); k.z = -7.5 + ((i * 5) % 4) * 2.0; }
@@ -585,5 +612,6 @@ requestAnimationFrame(frame);
   spawn: (kind: Kind = 'boy', lane = 1, z = -6, speed = 1.2) => { const k = spawnKid(kind, lane, speed); k.z = z; return kids.length; },
   hurt: (n = 1) => { for (let i = 0; i < n; i++) { const k = spawnKid('boy', i % 4, 1); k.z = LINE_Z - 0.01; } },
   rapid: startRapid,
+  aim: () => ({ aiming, pullPow: +pullPow.toFixed(2), aimKid: aimKid ? aimKid.lane : null, aimPt: aimPt.toArray().map((n) => +n.toFixed(2)) }),
   pause: (on: boolean) => { if (on !== (state === 'paused')) togglePause(); },
 };
