@@ -29,6 +29,16 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 #hearts i.off{opacity:.28;filter:grayscale(1);transform:scale(.8)}
 #hearts i.lost{animation:hlost .5s}
 @keyframes hlost{30%{transform:scale(1.6) rotate(-14deg)}100%{transform:scale(.8)}}
+#bomb{position:absolute;right:122px;bottom:calc(env(safe-area-inset-bottom) + 52px);z-index:6;width:70px;height:70px;border-radius:50%;padding:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#ffcf6a,#ff6a1a 55%,#a8101e);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f,0 0 18px rgba(255,120,40,.7);cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;animation:bglow 1s ease-in-out infinite alternate;transition:transform .12s}
+#bomb img{width:52px;height:auto;pointer-events:none;transform:rotate(-24deg);filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
+#bomb .bb{position:absolute;left:-6px;top:-8px;font-size:22px;pointer-events:none;filter:drop-shadow(0 2px 1px rgba(0,0,0,.6))}
+#bomb .bn{position:absolute;right:-6px;top:-6px;min-width:24px;height:24px;border-radius:12px;background:#3b1a5c;border:2px solid #ffd23f;color:#fff;font:400 14px/20px LilitaOne,system-ui;text-align:center;pointer-events:none}
+#bomb.hidden{display:none}#bomb.press{transform:translateY(4px) scale(.9)}#bomb.pop{animation:bpop .45s cubic-bezier(.3,1.6,.5,1),bglow 1s ease-in-out .45s infinite alternate}
+@keyframes bglow{from{box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f,0 0 10px rgba(255,120,40,.5)}to{box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f,0 0 26px rgba(255,170,60,.95)}}
+@keyframes bpop{0%{transform:scale(.3)}100%{transform:scale(1)}}
+#boomflash{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 45%,rgba(255,240,190,.85),rgba(255,140,40,.35) 45%,rgba(255,80,20,0) 75%)}
+#boomflash.on{animation:boomf .5s ease-out}@keyframes boomf{0%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#bomb,#bomb.pop{animation:none}#boomflash.on{animation:none}}
 #fire{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 40px);z-index:6;width:100px;height:100px;border-radius:50%;padding:0;border:5px solid #3b1a5c;background:radial-gradient(circle at 50% 36%,#7a35ad,#46196b 58%,#24092f);box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f;cursor:pointer;touch-action:none;transition:filter .2s,transform .09s,box-shadow .09s;display:flex;align-items:center;justify-content:center}
 #fire img{width:84px;height:auto;pointer-events:none;filter:drop-shadow(0 4px 2px rgba(0,0,0,.55));transform:rotate(-24deg) translateY(-3px)}
 #fire .tap{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);font:400 13px LilitaOne,system-ui;letter-spacing:.08em;color:#ffd23f;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none}
@@ -102,6 +112,8 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   <div id="fx"></div>
   <div id="hint" class="gone">Tap a kid to throw · or tap the gold chancla</div>
   <div id="rapid" class="hidden" aria-live="polite">🔥 RAPID FIRE <span class="rb"><i></i></span></div>
+  <button id="bomb" class="hidden" aria-label="Drop a gold chancla bomb (B)"><img src="/crash/chancla-btn.webp" alt="" width="54" height="30" /><span class="bb">💣</span><span id="bombN" class="bn">0</span></button>
+  <div id="boomflash" aria-hidden="true"></div>
   <button id="fire" aria-label="Throw the gold chancla at the closest kid"><img src="/crash/chancla-btn.webp" alt="" width="84" height="47" /><span class="tap">TAP!</span></button>
 
   <div class="screen" id="title"><div class="card">

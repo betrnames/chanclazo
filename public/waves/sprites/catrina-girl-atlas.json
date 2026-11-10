@@ -1,0 +1,150 @@
+{
+ "meta": {
+  "generator": "Agent Sprite Forge (MIT) host_image route: GenerateImage keyframe sheets -> assemble_frames.py chroma soft-matte + ownership slicing -> scale_frames.py (one scale, stance root, feet/torso locks) -> pack.py",
+  "image": "catrina-girl-atlas.webp",
+  "size": {
+   "w": 2448,
+   "h": 1029
+  },
+  "cell": {
+   "w": 306,
+   "h": 343
+  },
+  "anchor": {
+   "x": 138,
+   "y": 336,
+   "note": "feet/ground point inside every cell"
+  },
+  "bodyHeightPx": 320
+ },
+ "frames": {
+  "walk_0": {
+   "x": 0,
+   "y": 0,
+   "w": 306,
+   "h": 343
+  },
+  "walk_1": {
+   "x": 306,
+   "y": 0,
+   "w": 306,
+   "h": 343
+  },
+  "walk_2": {
+   "x": 612,
+   "y": 0,
+   "w": 306,
+   "h": 343
+  },
+  "walk_3": {
+   "x": 918,
+   "y": 0,
+   "w": 306,
+   "h": 343
+  },
+  "walk_4": {
+   "x": 1224,
+   "y": 0,
+   "w": 306,
+   "h": 343
+  },
+  "walk_5": {
+   "x": 1530,
+   "y": 0,
+   "w": 306,
+   "h": 343
+  },
+  "walk_6": {
+   "x": 1836,
+   "y": 0,
+   "w": 306,
+   "h": 343
+  },
+  "walk_7": {
+   "x": 2142,
+   "y": 0,
+   "w": 306,
+   "h": 343
+  },
+  "hit_0": {
+   "x": 0,
+   "y": 343,
+   "w": 306,
+   "h": 343
+  },
+  "hit_1": {
+   "x": 306,
+   "y": 343,
+   "w": 306,
+   "h": 343
+  },
+  "hit_2": {
+   "x": 612,
+   "y": 343,
+   "w": 306,
+   "h": 343
+  },
+  "ko_0": {
+   "x": 0,
+   "y": 686,
+   "w": 306,
+   "h": 343
+  },
+  "ko_1": {
+   "x": 306,
+   "y": 686,
+   "w": 306,
+   "h": 343
+  },
+  "ko_2": {
+   "x": 612,
+   "y": 686,
+   "w": 306,
+   "h": 343
+  },
+  "ko_3": {
+   "x": 918,
+   "y": 686,
+   "w": 306,
+   "h": 343
+  }
+ },
+ "animations": {
+  "walk": {
+   "frames": [
+    "walk_0",
+    "walk_1",
+    "walk_2",
+    "walk_3",
+    "walk_4",
+    "walk_5",
+    "walk_6",
+    "walk_7"
+   ],
+   "fps": 10,
+   "loop": true,
+   "row": 0
+  },
+  "hit": {
+   "frames": [
+    "hit_0",
+    "hit_1",
+    "hit_2"
+   ],
+   "fps": 12,
+   "loop": false,
+   "row": 1
+  },
+  "ko": {
+   "frames": [
+    "ko_0",
+    "ko_1",
+    "ko_2",
+    "ko_3"
+   ],
+   "fps": 10,
+   "loop": false,
+   "row": 2
+  }
+ }
+}

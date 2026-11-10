@@ -8,6 +8,7 @@ import { $, autoUnlockAudio, wireMute, report } from './common';
 import { markGameStart, markFirstAction, track } from '../analytics';
 import { makeChancla, makeCandle, buildBackdrop, glowTex, dotTex } from './crashArt';
 import * as sfx from './crashAudio';
+import { FX, HitStop } from './fx3d';
 
 const G = 16;
 const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -82,9 +83,52 @@ const flames: THREE.Sprite[] = [];
 // ───────────────────────── art ─────────────────────────
 const texLoader = new THREE.TextureLoader();
 function tex(src: string): THREE.Texture { const t = texLoader.load(src); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
-const KIDS = {
-  boy: { map: tex('/crash/kid-boy.webp'), aspect: 252 / 404, h: 2.05 },
-  girl: { map: tex('/crash/kid-girl.webp'), aspect: 283 / 446, h: 2.15 },
+// ───────────────────────── the little calaca skeletons from the home screen art (scene decoration) ─────────────────────────
+// Cut out of the landing-page plaza art (public/waves/calaca1-5.webp). They stand just outside the lanes and on the ofrenda,
+// dancing gently; they never enter the lanes so they cannot block or be confused with the marching kids.
+interface Calaca { s: THREE.Sprite; base: THREE.Vector3; h: number; ph: number; spd: number; flip: number }
+const calacas: Calaca[] = [];
+{
+  const spots: [number, number, number, number][] = [ // x, z, height, art index
+    [-3.75, -8.6, 0.95, 1], [3.8, -7.2, 0.95, 3], [-3.7, -5.0, 0.9, 2], [3.75, -3.1, 0.9, 4], [-3.65, -1.2, 0.85, 5],
+    [-2.35, LINE_Z + 1.4, 0.62, 3], [2.4, LINE_Z + 1.4, 0.62, 1],
+  ];
+  const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false });
+  const shadowGeo = new THREE.CircleGeometry(0.28, 20);
+  const mats = [1, 2, 3, 4, 5].map((i) => tex(`/waves/calaca${i}.webp`));
+  spots.forEach(([x, z, h, ai], i) => {
+    const m = new THREE.SpriteMaterial({ map: mats[ai - 1], transparent: true, alphaTest: 0.08, depthWrite: true });
+    const sp = new THREE.Sprite(m); sp.center.set(0.5, 0); const w = h * 0.66, flip = x > 0 ? -1 : 1; sp.scale.set(w * flip, h, 1);
+    const onTable = z > LINE_Z; const base = new THREE.Vector3(x, onTable ? 0.39 : 0, z);
+    sp.position.copy(base); scene.add(sp);
+    if (!onTable) { const sh = new THREE.Mesh(shadowGeo, shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.set(x, 0.015, z); sh.scale.set(1, 0.6, 1); scene.add(sh); }
+    calacas.push({ s: sp, base, h, ph: i * 1.7, spd: 2.2 + (i % 3) * 0.45, flip });
+  });
+}
+function danceCalacas(t: number): void {
+  for (const c of calacas) {
+    const k = t * c.spd + c.ph, hop = Math.max(0, Math.sin(k)) * 0.07 * c.h;
+    c.s.position.set(c.base.x + Math.sin(k * 0.5) * 0.04, c.base.y + hop, c.base.z);
+    (c.s.material as THREE.SpriteMaterial).rotation = Math.sin(k) * 0.09;
+    const sq = 1 - hop * 0.6; c.s.scale.set(c.h * 0.66 * c.flip * (2 - sq), c.h * sq, 1); // tiny squash and stretch
+  }
+}
+// Enemy art registry: animated Agent Sprite Forge atlases (public/waves/sprites/<name>-atlas.webp + .json).
+// Each atlas = uniform cells, row 0 walk (8), row 1 hit (3), row 2 ko (4); anchor = feet point inside every cell.
+// To swap art, drop a new atlas in and update its numbers here (copied from its JSON meta).
+interface Sheet { tex: THREE.Texture; W: number; H: number; cw: number; ch: number; ax: number; ay: number; h: number; stride: number }
+const sheet = (name: string, W: number, H: number, cw: number, ch: number, ax: number, ay: number, h: number, stride: number): Sheet =>
+  ({ tex: tex(`/waves/sprites/${name}-atlas.webp`), W, H, cw, ch, ax, ay, h, stride });
+const ANIM = { walk: { row: 0, n: 8, fps: 10 }, hit: { row: 1, n: 3, fps: 12 }, ko: { row: 2, n: 4, fps: 10 } } as const;
+type AnimName = keyof typeof ANIM;
+// h = body height in world units (320 px of art); stride = world units walked per 8-frame walk cycle (feet don't slide)
+const ART = {
+  boy: sheet('calavera-boy', 2480, 1011, 310, 337, 142, 330, 2.05, 1.5),
+  girl: sheet('catrina-girl', 2448, 1029, 306, 343, 138, 336, 2.15, 1.55),
+  // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
+  calaca: sheet('calaverita-small', 2432, 1014, 304, 338, 155, 331, 1.2, 1.6),
+  // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
+  lucha: sheet('luchador-boss', 2744, 1038, 343, 346, 170, 339, 2.75, 2.0),
 };
 const pmrem = new THREE.PMREMGenerator(renderer);
 const goldEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -121,14 +165,15 @@ ring.rotation.x = -Math.PI / 2; scene.add(ring);
 dotGroup.visible = ring.visible = false;
 
 // ───────────────────────── state ─────────────────────────
-type Kind = 'boy' | 'girl' | 'jefe';
+type Kind = 'boy' | 'girl' | 'jefe' | 'calaca' | 'lucha';
 interface Kid {
   kind: Kind; root: THREE.Group; body: THREE.Mesh; flash: THREE.Mesh; shadow: THREE.Mesh; mat: THREE.MeshBasicMaterial; flashMat: THREE.MeshBasicMaterial;
-  pips?: THREE.Sprite[]; aura?: THREE.Sprite;
+  pips?: THREE.Sprite[]; aura?: THREE.Sprite; hpFill?: THREE.Sprite; hpBar?: THREE.Sprite; variant: number;
+  sheet: Sheet; map: THREE.Texture; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number;
 }
-interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number }
+interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
 type State = 'title' | 'play' | 'between' | 'paused' | 'over';
 let state: State = 'title', prevState: State = 'play';
@@ -138,32 +183,46 @@ let lastThrow = -1e9, combo = 0, comboT = 0, rapidUntil = 0, holding = false, sh
 let best = (() => { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } })();
 const kidGroup = new THREE.Group(); scene.add(kidGroup);
 const fxGroup = new THREE.Group(); scene.add(fxGroup);
+const fx = new FX(scene, 0), hitStop = new HitStop();
+let bombs = 0, bossPending = false, boss: Kid | undefined;
+const BOMB_MAX = 3, BOMB_R = 2.4, BOMB_DMG = 4;
 
 // ───────────────────────── kids ─────────────────────────
-const planeGeo = new Map<Kind, THREE.PlaneGeometry>();
-function geoFor(kind: Kind, w: number, h: number): THREE.PlaneGeometry {
-  if (!planeGeo.has(kind)) { const g = new THREE.PlaneGeometry(w, h); g.translate(0, h / 2, 0); planeGeo.set(kind, g); }
+const planeGeo = new Map<string, THREE.PlaneGeometry>();
+function geoFor(kind: string, w: number, h: number, ax = 0.5, ay = 1): THREE.PlaneGeometry {
+  if (!planeGeo.has(kind)) { const g = new THREE.PlaneGeometry(w, h); g.translate(-(ax - 0.5) * w, -(0.5 - ay) * h, 0); planeGeo.set(kind, g); } // feet anchor at the origin
   return planeGeo.get(kind)!;
 }
 const pipTex = canvasTex(32, 32, (g) => { g.fillStyle = '#3b1a5c'; g.beginPath(); g.arc(16, 16, 14, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ff3d9a'; g.beginPath(); g.arc(16, 16, 9, 0, Math.PI * 2); g.fill(); });
+const hpBgTex = canvasTex(128, 24, (g) => { g.fillStyle = '#1a0826'; g.beginPath(); g.roundRect(0, 0, 128, 24, 12); g.fill(); g.strokeStyle = '#ffd23f'; g.lineWidth = 3; g.beginPath(); g.roundRect(2, 2, 124, 20, 10); g.stroke(); });
+const hpFillTex = canvasTex(64, 16, (g) => { const gr = g.createLinearGradient(0, 0, 0, 16); gr.addColorStop(0, '#ff8a5c'); gr.addColorStop(1, '#d6122a'); g.fillStyle = gr; g.fillRect(0, 0, 64, 16); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, 2, 64, 4); });
+function bossHp(n: number): number { return 8 + Math.floor(n / 3) * 3; } // wave 3: 11, wave 6: 14, ...
 function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid {
-  const art = kind === 'girl' ? KIDS.girl : KIDS.boy;
+  const variant = 0;
+  const a = kind === 'girl' ? ART.girl : kind === 'calaca' ? ART.calaca : kind === 'lucha' ? ART.lucha : ART.boy;
   const scale = kind === 'jefe' ? 1.3 : 1;
-  const h = art.h * scale, w = h * art.aspect;
-  const mat = new THREE.MeshBasicMaterial({ map: art.map, alphaTest: 0.45, side: THREE.DoubleSide, fog: true });
-  const flashMat = new THREE.MeshBasicMaterial({ map: art.map, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, alphaTest: 0.45, side: THREE.DoubleSide, fog: false });
+  const h = a.h * scale * (a.ch / 320), w = h * (a.cw / a.ch); // plane = one atlas cell
+  const map = a.tex.clone(); map.repeat.set(a.cw / a.W, a.ch / a.H); // the clone shares the image (no extra memory)
+  const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.45, side: THREE.DoubleSide, fog: true });
+  const flashMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, alphaTest: 0.45, side: THREE.DoubleSide, fog: false });
   const root = new THREE.Group();
-  const body = new THREE.Mesh(geoFor(kind, w, h), mat); body.castShadow = true;
-  const flash = new THREE.Mesh(geoFor(kind, w, h), flashMat); flash.position.z = 0.005; body.add(flash);
-  if (kind === 'jefe') mat.color.setHex(0xc4b0ff);
+  const gk = `${kind}${variant}`;
+  const body = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), mat); body.castShadow = true;
+  const flash = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), flashMat); flash.position.z = 0.005; body.add(flash);
+  if (kind === 'jefe') mat.color.setHex(0xd8c8ff); // big brother: a touch of purple
   root.add(body);
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.2, w * 0.55), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.015; root.add(shadow);
-  const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : 1, maxHp: kind === 'jefe' ? 3 : 1, h, w, golden,
+  const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w, golden, variant, sheet: a, map, anim: 'walk', animT: 0, frameKey: -1,
     phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 4 && Math.random() < 0.35 ? 0.35 + Math.random() * 0.25 : 0 };
   if (kind === 'jefe') {
     k.pips = [];
     for (let i = 0; i < k.maxHp; i++) { const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: pipTex, depthWrite: false, fog: false })); p.scale.setScalar(0.3); p.position.set((i - (k.maxHp - 1) / 2) * 0.34, h + 0.16, 0.02); body.add(p); k.pips.push(p); }
+  }
+  if (kind === 'lucha') { // boss health bar over his head (always faces the camera)
+    k.hpBar = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpBgTex, depthWrite: false, depthTest: false, fog: false })); k.hpBar.scale.set(1.7, 0.32, 1); k.hpBar.position.set(0, h + 0.3, 0); k.hpBar.renderOrder = 8;
+    k.hpFill = new THREE.Sprite(new THREE.SpriteMaterial({ map: hpFillTex, depthWrite: false, depthTest: false, fog: false })); k.hpFill.center.set(0, 0.5); k.hpFill.scale.set(1.56, 0.18, 1); k.hpFill.position.set(-0.78, h + 0.3, 0); k.hpFill.renderOrder = 9;
+    root.add(k.hpBar, k.hpFill); boss = k;
   }
   if (golden) { k.aura = new THREE.Sprite(haloMat.clone()); k.aura.scale.set(w * 2.2, h * 1.5, 1); k.aura.position.y = h * 0.5; k.aura.renderOrder = -1; root.add(k.aura); }
   root.position.set(k.x, 0, k.z);
@@ -172,6 +231,11 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
 }
 function kidCenter(k: Kid, out = new THREE.Vector3()): THREE.Vector3 { return out.set(k.root.position.x, k.h * 0.55, k.root.position.z); }
 function alive(k: Kid): boolean { return k.ko < 0 && !k.dead; }
+function setFrame(k: Kid, anim: AnimName, i: number): void {
+  const A = ANIM[anim], col = Math.min(A.n - 1, i), key = A.row * 16 + col; if (key === k.frameKey) return; k.frameKey = key;
+  const sh = k.sheet; k.map.offset.set((col * sh.cw) / sh.W, 1 - ((A.row + 1) * sh.ch) / sh.H);
+}
+function playAnim(k: Kid, anim: AnimName): void { k.anim = anim; k.animT = 0; }
 
 // ───────────────────────── waves ─────────────────────────
 function waveSpec(n: number) {
@@ -181,14 +245,16 @@ function waveSpec(n: number) {
     gap: Math.max(0.42, 1.75 - n * 0.13),
     girl: Math.min(0.55, 0.15 + n * 0.06),
     jefe: n >= 3 ? Math.min(0.22, 0.06 + (n - 3) * 0.03) : 0,
+    calaca: Math.min(0.3, 0.14 + n * 0.03),
   };
 }
 function startWave(n: number): void {
   wave = n; const s = waveSpec(n);
   toSpawn = waveTotal = s.count; spawned = 0; spawnT = 0.4;
+  bossPending = n % 3 === 0; // the luchador boss shows up every 3rd wave
   state = 'play';
   $('wave').textContent = `Wave ${n}`;
-  banner(`WAVE ${n}`, n === 1 ? 'Here they come!' : `${s.count} kids · faster!`);
+  banner(`WAVE ${n}`, n === 1 ? 'Here they come!' : bossPending ? '¡Cuidado! El Luchador is coming' : `${s.count} kids · faster!`);
   sfx.sfxRapid();
   track('wave_start', { game: 'waves', wave: n });
   updateHud();
@@ -200,14 +266,16 @@ function spawnTick(dt: number): void {
   const s = waveSpec(wave);
   spawnT = s.gap * (0.7 + Math.random() * 0.6);
   const r = Math.random();
-  const kind: Kind = r < s.jefe ? 'jefe' : r < s.jefe + s.girl ? 'girl' : 'boy';
-  const sp = s.speed * (kind === 'girl' ? 1.3 : kind === 'jefe' ? 0.62 : 1) * (0.9 + Math.random() * 0.2);
+  const bossNow = bossPending && spawned >= Math.floor(waveTotal / 2);
+  const kind: Kind = bossNow ? 'lucha' : r < s.jefe ? 'jefe' : r < s.jefe + s.calaca ? 'calaca' : r < s.jefe + s.calaca + s.girl ? 'girl' : 'boy';
+  const sp = s.speed * (kind === 'girl' ? 1.3 : kind === 'jefe' ? 0.62 : kind === 'calaca' ? 1.55 : kind === 'lucha' ? 0.42 : 1) * (0.9 + Math.random() * 0.2);
+  if (bossNow) { bossPending = false; banner('¡EL LUCHADOR!', 'Lots of hits · or drop a chancla BOMB 💣'); sfx.sfxCombo(3); shake = 0.5; }
   // avoid stacking two in the same lane back to back
   let lane = Math.floor(Math.random() * LANES.length);
   const recent = kids.filter((k) => alive(k) && k.z < SPAWN_Z + 1.6).map((k) => k.lane);
   for (let i = 0; i < 4 && recent.includes(lane); i++) lane = (lane + 1) % LANES.length;
   // one golden kid per wave from wave 2 (knock it out for RAPID FIRE)
-  const golden = wave >= 2 && !goldenThisWave && spawned >= Math.floor(waveTotal / 3) && kind !== 'jefe';
+  const golden = wave >= 2 && !goldenThisWave && spawned >= Math.floor(waveTotal / 3) && (kind === 'boy' || kind === 'girl');
   if (golden) goldenThisWave = true;
   spawnKid(kind, lane, sp, golden);
   toSpawn--; spawned++;
@@ -217,7 +285,8 @@ function checkWaveDone(): void {
   const bonus = 250 * wave + hearts * 50;
   score += bonus; updateHud();
   state = 'between'; nextWaveAt = clock + 2.6; goldenThisWave = false;
-  banner(`WAVE ${wave} CLEAR!`, `+${bonus} bonus`);
+  const gotBomb = wave >= 2 && bombs < BOMB_MAX; if (gotBomb) giveBomb(1);
+  banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 chancla BOMB 💣` : `+${bonus} bonus`);
   sfx.sfxWin();
   track('wave_clear', { game: 'waves', wave, hearts });
 }
@@ -246,7 +315,7 @@ function throwAt(to: THREE.Vector3, target?: Kid): boolean {
   if (!canThrow()) return false;
   const T = flightTime(to);
   const v = velFor(to, T, new THREE.Vector3());
-  const obj = shotProto.clone(); scene.add(obj);
+  const obj = shotProto.clone(); scene.add(obj); FX.glow(obj, 1.2, 0.45);
   obj.position.copy(LAUNCH);
   shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target, born: clock });
   lastThrow = clock; thrown++; relicKick = 1;
@@ -312,34 +381,100 @@ fireBtn.addEventListener('pointerdown', (e) => {
 for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) fireBtn.addEventListener(ev, () => { fireBtn.classList.remove('press'); fireHeld = false; });
 addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'Enter') { if (state === 'play' || state === 'between') { e.preventDefault(); autoThrow(); } }
+  if (e.code === 'KeyB') useBomb();
   if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
 });
 
 // ───────────────────────── hits + knock-outs ─────────────────────────
-function hitKid(k: Kid, s: Shot): void {
-  k.hp--; k.flashT = 1; shake = Math.min(0.5, shake + 0.18);
+function hitKid(k: Kid, s?: Shot, dmg = 1): void {
+  k.hp = Math.max(0, k.hp - dmg); k.flashT = 1; shake = Math.min(0.5, shake + 0.18);
   const pan = THREE.MathUtils.clamp(k.root.position.x / 3, -1, 1);
   sfx.sfxThwack(0.9); sfx.buzz(20);
-  // chancla bounces off and spins away
-  s.spent = 0; s.v.set(-s.v.x * 0.25 + (Math.random() - 0.5) * 2, 5.5, Math.abs(s.v.z) * 0.18 + 1.5);
+  const at = kidCenter(k, new THREE.Vector3());
+  if (s) { // chancla bounces off and spins away
+    s.spent = 0; s.v.set(-s.v.x * 0.25 + (Math.random() - 0.5) * 2, 5.5, Math.abs(s.v.z) * 0.18 + 1.5);
+    fx.ring(at, 0.9); fx.sparks(at, 14); sfx.sfxImpact(0.7);
+  }
   if (k.pips) k.pips.forEach((p, i) => { p.visible = i < k.hp; });
-  if (k.hp > 0) { k.stagger = 0.45; k.z -= 0.55; sfx.sfxWood(0.7, pan); popText(k, 'OUCH!', 'bad'); return; }
+  if (k.hpFill) k.hpFill.scale.x = 1.56 * (k.hp / k.maxHp);
+  if (k.hp > 0) {
+    const big = k.kind === 'lucha'; playAnim(k, 'hit'); k.stagger = big ? 0.18 : 0.45; k.z -= big ? 0.2 : 0.55; sfx.sfxWood(0.7, pan);
+    popText(k, big ? (dmg > 1 ? `BOOM −${dmg}` : `${k.hp}/${k.maxHp}`) : 'OUCH!', 'bad'); return;
+  }
   // knocked out
-  k.ko = 0; k.koSpin = (Math.random() < 0.5 ? -1 : 1) * (9 + Math.random() * 5); k.koVy = 4.2; k.koY = 0;
+  k.ko = 0; k.koSpin = 0; k.koVy = 2.6; k.koY = 0; playAnim(k, 'ko');
   k.mat.transparent = true; k.mat.alphaTest = 0.05; k.mat.depthWrite = false;
   sfx.sfxRattle(pan);
   knocked++;
   combo = clock - comboT < 1.3 ? combo + 1 : 1; comboT = clock;
-  const base = k.kind === 'jefe' ? 300 : k.kind === 'girl' ? 150 : 100;
+  const base = k.kind === 'lucha' ? 1500 : k.kind === 'jefe' ? 300 : k.kind === 'girl' ? 150 : k.kind === 'calaca' ? 130 : 100;
   const far = THREE.MathUtils.clamp((LINE_Z - k.z) / (LINE_Z - SPAWN_Z), 0, 1); // earlier knock-outs pay more
   const pts = Math.round((base + far * 50) * Math.min(combo, 5) / 10) * 10;
   score += pts; updateHud(true);
-  popText(k, `+${pts}`, combo >= 2 || k.kind === 'jefe' ? 'big' : '');
+  popText(k, `+${pts}`, combo >= 2 || k.kind === 'jefe' || k.kind === 'lucha' ? 'big' : '');
   sfx.sfxPoint(Math.min(combo, 8));
   if (combo >= 2) showCombo(combo);
   if (k.golden) startRapid();
-  poof(kidCenter(k, new THREE.Vector3()), k.kind === 'jefe' ? 46 : 30);
+  poof(at, k.kind === 'lucha' ? 70 : k.kind === 'jefe' ? 46 : 30);
+  fx.sparks(at, 14, 0xffd36b, 4); fx.sparks(at, 8, 0xff8c1a, 3); sfx.sfxShimmer(k.kind === 'lucha' ? 1 : 0.6);
+  if (clock >= rapidUntil) hitStop.stop(k.kind === 'lucha' ? 160 : 40);
+  if (k.kind === 'lucha') { boss = undefined; shake = 1; fx.ring(at, 3.2); banner('¡LUCHADOR DOWN!', bombs < BOMB_MAX ? '+1 chancla BOMB 💣' : 'Bombs full'); if (bombs < BOMB_MAX) giveBomb(1); }
 }
+// ───────────────────────── chancla BOMB power-up ─────────────────────────
+const bombProto = (() => {
+  const g = new THREE.Group(); const m = makeChancla();
+  const sole = new THREE.MeshStandardMaterial({ color: 0xffc23a, metalness: 1, roughness: 0.2, emissive: 0x7a2a00, emissiveIntensity: 0.9, envMap: goldEnv, envMapIntensity: 1.8 });
+  m.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? sole : relicStrap; }); m.scale.setScalar(1.45); g.add(m);
+  FX.glow(g, 2.2, 0.85); const hot = FX.glow(g, 1.1, 0.9); hot.material.color.setHex(0xff5a1a);
+  return g;
+})();
+const bombBtn = $('bomb') as HTMLButtonElement;
+function giveBomb(n: number): void {
+  bombs = Math.min(BOMB_MAX, bombs + n); sfx.sfxBombReady(); updateBombBtn(true);
+}
+function updateBombBtn(pop = false): void {
+  bombBtn.classList.toggle('hidden', bombs <= 0); $('bombN').textContent = String(bombs);
+  if (pop) { bombBtn.classList.remove('pop'); void bombBtn.offsetWidth; bombBtn.classList.add('pop'); }
+}
+/** Best spot for the bomb: the boss if he's out, else the densest, closest cluster of kids. */
+function bombTarget(): THREE.Vector3 | undefined {
+  const live = kids.filter((k) => alive(k) && k.z > SPAWN_Z + 0.5); if (!live.length) return undefined;
+  if (boss && alive(boss)) return predict(boss, 0.8, new THREE.Vector3()).setY(0.4);
+  let bestS = -1, bestK = live[0];
+  for (const k of live) {
+    let sc = 0; for (const o of live) { const d = Math.hypot(o.root.position.x - k.root.position.x, o.root.position.z - k.root.position.z); if (d < BOMB_R) sc += 1 + (o.z - SPAWN_Z) * 0.05; }
+    sc += (k.z - SPAWN_Z) * 0.08; if (sc > bestS) { bestS = sc; bestK = k; }
+  }
+  return predict(bestK, 0.8, new THREE.Vector3()).setY(0.4);
+}
+function useBomb(): boolean {
+  if (bombs <= 0 || !(state === 'play' || state === 'between')) return false;
+  const to = bombTarget(); if (!to) return false;
+  bombs--; updateBombBtn();
+  const T = 0.8, v = velFor(to, T, new THREE.Vector3());
+  const obj = bombProto.clone(); scene.add(obj); obj.position.copy(LAUNCH);
+  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), born: clock, bomb: true });
+  relicKick = 1.4; sfx.sfxFire(); sfx.sfxWhoosh(); sfx.buzz(30);
+  track('bomb', { game: 'waves', wave });
+  return true;
+}
+let booms = 0;
+function explode(at: THREE.Vector3): void {
+  booms++;
+  const c = at.clone().setY(0.5);
+  for (const k of kids) {
+    if (!alive(k)) continue;
+    const d = Math.hypot(k.root.position.x - c.x, k.root.position.z - c.z);
+    if (d < BOMB_R + k.w * 0.3) hitKid(k, undefined, k.kind === 'lucha' || k.kind === 'jefe' ? BOMB_DMG : 99);
+  }
+  fx.ring(c, 4.6, 0xffd36b); fx.ring(c.clone().setY(1.1), 3.0, 0xff7a2a);
+  fx.sparks(c, 90, 0xffd36b, 9, 6); fx.sparks(c, 50, 0xff7a1a, 7, 5); fx.sparks(c, 20, 0xffffff, 5, 4);
+  poof(c.clone().setY(1.2), 60);
+  const f = $('boomflash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
+  shake = 1.2; hitStop.stop(120); sfx.sfxBoom(); sfx.buzz([60, 40, 90]);
+}
+bombBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); bombBtn.classList.add('press'); useBomb(); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) bombBtn.addEventListener(ev, () => bombBtn.classList.remove('press'));
 function startRapid(): void {
   rapidUntil = clock + 5; sfx.sfxRapid(); sfx.buzz([20, 40, 20]);
   banner('RAPID FIRE!', 'Hold to spray chanclas'); $('rapid').classList.remove('hidden');
@@ -374,8 +509,8 @@ function tickPetals(dt: number): void {
   petals = petals.filter((p) => { const done = p.life >= p.max || p.s.position.y < 0.35; if (done) { fxGroup.remove(p.s); p.s.material.dispose(); } return !done; });
 }
 function kidReachedLine(k: Kid): void {
-  k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose();
-  hearts--; updateHud();
+  k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.map.dispose();
+  hearts = Math.max(0, hearts - (k.kind === 'lucha' ? 3 : 1)); if (k === boss) boss = undefined; updateHud();
   const hs = $('hearts').children; const lostEl = hs[hearts] as HTMLElement | undefined;
   if (lostEl) { lostEl.classList.remove('lost'); void lostEl.offsetWidth; lostEl.classList.add('lost'); }
   const h = $('hurt'); h.classList.add('on'); setTimeout(() => h.classList.remove('on'), 90);
@@ -411,14 +546,14 @@ function popText(k: Kid, text: string, cls: string): void {
   $('fx').appendChild(el); setTimeout(() => el.remove(), 1000);
 }
 function clearField(): void {
-  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); }
+  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.map.dispose(); }
   for (const s of shots) scene.remove(s.obj);
   for (const p of petals) { fxGroup.remove(p.s); p.s.material.dispose(); }
-  kids = []; shots = []; petals = [];
+  kids = []; shots = []; petals = []; fx.clear(); boss = undefined;
 }
 function newGame(): void {
   clearField();
-  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false;
+  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; updateBombBtn();
   ['title', 'over', 'pause'].forEach((id) => $(id).classList.add('hidden'));
   $('hint').classList.remove('gone');
   setTimeout(() => $('hint').classList.add('gone'), 5000);
@@ -457,10 +592,11 @@ function frame(now: number): void {
   fpsAcc += dtReal; fpsN++;
   if (fpsAcc > 2) { const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; if (fps < 45 && ++lowFps >= 2 && renderer.shadowMap.enabled) { renderer.shadowMap.enabled = false; renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25)); resize(); report('quality: low'); } }
   const running = state === 'play' || state === 'between' || state === 'over';
-  const dt = state === 'paused' ? 0 : dtReal;
+  const dt = state === 'paused' ? 0 : dtReal * hitStop.scale();
   if (state !== 'paused') clock += dt;
   const s = now / 1000;
 
+  danceCalacas(s);
   if (state === 'play') spawnTick(dt);
   if (state === 'between' && clock >= nextWaveAt) startWave(wave + 1);
   // rapid fire: holding the button or the field keeps spraying
@@ -475,17 +611,17 @@ function frame(now: number): void {
     if (k.dead) continue;
     k.flashT = Math.max(0, k.flashT - dt * 4); k.flashMat.opacity = k.flashT * 0.95;
     if (k.ko >= 0) {
-      // knock-out: pop up, spin, fall flat on the back, fade
+      // knock-out: small pop, the atlas KO frames do the fall, then fade
       k.ko += dt; k.koVy -= 14 * dt; k.koY = Math.max(0, k.koY + k.koVy * dt);
       k.root.position.y = k.koY;
-      k.body.rotation.y += k.koSpin * dt * Math.max(0, 1 - k.ko * 1.6);
-      k.body.rotation.x = THREE.MathUtils.lerp(0.28, -Math.PI / 2, Math.min(1, k.ko / 0.55));
+      setFrame(k, 'ko', Math.floor(k.ko * ANIM.ko.fps)); k.body.rotation.set(0.28, 0, 0); k.body.scale.set(1, 1, 1);
       k.root.position.z -= dt * 1.2;
-      k.mat.opacity = THREE.MathUtils.clamp(1.6 - k.ko * 1.6, 0, 1);
+      k.mat.opacity = THREE.MathUtils.clamp((1.15 - k.ko) / 0.45, 0, 1);
       (k.shadow.material as THREE.MeshBasicMaterial).opacity = k.mat.opacity;
       if (k.pips) k.pips.forEach((p) => { p.visible = false; });
       if (k.aura) k.aura.visible = false;
-      if (k.ko > 1.0) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); }
+      if (k.hpBar) { k.hpBar.visible = false; k.hpFill!.visible = false; }
+      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.map.dispose(); }
       continue;
     }
     if (state === 'play' || state === 'between') {
@@ -495,11 +631,16 @@ function frame(now: number): void {
     }
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
     // bobbing waddle walk (the art is a single pose)
-    const stepF = 5.2 + k.speed * 1.6, ph = s * stepF + k.phase;
-    const bob = Math.abs(Math.sin(ph)) * 0.09 * (k.stagger > 0 ? 0.2 : 1);
+    // walk frames are driven by distance walked (k.wob) so the feet don't slide; hit plays once then back to walk
+    const cyc = (k.wob / (k.sheet.stride * (k.kind === 'jefe' ? 1.3 : 1)) + k.phase) % 1;
+    if (k.anim === 'hit') { k.animT += dt; const i = Math.floor(k.animT * ANIM.hit.fps); if (i >= ANIM.hit.n) playAnim(k, 'walk'); else setFrame(k, 'hit', i); }
+    if (k.anim === 'walk') setFrame(k, 'walk', Math.floor(cyc * 8));
+    const ph = cyc * Math.PI * 4;
+    const hopA = k.kind === 'calaca' ? 0.1 : k.kind === 'lucha' ? 0.02 : 0.03;
+    const bob = Math.abs(Math.sin(ph)) * hopA * (k.stagger > 0 ? 0.2 : 1);
+    if (k.hpBar) { const pulse = k.hp / k.maxHp < 0.34 ? 1 + Math.sin(s * 12) * 0.06 : 1; k.hpBar.scale.set(1.7 * pulse, 0.32 * pulse, 1); }
     k.root.position.set(k.x, bob, k.z);
-    k.body.rotation.set(0.28, Math.sin(ph * 0.5) * 0.08, Math.sin(ph) * 0.09 + (k.stagger > 0 ? Math.sin(s * 40) * 0.08 : 0));
-    k.body.scale.set(1 + Math.cos(ph * 2) * 0.025, 1 - Math.cos(ph * 2) * 0.025, 1);
+    k.body.rotation.set(0.28, 0, k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
     if (k.aura) { k.aura.material.opacity = 0.55 + Math.sin(s * 6) * 0.25; }
     if (k.z >= LINE_Z && state === 'play') kidReachedLine(k);
   }
@@ -513,6 +654,11 @@ function frame(now: number): void {
       const h = dt / steps;
       sh.v.y -= G * h; sh.p.addScaledVector(sh.v, h);
       if (sh.spent < 0 && state !== 'over') {
+        if (sh.bomb) { // the bomb goes off on the first kid it touches, or where it lands
+          const touch = kids.some((k) => alive(k) && Math.abs(sh.p.x - k.root.position.x) < k.w * 0.5 && Math.abs(sh.p.z - k.root.position.z) < 0.6 && sh.p.y < k.h);
+          if (touch || sh.p.y <= 0.3) { explode(sh.p); sh.spent = 0.61; sh.obj.visible = false; break; }
+          continue;
+        }
         for (const k of kids) {
           if (!alive(k)) continue;
           const dx = sh.p.x - k.root.position.x, dz = sh.p.z - k.root.position.z;
@@ -524,11 +670,12 @@ function frame(now: number): void {
     if (sh.spent >= 0) sh.spent += dt;
     sh.spin += dt * (sh.spent >= 0 ? 9 : 20);
     sh.obj.position.copy(sh.p);
+    if (sh.spent < 0 && dt > 0) { if (sh.bomb) fx.sparks(sh.p, 3, 0xff8a2a, 1.2, 0.6); else if (Math.random() < 0.5) fx.trail(sh.p); }
     if (sh.spent < 0) sh.obj.rotation.set(0.25, sh.yaw + sh.spin, 0, 'YXZ');
     else { sh.obj.rotation.set(sh.spin * 0.8, sh.yaw + sh.spin * 0.4, sh.spin * 0.3, 'YXZ'); sh.obj.scale.setScalar(Math.max(0.01, 1 - sh.spent * 1.6)); }
   }
   shots = shots.filter((sh) => { const done = sh.spent > 0.6 || sh.p.z < -40 || clock - sh.born > 4; if (done) scene.remove(sh.obj); return !done; });
-  tickPetals(dt);
+  tickPetals(dt); fx.update(dt, camera);
   checkWaveDone();
   if (running) updateBar();
 
@@ -577,7 +724,7 @@ requestAnimationFrame(frame);
 // test / screenshot hooks
 (window as unknown as Record<string, unknown>).__waves = {
   start: newGame,
-  state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil }),
+  state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil, bombs, booms, boss: boss && alive(boss) ? { hp: boss.hp, maxHp: boss.maxHp, z: +boss.root.position.z.toFixed(2) } : null }),
   kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden })),
   screenOf: (i = 0) => { const k = kids.filter(alive).sort((a, b) => b.z - a.z)[i]; if (!k) return null; const v = kidCenter(k).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; },
   auto: autoThrow,
@@ -585,5 +732,7 @@ requestAnimationFrame(frame);
   spawn: (kind: Kind = 'boy', lane = 1, z = -6, speed = 1.2) => { const k = spawnKid(kind, lane, speed); k.z = z; return kids.length; },
   hurt: (n = 1) => { for (let i = 0; i < n; i++) { const k = spawnKid('boy', i % 4, 1); k.z = LINE_Z - 0.01; } },
   rapid: startRapid,
+  bomb: useBomb,
+  giveBomb: (n = 1) => giveBomb(n),
   pause: (on: boolean) => { if (on !== (state === 'paused')) togglePause(); },
 };
