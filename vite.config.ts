@@ -1,21 +1,51 @@
 import path from "path"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
 
 function htmlEnv() {
   const site = process.env.VITE_SITE_URL || 'https://chanclazo.com';
   return {
     name: 'html-env',
     transformIndexHtml(html: string) {
-      return html.replaceAll('%VITE_SITE_URL%', site);
+      return html.replaceAll('%VITE_SITE_URL%', site).replaceAll('%%CZ_BUILD%%', 'preview');
+    },
+  };
+}
+
+/** Dev-only clean URLs so /waves, /crash, /choose match the production paths. */
+function cleanGameUrls(): Plugin {
+  const map: Record<string, string> = {
+    "/": "/home.html",
+    "/choose": "/choose.html",
+    "/waves": "/waves.html",
+    "/crash": "/crash.html",
+    "/chancla-strike": "/chancla-strike.html",
+    "/match": "/match.html",
+    "/slots": "/slots.html",
+    "/lore": "/lore.html",
+    "/strike3d": "/strike3d.html",
+    "/fling": "/chancla-strike.html",
+  };
+  return {
+    name: "clean-game-urls",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        if (!req.url) return next();
+        const q = req.url.indexOf("?");
+        const pathname = q === -1 ? req.url : req.url.slice(0, q);
+        const dest = map[pathname];
+        if (dest) req.url = dest + (q === -1 ? "" : req.url.slice(q));
+        next();
+      });
     },
   };
 }
 
 // Games + lore only. Landing is Astro (see astro.config.mjs + scripts/merge-dist.mjs).
 export default defineConfig({
-  plugins: [react(), htmlEnv()],
-  server: { host: true },
+  plugins: [cleanGameUrls(), react(), htmlEnv()],
+  server: { host: true, port: 8080, strictPort: true },
   build: {
     outDir: 'dist-games',
     emptyOutDir: true,

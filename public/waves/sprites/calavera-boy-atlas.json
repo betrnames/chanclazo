@@ -1,150 +1,25 @@
 {
  "meta": {
-  "generator": "Agent Sprite Forge (MIT) host_image route: GenerateImage keyframe sheets -> assemble_frames.py chroma soft-matte + ownership slicing -> scale_frames.py (one scale, stance root, feet/torso locks) -> pack.py",
+  "generator": "packed from IMG_7861.jpg",
   "image": "calavera-boy-atlas.webp",
   "size": {
-   "w": 2480,
-   "h": 1011
+   "w": 3328,
+   "h": 1302
   },
   "cell": {
-   "w": 310,
-   "h": 337
+   "w": 416,
+   "h": 434
   },
   "anchor": {
-   "x": 142,
-   "y": 330,
-   "note": "feet/ground point inside every cell"
+   "x": 208,
+   "y": 422,
+   "note": "feet/ground point inside every cell, y from top"
   },
-  "bodyHeightPx": 320
- },
- "frames": {
-  "walk_0": {
-   "x": 0,
-   "y": 0,
-   "w": 310,
-   "h": 337
-  },
-  "walk_1": {
-   "x": 310,
-   "y": 0,
-   "w": 310,
-   "h": 337
-  },
-  "walk_2": {
-   "x": 620,
-   "y": 0,
-   "w": 310,
-   "h": 337
-  },
-  "walk_3": {
-   "x": 930,
-   "y": 0,
-   "w": 310,
-   "h": 337
-  },
-  "walk_4": {
-   "x": 1240,
-   "y": 0,
-   "w": 310,
-   "h": 337
-  },
-  "walk_5": {
-   "x": 1550,
-   "y": 0,
-   "w": 310,
-   "h": 337
-  },
-  "walk_6": {
-   "x": 1860,
-   "y": 0,
-   "w": 310,
-   "h": 337
-  },
-  "walk_7": {
-   "x": 2170,
-   "y": 0,
-   "w": 310,
-   "h": 337
-  },
-  "hit_0": {
-   "x": 0,
-   "y": 337,
-   "w": 310,
-   "h": 337
-  },
-  "hit_1": {
-   "x": 310,
-   "y": 337,
-   "w": 310,
-   "h": 337
-  },
-  "hit_2": {
-   "x": 620,
-   "y": 337,
-   "w": 310,
-   "h": 337
-  },
-  "ko_0": {
-   "x": 0,
-   "y": 674,
-   "w": 310,
-   "h": 337
-  },
-  "ko_1": {
-   "x": 310,
-   "y": 674,
-   "w": 310,
-   "h": 337
-  },
-  "ko_2": {
-   "x": 620,
-   "y": 674,
-   "w": 310,
-   "h": 337
-  },
-  "ko_3": {
-   "x": 930,
-   "y": 674,
-   "w": 310,
-   "h": 337
-  }
- },
- "animations": {
-  "walk": {
-   "frames": [
-    "walk_0",
-    "walk_1",
-    "walk_2",
-    "walk_3",
-    "walk_4",
-    "walk_5",
-    "walk_6",
-    "walk_7"
-   ],
-   "fps": 10,
-   "loop": true,
-   "row": 0
-  },
-  "hit": {
-   "frames": [
-    "hit_0",
-    "hit_1",
-    "hit_2"
-   ],
-   "fps": 12,
-   "loop": false,
-   "row": 1
-  },
-  "ko": {
-   "frames": [
-    "ko_0",
-    "ko_1",
-    "ko_2",
-    "ko_3"
-   ],
-   "fps": 10,
-   "loop": false,
-   "row": 2
+  "bodyHeightPx": 400,
+  "counts": {
+   "walk": 6,
+   "hit": 1,
+   "ko": 3
   }
  }
 }

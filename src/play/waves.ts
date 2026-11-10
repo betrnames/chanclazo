@@ -83,48 +83,19 @@ const flames: THREE.Sprite[] = [];
 // ───────────────────────── art ─────────────────────────
 const texLoader = new THREE.TextureLoader();
 function tex(src: string): THREE.Texture { const t = texLoader.load(src); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
-// ───────────────────────── the little calaca skeletons from the home screen art (scene decoration) ─────────────────────────
-// Cut out of the landing-page plaza art (public/waves/calaca1-5.webp). They stand just outside the lanes and on the ofrenda,
-// dancing gently; they never enter the lanes so they cannot block or be confused with the marching kids.
-interface Calaca { s: THREE.Sprite; base: THREE.Vector3; h: number; ph: number; spd: number; flip: number }
-const calacas: Calaca[] = [];
-{
-  const spots: [number, number, number, number][] = [ // x, z, height, art index
-    [-3.75, -8.6, 0.95, 1], [3.8, -7.2, 0.95, 3], [-3.7, -5.0, 0.9, 2], [3.75, -3.1, 0.9, 4], [-3.65, -1.2, 0.85, 5],
-    [-2.35, LINE_Z + 1.4, 0.62, 3], [2.4, LINE_Z + 1.4, 0.62, 1],
-  ];
-  const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false });
-  const shadowGeo = new THREE.CircleGeometry(0.28, 20);
-  const mats = [1, 2, 3, 4, 5].map((i) => tex(`/waves/calaca${i}.webp`));
-  spots.forEach(([x, z, h, ai], i) => {
-    const m = new THREE.SpriteMaterial({ map: mats[ai - 1], transparent: true, alphaTest: 0.08, depthWrite: true });
-    const sp = new THREE.Sprite(m); sp.center.set(0.5, 0); const w = h * 0.66, flip = x > 0 ? -1 : 1; sp.scale.set(w * flip, h, 1);
-    const onTable = z > LINE_Z; const base = new THREE.Vector3(x, onTable ? 0.39 : 0, z);
-    sp.position.copy(base); scene.add(sp);
-    if (!onTable) { const sh = new THREE.Mesh(shadowGeo, shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.set(x, 0.015, z); sh.scale.set(1, 0.6, 1); scene.add(sh); }
-    calacas.push({ s: sp, base, h, ph: i * 1.7, spd: 2.2 + (i % 3) * 0.45, flip });
-  });
-}
-function danceCalacas(t: number): void {
-  for (const c of calacas) {
-    const k = t * c.spd + c.ph, hop = Math.max(0, Math.sin(k)) * 0.07 * c.h;
-    c.s.position.set(c.base.x + Math.sin(k * 0.5) * 0.04, c.base.y + hop, c.base.z);
-    (c.s.material as THREE.SpriteMaterial).rotation = Math.sin(k) * 0.09;
-    const sq = 1 - hop * 0.6; c.s.scale.set(c.h * 0.66 * c.flip * (2 - sq), c.h * sq, 1); // tiny squash and stretch
-  }
-}
+// ───────────────────────── art ─────────────────────────
 // Enemy art registry: animated Agent Sprite Forge atlases (public/waves/sprites/<name>-atlas.webp + .json).
-// Each atlas = uniform cells, row 0 walk (8), row 1 hit (3), row 2 ko (4); anchor = feet point inside every cell.
-// To swap art, drop a new atlas in and update its numbers here (copied from its JSON meta).
-interface Sheet { tex: THREE.Texture; W: number; H: number; cw: number; ch: number; ax: number; ay: number; h: number; stride: number }
-const sheet = (name: string, W: number, H: number, cw: number, ch: number, ax: number, ay: number, h: number, stride: number): Sheet =>
-  ({ tex: tex(`/waves/sprites/${name}-atlas.webp`), W, H, cw, ch, ax, ay, h, stride });
+// Each atlas = uniform cells. Default rows: walk 8, hit 3, ko 4. Counts can be shorter (the boy sheet is 6 / 1 / 3).
+// Anchor = feet point inside every cell. To swap art, drop a new atlas in and update its numbers here (copied from its JSON meta).
+interface Sheet { tex: THREE.Texture; W: number; H: number; cw: number; ch: number; ax: number; ay: number; h: number; stride: number; walkN: number; hitN: number; koN: number }
+const sheet = (name: string, W: number, H: number, cw: number, ch: number, ax: number, ay: number, h: number, stride: number, walkN = 8, hitN = 3, koN = 4, v = ''): Sheet =>
+  ({ tex: tex(`/waves/sprites/${name}-atlas.webp${v}`), W, H, cw, ch, ax, ay, h, stride, walkN, hitN, koN });
 const ANIM = { walk: { row: 0, n: 8, fps: 10 }, hit: { row: 1, n: 3, fps: 12 }, ko: { row: 2, n: 4, fps: 10 } } as const;
 type AnimName = keyof typeof ANIM;
-// h = body height in world units (320 px of art); stride = world units walked per 8-frame walk cycle (feet don't slide)
+// h = world height that a 320px-tall body should be; stride = world units per walk cycle
 const ART = {
-  boy: sheet('calavera-boy', 2480, 1011, 310, 337, 142, 330, 2.05, 1.5),
-  girl: sheet('catrina-girl', 2448, 1029, 306, 343, 138, 336, 2.15, 1.55),
+  boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3),
+  girl: sheet('catrina-girl', 2576, 1086, 368, 362, 184, 354, 2.02, 1.55, 7, 1, 2, '?v=3'),
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
   calaca: sheet('calaverita-small', 2432, 1014, 304, 338, 155, 331, 1.2, 1.6),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
@@ -152,7 +123,7 @@ const relic = new THREE.Group(); const relicMesh = makeChancla();
 const relicSole = new THREE.MeshStandardMaterial({ color: 0xffb21a, metalness: 1, roughness: 0.22, emissive: 0x2a1400, emissiveIntensity: 0.5, envMap: goldEnv, envMapIntensity: 1.6 });
 relicMesh.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? relicSole : relicStrap; }); relicMesh.scale.setScalar(0.85); relic.add(relicMesh);
 const relicHalo = new THREE.Sprite(haloMat.clone()); relicHalo.scale.setScalar(1.7); relicHalo.renderOrder = -1; relic.add(relicHalo);
-relic.position.copy(LAUNCH); scene.add(relic);
+relic.position.copy(LAUNCH); relic.visible = false;
 let relicKick = 0;
 
 // aim preview: dotted arc + ground ring
@@ -169,7 +140,7 @@ type Kind = 'boy' | 'girl' | 'jefe' | 'calaca' | 'lucha';
 interface Kid {
   kind: Kind; root: THREE.Group; body: THREE.Mesh; flash: THREE.Mesh; shadow: THREE.Mesh; mat: THREE.MeshBasicMaterial; flashMat: THREE.MeshBasicMaterial;
   pips?: THREE.Sprite[]; aura?: THREE.Sprite; hpFill?: THREE.Sprite; hpBar?: THREE.Sprite; variant: number;
-  sheet: Sheet; map: THREE.Texture; anim: AnimName; animT: number; frameKey: number;
+  sheet: Sheet; map: THREE.Texture; edgeMat: THREE.Material; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number;
 }
@@ -203,17 +174,25 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const scale = kind === 'jefe' ? 1.3 : 1;
   const h = a.h * scale * (a.ch / 320), w = h * (a.cw / a.ch); // plane = one atlas cell
   const map = a.tex.clone(); map.repeat.set(a.cw / a.W, a.ch / a.H); // the clone shares the image (no extra memory)
-  const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.45, side: THREE.DoubleSide, fog: true });
-  const flashMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, alphaTest: 0.45, side: THREE.DoubleSide, fog: false });
+  const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.45, side: THREE.FrontSide, fog: true });
+  const flashMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   const root = new THREE.Group();
   const gk = `${kind}${variant}`;
   const body = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), mat); body.castShadow = true;
-  const flash = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), flashMat); flash.position.z = 0.005; body.add(flash);
+  const flash = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), flashMat); flash.position.z = 0.01; body.add(flash);
+  // same drawing, stacked into a thick card so the cutout has an edge instead of looking like a sticker
+  const edgeMat = new THREE.MeshBasicMaterial({ map, color: 0x241028, alphaTest: 0.45, side: THREE.FrontSide, fog: true });
+  for (let i = 1; i <= 4; i++) {
+    const edge = new THREE.Mesh(body.geometry, edgeMat);
+    edge.position.set(0, -0.012 * i, -0.028 * i);
+    edge.castShadow = false; body.add(edge);
+  }
   if (kind === 'jefe') mat.color.setHex(0xd8c8ff); // big brother: a touch of purple
   root.add(body);
-  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.2, w * 0.55), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false }));
-  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.015; root.add(shadow);
-  const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w, golden, variant, sheet: a, map, anim: 'walk', animT: 0, frameKey: -1,
+  const bodyW = kind === 'girl' ? w * (220 / a.cw) : w;
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bodyW * 0.72, bodyW * 0.32), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.8 }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.02, 0.04); root.add(shadow);
+  const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w: bodyW, golden, variant, sheet: a, map, edgeMat, anim: 'walk', animT: 0, frameKey: -1,
     phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 4 && Math.random() < 0.35 ? 0.35 + Math.random() * 0.25 : 0 };
   if (kind === 'jefe') {
     k.pips = [];
@@ -232,7 +211,8 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
 function kidCenter(k: Kid, out = new THREE.Vector3()): THREE.Vector3 { return out.set(k.root.position.x, k.h * 0.55, k.root.position.z); }
 function alive(k: Kid): boolean { return k.ko < 0 && !k.dead; }
 function setFrame(k: Kid, anim: AnimName, i: number): void {
-  const A = ANIM[anim], col = Math.min(A.n - 1, i), key = A.row * 16 + col; if (key === k.frameKey) return; k.frameKey = key;
+  const n = anim === 'walk' ? k.sheet.walkN : anim === 'hit' ? k.sheet.hitN : k.sheet.koN;
+  const A = ANIM[anim], col = Math.min(n - 1, i), key = A.row * 16 + col; if (key === k.frameKey) return; k.frameKey = key;
   const sh = k.sheet; k.map.offset.set((col * sh.cw) / sh.W, 1 - ((A.row + 1) * sh.ch) / sh.H);
 }
 function playAnim(k: Kid, anim: AnimName): void { k.anim = anim; k.animT = 0; }
@@ -430,11 +410,14 @@ const bombProto = (() => {
 })();
 const bombBtn = $('bomb') as HTMLButtonElement;
 function giveBomb(n: number): void {
-  bombs = Math.min(BOMB_MAX, bombs + n); sfx.sfxBombReady(); updateBombBtn(true);
+  bombs = Math.min(BOMB_MAX, bombs + n); sfx.sfxBombReady(); updateBombBtn();
 }
-function updateBombBtn(pop = false): void {
-  bombBtn.classList.toggle('hidden', bombs <= 0); $('bombN').textContent = String(bombs);
-  if (pop) { bombBtn.classList.remove('pop'); void bombBtn.offsetWidth; bombBtn.classList.add('pop'); }
+function updateBombBtn(): void {
+  const on = bombs > 0;
+  bombBtn.classList.toggle('ghost', !on);
+  bombBtn.classList.toggle('ready', on);
+  bombBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
+  $('bombN').textContent = String(bombs);
 }
 /** Best spot for the bomb: the boss if he's out, else the densest, closest cluster of kids. */
 function bombTarget(): THREE.Vector3 | undefined {
@@ -509,7 +492,7 @@ function tickPetals(dt: number): void {
   petals = petals.filter((p) => { const done = p.life >= p.max || p.s.position.y < 0.35; if (done) { fxGroup.remove(p.s); p.s.material.dispose(); } return !done; });
 }
 function kidReachedLine(k: Kid): void {
-  k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.map.dispose();
+  k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose();
   hearts = Math.max(0, hearts - (k.kind === 'lucha' ? 3 : 1)); if (k === boss) boss = undefined; updateHud();
   const hs = $('hearts').children; const lostEl = hs[hearts] as HTMLElement | undefined;
   if (lostEl) { lostEl.classList.remove('lost'); void lostEl.offsetWidth; lostEl.classList.add('lost'); }
@@ -546,7 +529,7 @@ function popText(k: Kid, text: string, cls: string): void {
   $('fx').appendChild(el); setTimeout(() => el.remove(), 1000);
 }
 function clearField(): void {
-  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.map.dispose(); }
+  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); }
   for (const s of shots) scene.remove(s.obj);
   for (const p of petals) { fxGroup.remove(p.s); p.s.material.dispose(); }
   kids = []; shots = []; petals = []; fx.clear(); boss = undefined;
@@ -582,7 +565,6 @@ $('restart').addEventListener('click', () => { sfx.sfxClick(); newGame(); });
 $('resume').addEventListener('click', () => { sfx.sfxClick(); togglePause(); });
 $('pauseBtn').addEventListener('click', (e) => { e.stopPropagation(); sfx.sfxClick(); togglePause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && (state === 'play' || state === 'between')) togglePause(); });
-$('bestT').textContent = best ? `Best: ${best}` : '';
 
 // ───────────────────────── main loop ─────────────────────────
 let prev = performance.now(), fpsAcc = 0, fpsN = 0, lowFps = 0, fireState = '';
@@ -596,7 +578,6 @@ function frame(now: number): void {
   if (state !== 'paused') clock += dt;
   const s = now / 1000;
 
-  danceCalacas(s);
   if (state === 'play') spawnTick(dt);
   if (state === 'between' && clock >= nextWaveAt) startWave(wave + 1);
   // rapid fire: holding the button or the field keeps spraying
@@ -621,7 +602,7 @@ function frame(now: number): void {
       if (k.pips) k.pips.forEach((p) => { p.visible = false; });
       if (k.aura) k.aura.visible = false;
       if (k.hpBar) { k.hpBar.visible = false; k.hpFill!.visible = false; }
-      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.map.dispose(); }
+      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); }
       continue;
     }
     if (state === 'play' || state === 'between') {
@@ -630,17 +611,13 @@ function frame(now: number): void {
       k.z += sp * dt; k.wob += sp * dt;
     }
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
-    // bobbing waddle walk (the art is a single pose)
-    // walk frames are driven by distance walked (k.wob) so the feet don't slide; hit plays once then back to walk
+    // walk frames follow distance so the planted feet in the atlas stay on the cobbles. No extra hop (that read as a skip).
     const cyc = (k.wob / (k.sheet.stride * (k.kind === 'jefe' ? 1.3 : 1)) + k.phase) % 1;
     if (k.anim === 'hit') { k.animT += dt; const i = Math.floor(k.animT * ANIM.hit.fps); if (i >= ANIM.hit.n) playAnim(k, 'walk'); else setFrame(k, 'hit', i); }
-    if (k.anim === 'walk') setFrame(k, 'walk', Math.floor(cyc * 8));
-    const ph = cyc * Math.PI * 4;
-    const hopA = k.kind === 'calaca' ? 0.1 : k.kind === 'lucha' ? 0.02 : 0.03;
-    const bob = Math.abs(Math.sin(ph)) * hopA * (k.stagger > 0 ? 0.2 : 1);
+    if (k.anim === 'walk') setFrame(k, 'walk', Math.floor(cyc * k.sheet.walkN));
     if (k.hpBar) { const pulse = k.hp / k.maxHp < 0.34 ? 1 + Math.sin(s * 12) * 0.06 : 1; k.hpBar.scale.set(1.7 * pulse, 0.32 * pulse, 1); }
-    k.root.position.set(k.x, bob, k.z);
-    k.body.rotation.set(0.28, 0, k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
+    k.root.position.set(k.x, 0, k.z);
+    k.body.rotation.set(0.2, -k.x * 0.04, k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
     if (k.aura) { k.aura.material.opacity = 0.55 + Math.sin(s * 6) * 0.25; }
     if (k.z >= LINE_Z && state === 'play') kidReachedLine(k);
   }
