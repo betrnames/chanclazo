@@ -99,13 +99,13 @@ import Base from '../layouts/Base.astro';
   @media (prefers-reduced-motion:reduce){.home *{animation:none!important}}
 </style>
 <script>
-  // Art layout in image fractions. safe = x-span that must stay on screen; keep = boxes around the side characters
-  // (boy + pedestal top on the left, Catrina + pedestal top on the right) that the hero group must never cover.
+  // Art layout in image fractions. safe = x-span that must stay on screen; keep = boxes around the two (now empty) pedestal tops
+  // that the hero group must never cover.
   type Box = [number, number, number, number]; // x0, y0, x1, y1
   type Art = { W: number; H: number; safe: [number, number]; ay: number; cx: number; feet: number; keep: Box[]; candles: [number, number, number][] };
-  const DESK: Art = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, cx: 0.48, feet: 0.8, keep: [[0.06, 0.15, 0.23, 0.62], [0.738, 0.11, 0.92, 0.62]],
+  const DESK: Art = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, cx: 0.48, feet: 0.8, keep: [[0.06, 0.31, 0.23, 0.62], [0.738, 0.31, 0.92, 0.62]],
     candles: [[.152, .875, 1], [.291, .865, 1], [.38, .865, 1], [.407, .825, 1], [.553, .76, .9], [.6, .865, .9], [.627, .835, 1], [.627, .93, 1], [.748, .835, 1], [.845, .875, 1]] };
-  const MOB: Art = { W: 1008, H: 1792, safe: [0.025, 0.985], ay: 0.6, cx: 0.49, feet: 0.75, keep: [[0, 0.3, 0.226, 0.5], [0.748, 0.275, 1, 0.5]],
+  const MOB: Art = { W: 1008, H: 1792, safe: [0.025, 0.985], ay: 0.6, cx: 0.49, feet: 0.75, keep: [[0, 0.275, 0.226, 0.36], [0.748, 0.275, 1, 0.36]],
     candles: [[.05, .68, 1], [.243, .67, 1], [.39, .67, 1], [.425, .64, 1], [.615, .61, .9], [.685, .66, .9], [.735, .655, 1], [.735, .695, 1], [.912, .655, 1], [.98, .7, 1]] };
   const T = { w: 1681, h: 363 }, C = { w: 1000, h: 760 };
   // relic footprint per 1/10 height band (fraction of the group width): rays thin at top/bottom, the chancla across the middle
@@ -174,8 +174,24 @@ import Base from '../layouts/Base.astro';
       if (PROF.some(([a, b], i) => !free([gx + a * gw, ngy + (i / PROF.length) * gh, gx + b * gw, ngy + ((i + 1) / PROF.length) * gh]))) continue;
       ly = nly; gy = ngy; break;
     }
+    if (mob) {
+      // phones: CHANCLAZO sits at about the vertical middle of the screen with the relic right under it, then tagline + PLAY NOW
+      let w = Math.min(vw * 0.9, 480), rw2 = Math.min(vw * 0.8, 460);
+      for (let i = 0; i < 40; i++) {
+        const h = w * T.h / T.w, g2 = rw2 * C.h / C.w;
+        let y = vh * 0.49 - h / 2;
+        let y2 = y + h * 0.88 + 4 - g2 * 0.196; // relic's chancla top (at the peak of its hover) just below the logo
+        const over = y2 + g2 * 0.757 - (ry - 6); // keep the chancla above the tagline
+        if (over > 0) { const up = Math.min(over, y - Math.max(minTop, vh * 0.3)); y -= up; y2 -= up; }
+        if (y2 + g2 * 0.757 <= ry - 6 || i === 39) { ly = y; gy = y2; best.lw = w; best.lh = h; best.gw = rw2; best.gh = g2; break; }
+        w *= 0.97; rw2 *= 0.96;
+      }
+      put(ttl, gcx - best.lw / 2, ly, best.lw, best.lh);
+      put(grp, gcx - best.gw / 2, gy, best.gw, best.gh);
+    } else {
     put(ttl, gcx - lw / 2, ly, lw, lh);
     put(grp, gx, gy, gw, gh);
+    }
     put(rib, gcx - rw / 2 < 4 ? (vw - rw) / 2 : Math.min(vw - rw - 4, gcx - rw / 2), ry, rw);
     const key = `${mob}|${Math.round(iw)}|${Math.round(ix)}|${Math.round(iy)}`;
     if (key !== glowMode) {
