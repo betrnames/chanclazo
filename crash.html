@@ -91,6 +91,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 .link{display:block;margin-top:12px;color:#ffd23f;font:600 14px system-ui}
 .hero{height:150px;display:block;margin:-60px auto 0;filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))}
 .cameos{display:flex;justify-content:center;align-items:flex-end;gap:2px;margin-top:-64px}.cameos .hero{margin:0;height:140px}.hero.d2{animation-delay:-.35s}
+.hero.relicx{height:auto;width:170px;margin:-40px auto 4px;filter:grayscale(.5) brightness(.8) drop-shadow(0 8px 10px rgba(0,0,0,.6));transform:rotate(-12deg)}
 .hero.cheer{animation:cheer .7s ease-in-out infinite alternate}
 @keyframes cheer{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-10px) rotate(3deg)}}
 .menu{display:flex;flex-direction:column;gap:10px;align-items:center}
@@ -115,7 +116,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   <div id="rapid" class="hidden" aria-live="polite">🔥 RAPID FIRE <span class="rb"><i></i></span><span id="rapidT">5.0</span></div>
 
   <div class="screen hidden" id="victory"><canvas id="petals"></canvas><div class="card">
-    <div class="cameos"><img class="hero cheer" src="/crash/abuela-chibi.webp" alt="Abuela cheering" /><img class="hero cheer d2" src="/crash/sidro-chibi.webp" alt="Sidro cheering" /></div>
+    <div class="cameos"><img class="hero cheer" src="/crash/kids-card.webp" alt="The sugar-skull kids cheering" /><img class="hero cheer d2" src="/crash/sidro-chibi.webp" alt="Sidro cheering" /></div>
     <h1 id="vTitle">PERFECT!</h1>
     <p class="sub" id="vSub"></p>
     <div class="vstars" id="vStars"></div>
@@ -125,7 +126,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   </div></div>
 
   <div class="screen hidden" id="lose"><div class="card">
-    <img class="hero" src="/crash/abuela-chibi-angry.webp" alt="Abuela, not impressed" />
+    <img class="hero relicx" src="/crash/chancla-btn.webp" alt="The gold chancla, all thrown out" />
     <h1>Out of chanclas!</h1>
     <p class="sub" id="lSub"></p>
     <button class="btn gold" id="retry">RETRY</button>
@@ -140,7 +141,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   </div></div>
 
   <div class="screen hidden" id="final"><div class="card">
-    <div class="cameos"><img class="hero cheer" src="/crash/abuela-chibi.webp" alt="Abuela cheering" /><img class="hero cheer d2" src="/crash/kids-card.webp" alt="The sugar-skull kids cheering" /><img class="hero cheer" src="/crash/sidro-chibi.webp" alt="Sidro cheering" /></div>
+    <div class="cameos"><img class="hero cheer d2" src="/crash/kids-card.webp" alt="The sugar-skull kids cheering" /><img class="hero cheer" src="/crash/sidro-chibi.webp" alt="Sidro cheering" /></div>
     <h1>¡Chanclazo!</h1>
     <p class="sub">You cleared every stage in all three worlds.</p>
     <div class="reward" id="fStars">0 ★</div>
