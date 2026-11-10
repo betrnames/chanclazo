@@ -105,7 +105,7 @@ import Base from '../layouts/Base.astro';
   type Art = { W: number; H: number; safe: [number, number]; ay: number; cx: number; feet: number; keep: Box[]; candles: [number, number, number][] };
   const DESK: Art = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, cx: 0.48, feet: 0.8, keep: [[0.06, 0.15, 0.23, 0.62], [0.738, 0.11, 0.92, 0.62]],
     candles: [[.152, .875, 1], [.291, .865, 1], [.38, .865, 1], [.407, .825, 1], [.553, .76, .9], [.6, .865, .9], [.627, .835, 1], [.627, .93, 1], [.748, .835, 1], [.845, .875, 1]] };
-  const MOB: Art = { W: 1008, H: 1792, safe: [0.025, 0.985], ay: 0.35, cx: 0.49, feet: 0.75, keep: [[0, 0.3, 0.226, 0.5], [0.748, 0.275, 1, 0.5]],
+  const MOB: Art = { W: 1008, H: 1792, safe: [0.025, 0.985], ay: 0.6, cx: 0.49, feet: 0.75, keep: [[0, 0.3, 0.226, 0.5], [0.748, 0.275, 1, 0.5]],
     candles: [[.05, .68, 1], [.243, .67, 1], [.39, .67, 1], [.425, .64, 1], [.615, .61, .9], [.685, .66, .9], [.735, .655, 1], [.735, .695, 1], [.912, .655, 1], [.98, .7, 1]] };
   const T = { w: 1681, h: 363 }, C = { w: 1000, h: 760 };
   // relic footprint per 1/10 height band (fraction of the group width): rays thin at top/bottom, the chancla across the middle
@@ -155,13 +155,27 @@ import Base from '../layouts/Base.astro';
       }
     }
     if (!best) return;
-    const { gw, gh, gx, gy, lw, lh, ly, feet } = best;
-    put(ttl, gcx - lw / 2, ly, lw, lh);
-    put(grp, gx, gy, gw, gh);
+    const { gw, gh, gx, lw, lh, feet } = best;
+    let { gy, ly } = best;
     const rw = rib.offsetWidth, rh = rib.offsetHeight;
     // tagline: on the floor between the relic and PLAY NOW
     let ry = mob ? Math.max(feet + 10, Math.min(ctaTop - rh - 14, Y(0.8))) : Math.min(feet + 10, ctaTop - rh - 8);
     if (ry + rh > ctaTop - 6) ry = ctaTop - rh - 6;
+    // nudge the wordmark down a little (it sat too high), but keep it clear of the kids and of the relic below;
+    // the relic may drop a little too to make room, never into the tagline
+    const want = vh * (mob ? 0.05 : 0.06);
+    for (let d = want; d >= 0; d -= 2) {
+      const nly = ly + d;
+      if (!free([gcx - lw / 2, nly + lh * 0.06, gcx + lw / 2, nly + lh * 0.9])) continue;
+      const imgTop = gy + gh * (0.242 - 0.515 * 0.09); // top of the chancla at the peak of its hover
+      const need = Math.max(0, nly + lh * 0.88 + 4 - imgTop);
+      if (gy + need + gh * 0.757 > ry - 6) continue;
+      const ngy = gy + need;
+      if (PROF.some(([a, b], i) => !free([gx + a * gw, ngy + (i / PROF.length) * gh, gx + b * gw, ngy + ((i + 1) / PROF.length) * gh]))) continue;
+      ly = nly; gy = ngy; break;
+    }
+    put(ttl, gcx - lw / 2, ly, lw, lh);
+    put(grp, gx, gy, gw, gh);
     put(rib, gcx - rw / 2 < 4 ? (vw - rw) / 2 : Math.min(vw - rw - 4, gcx - rw / 2), ry, rw);
     const key = `${mob}|${Math.round(iw)}|${Math.round(ix)}|${Math.round(iy)}`;
     if (key !== glowMode) {
