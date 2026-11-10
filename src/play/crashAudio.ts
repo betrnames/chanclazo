@@ -219,3 +219,32 @@ export function sfxRapidEnd(): void {
 export function buzz(p: number | number[]): void {
   try { if ('vibrate' in navigator) navigator.vibrate(p); } catch { /* ignore */ }
 }
+
+/** Gold relic shimmer: bright bell partials on a pentatonic step (knock-outs / big hits). */
+export function sfxShimmer(strength = 1): void {
+  if (!gate('shimmer', 70)) return;
+  const a = c(); if (!a) return; const t = now();
+  const steps = [0, 2, 4, 7, 9, 12], f = 1568 * Math.pow(2, steps[Math.floor(Math.random() * steps.length)] / 12);
+  const pk = 0.05 + 0.05 * Math.min(1, strength);
+  tone(f, f, 'sine', t, 0.45, pk); tone(f * 2.76, f * 2.7, 'sine', t + 0.01, 0.25, pk * 0.45); tone(f * 1.5, f * 1.5, 'triangle', t + 0.05, 0.3, pk * 0.5);
+}
+/** Deep body thud under a solid chancla impact (adds weight to hits). */
+export function sfxImpact(strength = 1): void {
+  if (!gate('impact', 60)) return;
+  const a = c(); if (!a) return; const t = now(), s = Math.min(1, strength);
+  tone(130, 42, 'sine', t, 0.22, 0.25 * s + 0.08);
+  burst(t, 0.08, 0.12 * s + 0.04, 'lowpass', 900, 300, 0.7);
+}
+/** Chancla bomb: sub-bass boom, crackling noise tail and a bright gold ring-out. */
+export function sfxBoom(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(90, 28, 'sine', t, 0.7, 0.55); tone(180, 40, 'triangle', t, 0.35, 0.25);
+  burst(t, 0.5, 0.5, 'lowpass', 2400, 160, 0.8); burst(t + 0.04, 0.9, 0.18, 'bandpass', 3200, 900, 1.2);
+  for (let i = 0; i < 6; i++) burst(t + 0.15 + Math.random() * 0.5, 0.05, 0.08, 'highpass', 4000, 4000, 0.7); // crackle
+  tone(1568, 1568, 'sine', t + 0.05, 0.8, 0.05); tone(2093, 2093, 'sine', t + 0.09, 0.7, 0.035);
+}
+/** Bomb pickup / ready: two-note gold chime. */
+export function sfxBombReady(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(784, 784, 'triangle', t, 0.16, 0.12); tone(1175, 1175, 'triangle', t + 0.09, 0.28, 0.12); tone(1568, 1568, 'sine', t + 0.12, 0.35, 0.05);
+}

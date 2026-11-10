@@ -12,6 +12,7 @@ import {
 } from './crashArt';
 import { LEVELS, S, type Builder } from './crashLevels';
 import * as sfx from './crashAudio';
+import { FX, HitStop } from './fx3d';
 
 const G = 18;                       // gravity (snappier than real)
 const FIXED = 1 / 120;
@@ -34,6 +35,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 stage.insertBefore(renderer.domElement, stage.firstChild);
 const scene = new THREE.Scene();
+const fx = new FX(scene, 0), hitStop = new HitStop(); // polish: gold shockwaves, sparks, relic glow, hit-stop
 const camera = new THREE.PerspectiveCamera(55, 9 / 16, 0.1, 200);
 const CAM_POS = new THREE.Vector3(0, 3.0, 6.6), CAM_LOOK = new THREE.Vector3(0, 1.45, -7.5);
 camera.position.copy(CAM_POS); camera.lookAt(CAM_LOOK);
@@ -105,7 +107,7 @@ function clearLevel(): void {
   scene.remove(levelGroup); disposeObj(levelGroup);
   levelGroup = new THREE.Group(); scene.add(levelGroup);
   papels = []; ents = []; movers = []; projs = []; defls = []; statics = []; aimables = [];
-  debris.clear();
+  debris.clear(); fx.clear();
 }
 
 function setWorld(w: WorldId): void {
@@ -523,7 +525,7 @@ function release(rapid: boolean): void {
   const tgt = aimPt.clone();
   if (rapid) { tgt.x += (Math.random() - 0.5) * 0.5; tgt.y += (Math.random() - 0.5) * 0.3; }
   const v = launchVel(hand, tgt, new THREE.Vector3());
-  const obj = chanclaProto.clone(); obj.scale.setScalar(1.0); levelGroup.add(obj);
+  const obj = chanclaProto.clone(); obj.scale.setScalar(1.0); levelGroup.add(obj); FX.glow(obj, 1.25, 0.5);
   const body = new CANNON.Body({ mass: 5, material: mProj, shape: new CANNON.Sphere(0.3), position: new CANNON.Vec3(hand.x, hand.y, hand.z), linearDamping: 0.0, angularDamping: 0.4 });
   body.allowSleep = false;
   body.velocity.set(v.x, v.y, v.z);
@@ -533,7 +535,8 @@ function release(rapid: boolean): void {
   const p: Proj = { body, obj, born: performance.now(), bornSim: world.time, hit: false };
   body.addEventListener('collide', (ev: { body: CANNON.Body; contact: CANNON.ContactEquation }) => {
     const iv = Math.abs(ev.contact.getImpactVelocityAlongNormal());
-    if (!p.hit && iv > 2) { p.hit = true; sfx.sfxThwack(iv / 14); sfx.buzz(25); shake = Math.min(0.35, shake + iv * 0.012); }
+    if (!p.hit && iv > 2) { p.hit = true; sfx.sfxThwack(iv / 14); sfx.sfxImpact(iv / 12); sfx.buzz(25); shake = Math.min(0.35, shake + iv * 0.012);
+      const at = new THREE.Vector3(body.position.x, body.position.y, body.position.z); fx.ring(at, 0.6 + Math.min(0.8, iv * 0.06)); fx.sparks(at, 12 + Math.min(14, Math.round(iv))); }
   });
   projs.push(p);
   if (rapid) { sfx.sfxRapidShot(); sfx.buzz(8); } else { sfx.sfxFire(); sfx.sfxWhoosh(); sfx.buzz(15); setTimeout(() => { if (ammo > 0 && state === 'play') sfx.sfxReload(); }, 450); }
@@ -573,6 +576,7 @@ function markDown(e: Ent): void {
   const pts = e.pts;
   levelScore += pts;
   const p = e.body.position;
+  { const at = new THREE.Vector3(p.x, p.y + 0.25, p.z); fx.sparks(at, 16, 0xffd36b, 4); fx.sparks(at, 10, 0xff8c1a, 3.2, 3); fx.ring(at, e.starred ? 1.5 : 1.0); sfx.sfxShimmer(e.starred ? 1 : 0.6); if (!rapidOn) hitStop.stop(e.starred ? 90 : 45); }
   popup(`+${pts}`, new THREE.Vector3(p.x, p.y + 0.6, p.z), e.starred);
   if (e.kind === 'skel') { sfx.sfxRattle(); debris.burst(new THREE.Vector3(p.x, p.y + 0.3, p.z), 8, [0xf3ead8, 0xcfc2a8], 3, 0.07); }
   if (e.critter) { e.critter.setMood('dizzy'); sfx.sfxSquish(); }
@@ -774,7 +778,7 @@ function frame(now: number): void {
   fpsAcc += dtReal; fpsN++;
   if (fpsAcc > 2) { const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; if (fps < 45 && ++lowFps >= 2 && renderer.shadowMap.enabled) { renderer.shadowMap.enabled = false; renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25)); resize(); report('quality: low'); } }
   if (slowUntil && now > slowUntil) { slowUntil = 0; timeScale = 1; }
-  const dt = state === 'paused' ? 0 : dtReal * timeScale;
+  const dt = state === 'paused' ? 0 : dtReal * timeScale * hitStop.scale();
   if (dt > 0) world.step(FIXED, dt, 10);
   while (tearQ.length) tearPapel(tearQ.pop()!);
   while (removeQ.length) { const b = removeQ.pop()!; const e = ents.find((x) => x.body === b); if (e && world.bodies.includes(b)) breakEnt(e); }
@@ -802,6 +806,7 @@ function frame(now: number): void {
   for (const p of projs) {
     // sphere collider (predictable bounces); the chancla visual spins flat like a thrown sandal and tumbles after impact
     p.obj.position.set(p.body.position.x, p.body.position.y - 0.05, p.body.position.z);
+    if (!p.hit && dt > 0 && Math.random() < 0.6) fx.trail(p.obj.position);
     const sp = p.body.velocity.length();
     p.obj.userData.spin += dt * (p.hit ? sp * 1.2 : 19);
     if (!p.hit) p.obj.rotation.set(0.25, p.obj.userData.yaw + p.obj.userData.spin, 0, 'YXZ');
@@ -809,7 +814,7 @@ function frame(now: number): void {
   }
   if (projs.length) { const b = projs[projs.length - 1].body.position; trace.push([+b.x.toFixed(2), +b.y.toFixed(2), +b.z.toFixed(2)]); if (trace.length > 400) trace.shift(); }
   projs = projs.filter((p) => { if (now - p.born > 7000 || p.body.position.y < -5) { world.removeBody(p.body); levelGroup.remove(p.obj); return false; } return true; });
-  debris.update(dt);
+  debris.update(dt); fx.update(dtReal, camera);
   backdrop?.update(now);
   for (const pp of papels) {
     if (!pp.torn) { pp.g.children.forEach((c, i) => { if (i > 0) c.rotation.x = Math.sin(s * 1.6 + i) * 0.2; }); continue; }
