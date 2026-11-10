@@ -9,11 +9,12 @@ import * as A from './flingAudio';
 
 const { Engine, Bodies, Composite, Body, Events, Vector, Sleeping } = Matter;
 const W = 1100, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
-// Abuela throws by hand (no slingshot). HAND = her throwing hand in the release pose; launch + aim guide originate here.
+// Slingshot: the floating gold chancla sits in a gold-banded sling in front of Abuela. SLING = rest point of the chancla;
+// launch + aim guide originate here. Pull back (drag anywhere), the chancla follows, glows with power, release to throw.
 const ABU = { x: 68, ground: 920 };                 // feet centre (same spot the old sprite stood)
 // v2 chibi art (front-facing, angry): wind-up = chancla held back on her left; release = same art mirrored, fist out toward the fort, chancla gone (in flight)
-const WIND = { h: 210, hand: { x: 28, y: 802 } }, REL = { h: 210 };
-const HAND = { x: 106, y: 808 };
+const REL = { h: 210 };
+const SLING = { x: 176, y: 790 }, PRONG = 30, VIS = 0.42; // VIS = how far the chancla follows the pull on screen
 const MAXPULL = 140, POWER = 0.21;
 
 const cv = document.createElement('canvas'); (document.body as HTMLElement).insertBefore(cv, document.body.firstChild);
@@ -244,12 +245,12 @@ cv.addEventListener('pointerdown', (e) => {
   wakeAudio(); if (isPortraitPhone() || !playing || ended) return;
   if (flying.length && shotType === 'triple' && !split && performance.now() - shotAt < 2500) { doSplit(); return; }
   if (flying.length || shotsLeft <= 0) return;
-  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; cv.setPointerCapture(e.pointerId);
+  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; cv.setPointerCapture(e.pointerId); A.stretchStart();
 });
 cv.addEventListener('pointermove', (e) => {
   if (!aiming) return; const p = toWorld(e.clientX, e.clientY);
   let dx = p.x - dragStart.x, dy = p.y - dragStart.y; const d = Math.hypot(dx, dy);
-  if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy };
+  if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy }; A.stretch(Math.min(1, d / MAXPULL));
 });
 function makeShot(x: number, y: number, vx: number, vy: number) { markFirstAction('fling', 'throw');
   const si = SHOT_INFO[shotType];
@@ -258,8 +259,8 @@ function makeShot(x: number, y: number, vx: number, vy: number) { markFirstActio
 }
 const release = () => {
   if (!aiming) return; aiming = false;
-  if (Math.hypot(pull.x, pull.y) < 25) { pull = { x: 0, y: 0 }; return; }
-  makeShot(HAND.x, HAND.y, -pull.x * POWER, -pull.y * POWER); relT = 0.45;
+  if (Math.hypot(pull.x, pull.y) < 25) { pull = { x: 0, y: 0 }; A.stretchStop(); return; }
+  makeShot(SLING.x, SLING.y, -pull.x * POWER, -pull.y * POWER); relT = 0.45; A.stretchStop(); A.twang(Math.hypot(pull.x, pull.y) / MAXPULL);
   armed = true; split = false; shotAt = performance.now(); shotsLeft--; throwKOs = 0; abuelaKick = 1; vib(15);
   { const pw = Math.hypot(pull.x, pull.y) / MAXPULL; A.whoosh(pw); } pull = { x: 0, y: 0 }; hud();
 };
@@ -335,12 +336,48 @@ function drawImg(img: CanvasImageSource & { width: number; height: number }, x: 
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.drawImage(img, -w / 2, -h / 2, w, h); ctx.restore();
 }
 function shotImg(): (CanvasImageSource & { width: number; height: number }) | undefined { return shotType === 'boot' ? TINT.boot : shotType === 'triple' ? TINT.triple : IMG.chancla; }
+function drawSling(loaded: boolean) {
+  const pl = Math.hypot(pull.x, pull.y), pw = aiming ? Math.min(1, pl / MAXPULL) : 0;
+  const L = { x: SLING.x - PRONG, y: SLING.y - 26 }, R = { x: SLING.x + PRONG, y: SLING.y - 30 };
+  // carved wooden Y fork with gold caps
+  ctx.lineCap = 'round'; ctx.strokeStyle = '#5a3418'; ctx.lineWidth = 11;
+  ctx.beginPath(); ctx.moveTo(SLING.x, GROUND); ctx.lineTo(SLING.x, SLING.y + 40); ctx.lineTo(L.x, L.y); ctx.moveTo(SLING.x, SLING.y + 40); ctx.lineTo(R.x, R.y); ctx.stroke();
+  ctx.strokeStyle = '#8b5a2b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(SLING.x - 2, GROUND); ctx.lineTo(SLING.x - 2, SLING.y + 40); ctx.stroke();
+  const bob = loaded && !aiming ? Math.sin(t * 2.4) * 5 : 0, tilt = loaded && !aiming ? Math.sin(t * 1.7) * 0.08 : 0;
+  const jit = pw > 0.92 ? (Math.random() - 0.5) * 2.4 : 0;
+  const c = { x: SLING.x + pull.x * VIS + jit, y: SLING.y + pull.y * VIS + bob + jit };
+  const band = (from: { x: number; y: number }) => { ctx.strokeStyle = `rgba(255,${Math.round(205 - pw * 60)},70,.95)`; ctx.lineWidth = 5 - pw * 2; ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(c.x, c.y); ctx.stroke(); };
+  if (loaded) band(R); // back band behind the chancla
+  if (loaded) {
+    // glow halo grows with pull power; idle it breathes
+    const hr = 46 + pw * 46 + Math.sin(t * 4) * 4, g = ctx.createRadialGradient(c.x, c.y, 4, c.x, c.y, hr);
+    g.addColorStop(0, `rgba(255,236,150,${0.55 + pw * 0.35})`); g.addColorStop(0.45, `rgba(255,190,60,${0.25 + pw * 0.3})`); g.addColorStop(1, 'rgba(255,170,40,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, hr, 0, 7); ctx.fill();
+    // sparkles orbiting the relic
+    ctx.fillStyle = '#fff6c8'; for (let i = 0; i < 5; i++) { const a = t * (1.2 + pw * 2) + i * 1.257, r = 34 + Math.sin(t * 3 + i) * 6 + pw * 14; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 5 + i * 2); ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r * 0.6, 2.2, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
+    const si = shotType === 'chancla' ? IMG.chancla : shotImg();
+    if (si) { ctx.save(); ctx.shadowColor = 'rgba(255,214,90,1)'; ctx.shadowBlur = 18 + pw * 26; drawImg(si, c.x, c.y, SHOT_INFO[shotType].r * (2.5 + pw * 0.3), (aiming ? Math.atan2(-pull.y, -pull.x) * 0.5 : -0.25) + tilt); ctx.restore(); }
+    band(L); // front band over it
+    if (aiming && pl >= 25) { // power meter under the sling
+      const bw = 92, bx = SLING.x - bw / 2, by = SLING.y - 92; // above the fork, clear of the ground edge
+      ctx.fillStyle = 'rgba(20,10,36,.75)'; ctx.fillRect(bx - 3, by - 3, bw + 6, 14);
+      const pg = ctx.createLinearGradient(bx, 0, bx + bw, 0); pg.addColorStop(0, '#ffe08a'); pg.addColorStop(1, '#ff5a1f');
+      ctx.fillStyle = pg; ctx.fillRect(bx, by, bw * pw, 8);
+      ctx.font = '900 18px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#1a0c2c'; const tx = `${Math.round(pw * 100)}%`;
+      ctx.strokeText(tx, SLING.x, by - 8); ctx.fillStyle = '#ffd166'; ctx.fillText(tx, SLING.x, by - 8);
+    } else if (!aiming) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 4); ctx.strokeStyle = '#ffd68c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(SLING.x, SLING.y + bob, 50, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+  } else { // empty sling: band hangs between the prongs
+    ctx.strokeStyle = 'rgba(255,205,70,.9)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(L.x, L.y); ctx.quadraticCurveTo(SLING.x, SLING.y + 8, R.x, R.y); ctx.stroke();
+  }
+  ctx.fillStyle = '#ffd166'; for (const q of [L, R]) { ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, 7); ctx.fill(); }
+}
 function trajectory() {
   if (!aiming || Math.hypot(pull.x, pull.y) < 25) return;
-  let x = HAND.x, y = HAND.y, vx = -pull.x * POWER, vy = -pull.y * POWER;
+  let x = SLING.x, y = SLING.y, vx = -pull.x * POWER, vy = -pull.y * POWER;
+  const pw = Math.min(1, Math.hypot(pull.x, pull.y) / MAXPULL);
   const g = engine.gravity.y * 0.001 * (1000 / 60) ** 2;
-  ctx.fillStyle = 'rgba(255,214,140,.8)';
-  for (let i = 0; i < 40; i++) { for (let k = 0; k < 2; k++) { vy += g; x += vx; y += vy; } ctx.globalAlpha = 1 - i / 40; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
+  ctx.fillStyle = `rgb(255,${Math.round(230 - pw * 70)},${Math.round(150 - pw * 110)})`;
+  for (let i = 0; i < 40; i++) { for (let k = 0; k < 2; k++) { vy += g; x += vx; y += vy; } ctx.globalAlpha = 1 - i / 40; ctx.beginPath(); ctx.arc(x, y, 3.5 + pw * 2, 0, 7); ctx.fill(); }
   ctx.globalAlpha = 1;
 }
 const STEP = 1000 / 60; let acc = 0;
@@ -377,22 +414,17 @@ function frameBody(now: number) {
   ctx.fillStyle = gg; ctx.fillRect(-W, GROUND, W * 3, H - GROUND + 200);
   ctx.fillStyle = '#ff9f1c'; for (let i = 0; i < 40; i++) { ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc((i * 97) % (W + 200) - 100, GROUND + 8 + (i * 37) % 60, 4, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
   for (const cx of [60, 420, 1080]) { const r = ctx.createRadialGradient(cx, GROUND - 10, 2, cx, GROUND - 10, 60 + Math.sin(t * 7 + cx) * 4); r.addColorStop(0, 'rgba(255,170,60,.55)'); r.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = r; ctx.fillRect(cx - 70, GROUND - 80, 140, 140); ctx.fillStyle = '#fbf3d5'; ctx.fillRect(cx - 4, GROUND - 22, 8, 22); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(cx, GROUND - 28, 4, 7, 0, 0, 7); ctx.fill(); }
-  { // Abuela: wind-up pose while loaded/aiming, release pose right after a throw
-    const rel = (relT > 0 || flying.length > 0) && IMG.abuelaRel, im = rel ? IMG.abuelaRel! : IMG.abuela;
+  { // Abuela stands behind the sling cheering it on: empty-hand pose (fist toward the fort); leans in while you pull, punches on release
+    const im = IMG.abuelaRel || IMG.abuela;
     if (im) {
-      const h = rel ? REL.h : WIND.h, w = h * (im.width / im.height), bob = rel ? 0 : Math.sin(t * 2) * 1.5;
-      // pose by code: lean back while winding up (more while aiming), snap forward + mirror on release
-      const lean = rel ? 0.1 * Math.min(1, relT / 0.45 + 0.4) : -0.03 - (aiming ? 0.05 : 0) + Math.sin(t * 2) * 0.01;
-      ctx.save(); ctx.translate(ABU.x, ABU.ground + bob); ctx.rotate(lean); if (rel) ctx.scale(-1, 1);
+      const h = REL.h, w = h * (im.width / im.height), bob = Math.sin(t * 2) * 1.5;
+      const lean = relT > 0 ? 0.12 * Math.min(1, relT / 0.45 + 0.4) : (aiming ? 0.05 : 0) + Math.sin(t * 2) * 0.012;
+      ctx.save(); ctx.translate(ABU.x - 14, ABU.ground + bob); ctx.rotate(lean); if (IMG.abuelaRel) ctx.scale(-1, 1);
       ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore();
     }
   }
   const loaded = playing && !ended && !flying.length && shotsLeft > 0;
-  if (loaded && relT <= 0) {
-    // special shots: show the loaded ammo in her raised hand (the gold chancla is already in the art)
-    if (shotType !== 'chancla') { const si = shotImg(); if (si) drawImg(si, WIND.hand.x, WIND.hand.y, SHOT_INFO[shotType].r * 1.9, -0.4); }
-    if (!aiming) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 4); ctx.strokeStyle = '#ffd68c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(HAND.x, HAND.y, 50, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
-  }
+  drawSling(loaded && relT <= 0);
   trajectory();
   for (const b of Composite.allBodies(world)) {
     if (b.isStatic && !ghosts.includes(b)) continue;
@@ -498,6 +530,8 @@ requestAnimationFrame(frame);
   engine, world, meta, LEVELS, build, openMap, boom: (b: Matter.Body) => { armed = true; damage(b, 99); },
   snapshot: () => Composite.allBodies(world).filter((b) => meta.has(b.id) && !meta.get(b.id)!.dead && meta.get(b.id)!.kind !== 'ghost').map((b) => ({ id: b.id, x: b.position.x, y: b.position.y, a: b.angle })),
   fire: (px: number, py: number, type?: ShotType) => { if (type) shotType = type; aiming = true; pull = { x: px, y: py }; release(); },
+  aim: () => ({ aiming, pull: { ...pull }, power: Math.min(1, Math.hypot(pull.x, pull.y) / MAXPULL), sling: SLING }),
+  toScreen: (x: number, y: number) => ({ x: ox + x * scale, y: oy + y * scale }),
   split: () => doSplit(),
   finish: (win: boolean) => { ended = false; finish(win); },
   get state() { return { level, score, shotsLeft, ended, villains: villainsLeft(), alive: [...meta.values()].filter((m) => !m.dead).length, shotType }; },
