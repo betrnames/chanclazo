@@ -131,6 +131,14 @@ const parts: Part[] = [];
 interface Pop { x: number; y: number; t: string; life: number; big?: boolean }
 const pops: Pop[] = [];
 const ghosts: Matter.Body[] = [];
+// polish: gold shockwave rings, marigold petals that flutter and fade before the ground, short hit-stop on knock-outs
+interface Ring { x: number; y: number; r: number; life: number; c: string }
+const rings: Ring[] = [];
+interface Petal { x: number; y: number; vx: number; vy: number; a: number; va: number; life: number; c: string; s: number }
+const petals: Petal[] = [];
+let hitStopT = 0;
+const MARIGOLD = ['#ff8c1a', '#ffb000', '#ffd23f', '#ff6a00', '#e2197a'];
+function petalBurst(x: number, y: number, n = 18) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 5; petals.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, life: 1, c: MARIGOLD[i % MARIGOLD.length], s: 6 + Math.random() * 5 }); } }
 
 function burst(x: number, y: number, colors: string[], n = 16) {
   for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 9, vy: -Math.random() * 8, life: 1, c: colors[i % colors.length], s: 4 + Math.random() * 6 });
@@ -189,6 +197,7 @@ function damage(b: Matter.Body, amt: number) {
     if (m.kind === 'ghost') A.wail(); else A.knockout();
     if (throwKOs > 1) { const bonus = 1000 * (throwKOs - 1); score += bonus; pops.push({ x: b.position.x, y: b.position.y - 70, t: `COMBO ×${throwKOs}  +${bonus}`, life: 1.6, big: true }); A.explosion(); }
     shake = 10; burst(b.position.x, b.position.y, m.kind === 'lucha' || m.kind === 'armor' ? ['#d62828', '#ffd166', '#fff'] : ['#fbf6ea', '#9be7ff', '#f72585'], 26);
+    rings.push({ x: b.position.x, y: b.position.y, r: 10, life: 1, c: '255,214,102' }); petalBurst(b.position.x, b.position.y, 20); hitStopT = Math.max(hitStopT, 0.07);
     if (villainsLeft() === 0) { slowT = 1.5; focus = { x: b.position.x, y: b.position.y }; vib([40, 40, 80]); }
   } else { if (m.kind === 'wood') A.breakWood(); else if (m.kind === 'stone') A.breakStone(); else A.ripPaper(); burst(b.position.x, b.position.y, m.kind === 'wood' ? ['#8b5a2b', '#c08a4f'] : m.kind === 'stone' ? ['#8a8597', '#5d5868'] : PICADO, 12); }
   hud();
@@ -225,6 +234,8 @@ Events.on(engine, 'collisionStart', (e) => {
     const rel = Vector.magnitude(Vector.sub(p.bodyA.velocity, p.bodyB.velocity));
     if (rel < 2.4) continue; // ignore resting/settle contacts
     const km = meta.get(p.bodyA.id) || meta.get(p.bodyB.id); if (km && rel > 3) A.knock(km.kind === 'armor' ? 'stone' : km.kind, rel);
+    const shotB = isShot(p.bodyA) ? p.bodyA : isShot(p.bodyB) ? p.bodyB : null;
+    if (shotB && rel > 5 && !(shotB as any).__hit) { (shotB as any).__hit = 1; const c = p.collision.supports[0] || shotB.position; rings.push({ x: c.x, y: c.y, r: 6, life: 0.7, c: '255,236,170' }); burst(c.x, c.y, ['#ffe08a', '#fff6c8', '#ffb000'], 10); }
     const massF = (b: Matter.Body) => (b.isStatic ? 3 : Math.min(isShot(b) ? 4 : 3, b.mass / 2));
     for (const [a, o] of [[p.bodyA, p.bodyB], [p.bodyB, p.bodyA]] as const) {
       const ma = meta.get(a.id); if (!ma) continue;
@@ -384,7 +395,8 @@ function frameBody(now: number) {
   slowT = Math.max(0, slowT - dt); const timeScale = slowT > 0 ? 0.3 : 1;
   zoom += ((slowT > 0 ? 1.35 : 1) - zoom) * Math.min(1, dt * 4);
   if (playing && !portrait && !ended) {
-    levelT += dt; acc = Math.min(acc + dt * 1000 * timeScale, STEP * 4);
+    const hs = hitStopT > 0 ? 0.08 : 1; hitStopT = Math.max(0, hitStopT - dt);
+    levelT += dt; acc = Math.min(acc + dt * 1000 * timeScale * hs, STEP * 4);
     while (acc >= STEP) {
       for (const gb of ghosts) { const m = meta.get(gb.id); if (m && !m.dead) Body.setPosition(gb, { x: gb.position.x, y: m.baseY! + Math.sin(levelT * 1.6 + m.phase!) * 14 }); }
       Engine.update(engine, STEP); acc -= STEP;
@@ -411,7 +423,7 @@ function frameBody(now: number) {
   trajectory();
   for (const b of Composite.allBodies(world)) {
     if (b.isStatic && !ghosts.includes(b)) continue;
-    if (isShot(b)) { const si = shotImg(); if (si) drawImg(si, b.position.x, b.position.y, SHOT_INFO[shotType].r * 2.2, b.angle); continue; }
+    if (isShot(b)) { const si = shotImg(); if (si) { ctx.save(); ctx.shadowColor = 'rgba(255,210,90,.95)'; ctx.shadowBlur = 16; drawImg(si, b.position.x, b.position.y, SHOT_INFO[shotType].r * 2.2, b.angle); ctx.restore(); } continue; }
     const m = meta.get(b.id); if (!m || m.dead) continue;
     ctx.save(); ctx.translate(b.position.x, b.position.y); ctx.rotate(b.angle);
     const dmg = 1 - m.hp / m.maxHp;
@@ -454,6 +466,12 @@ function frameBody(now: number) {
     }
     ctx.restore();
   }
+  for (const f of flying) if (Math.random() < 0.8 && !(f as any).__hit) parts.push({ x: f.position.x + (Math.random() - 0.5) * 8, y: f.position.y + (Math.random() - 0.5) * 8, vx: (Math.random() - 0.5) * 0.6, vy: -0.6, life: 0.55, c: Math.random() < 0.5 ? '#ffe08a' : '#fff6c8', s: 2.5 + Math.random() * 2.5 });
+  for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.life -= dt * 2.6; if (r.life <= 0) { rings.splice(i, 1); continue; } const k = 1 - r.life; ctx.strokeStyle = `rgba(${r.c},${r.life * 0.9})`; ctx.lineWidth = 3 + r.life * 6; ctx.beginPath(); ctx.arc(r.x, r.y, r.r + k * 95, 0, 7); ctx.stroke(); }
+  for (let i = petals.length - 1; i >= 0; i--) { const p = petals[i]; p.vy += 0.22; p.vx *= 0.97; p.vy *= 0.97; p.x += p.vx + Math.sin(p.a) * 0.6; p.y += p.vy; p.a += p.va; p.life -= dt * 0.9;
+    const fade = Math.min(1, p.life * 2, Math.max(0, (GROUND - 60 - p.y) / 60)); if (p.life <= 0 || fade <= 0) { petals.splice(i, 1); continue; } // gone before the ground
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = fade; ctx.fillStyle = p.c; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, 7); ctx.fill(); ctx.restore(); }
+  ctx.globalAlpha = 1;
   for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.life -= dt * 1.4; if (p.life <= 0) { parts.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.s, p.s); }
   ctx.globalAlpha = 1; ctx.textAlign = 'center';
   for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.life -= dt; p.y -= dt * (p.big ? 24 : 40); if (p.life <= 0) { pops.splice(i, 1); continue; } ctx.font = p.big ? '900 38px system-ui' : p.t.length > 14 ? '800 26px system-ui' : '900 30px system-ui'; ctx.globalAlpha = Math.min(1, p.life); ctx.lineWidth = 6; ctx.strokeStyle = '#1a0c2c'; ctx.strokeText(p.t, p.x, p.y); ctx.fillStyle = p.big ? '#ffe36e' : '#ffd166'; ctx.fillText(p.t, p.x, p.y); }

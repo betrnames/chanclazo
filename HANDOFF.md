@@ -64,7 +64,7 @@ The flow so far: Strike work lands on `feat/chancla-strike-sling`, is fast-forwa
 ## Open TODOs
 - **Character sprites (Agent Sprite Forge)**: the Waves atlases are in git (`public/waves/sprites/*-atlas.webp/json`). The source work folder
   `/workspace/chanclazo_assets/sprites-forge` (raw sheets, GIFs, the calavera-boss test) lives on the build box only, not in git. Crash still uses the static kid art.
-- **Polish pass, partly done**: `src/play/fx3d.ts` (rings, sparks, glow, hit-stop) is wired into Crash and Waves. Strike polish is in progress. Remaining (free/permissive only) across Crash, Waves and Strike: impact particles, relic glow, marigold petal bursts
+- **Polish pass, partly done**: `src/play/fx3d.ts` (rings, sparks, glow, hit-stop) is wired into Crash and Waves. Strike has its own 2D canvas polish (gold trail, impact rings, marigold petals, hit-stop). Remaining (free/permissive only) across Crash, Waves and Strike: impact particles, relic glow, marigold petal bursts
   on hits (no floor confetti), screen shake/hit-stop, better code-generated sounds, smooth UI transitions, mobile performance.
 - The Strike Level Map card on short landscape phones slightly overlaps the footer copyright line.
 - The old Day-of-the-Dead **town map** `/choose` (commit `1d0af71`, Oct 28) was replaced by the carousel in `57f61ba`.
