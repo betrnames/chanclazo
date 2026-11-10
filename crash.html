@@ -26,10 +26,6 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 .coins{display:flex;align-items:center;gap:5px;background:rgba(36,9,47,.9);border:3px solid #3b1a5c;border-radius:999px;padding:4px 10px 4px 5px;font:400 18px LilitaOne,system-ui;color:#ffd23f}
 .coin{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c0,#ffd23f 45%,#d48a00);border:2px solid #7a4a00}
 #mute{pointer-events:auto;background:rgba(36,9,47,.9);border:3px solid #3b1a5c;border-radius:12px;width:40px;height:40px;font-size:16px;cursor:pointer;color:#fff}
-#ammo{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom) + 44px);z-index:5;display:flex;align-items:center;gap:8px;pointer-events:none;background:rgba(36,9,47,.85);border:3px solid #3b1a5c;border-radius:16px;padding:6px 10px}
-#ammo.bump{animation:pop .3s ease-out}
-#ammoIcons{display:flex;gap:3px}#ammoIcons i{width:13px;height:26px;display:block}#ammoIcons i.off{opacity:.25;filter:grayscale(1)}
-#ammoN{font:400 26px LilitaOne,system-ui;color:#ffd23f;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill}
 #fire{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 44px);z-index:6;width:104px;height:104px;border-radius:50%;padding:0;border:5px solid #3b1a5c;background:radial-gradient(circle at 50% 36%,#7a35ad,#46196b 58%,#24092f);box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f;cursor:pointer;touch-action:none;transition:filter .25s,transform .09s,box-shadow .09s;display:flex;align-items:center;justify-content:center}
 #fire img{width:88px;height:auto;pointer-events:none;filter:drop-shadow(0 4px 2px rgba(0,0,0,.55));transform:rotate(-24deg) translateY(-3px);transition:transform .2s cubic-bezier(.2,1.6,.4,1),opacity .2s}
 #fire .cnt{position:absolute;right:-8px;top:-8px;min-width:36px;height:36px;padding:0 6px;border-radius:18px;background:#ff3d9a;border:3px solid #3b1a5c;box-shadow:0 3px 0 #3b1a5c;display:flex;align-items:center;justify-content:center;font:400 21px LilitaOne,system-ui;color:#fff;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;pointer-events:none}
@@ -45,6 +41,17 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 #fire.busy .tap,#fire:disabled .tap{opacity:0}
 #fire:disabled{filter:grayscale(1) brightness(.5);animation:none}
 #fire:disabled img{opacity:.35;animation:none}
+#fire.rapid{background:radial-gradient(circle at 50% 38%,#ffd27a,#ff6a1a 52%,#b5121b);filter:none!important;animation:rglow .22s ease-in-out infinite alternate!important}
+#fire.rapid img{animation:rshake .12s linear infinite alternate!important;opacity:1!important}
+@keyframes rglow{from{box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f,0 0 18px 6px rgba(255,120,20,.7)}to{box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #fff2a8,0 0 34px 14px rgba(255,170,40,.95)}}
+@keyframes rshake{from{transform:rotate(-30deg) translateY(-4px) scale(1.05)}to{transform:rotate(-18deg) translateY(-7px) scale(1.12)}}
+#fire.rapid::before{content:"";position:absolute;inset:-14px;border-radius:50%;background:conic-gradient(#ffd23f calc(var(--p,1)*360deg),rgba(255,255,255,.14) 0);-webkit-mask:radial-gradient(circle,transparent 59px,#000 60px);mask:radial-gradient(circle,transparent 59px,#000 60px);z-index:-1;pointer-events:none}
+#fire.rapid::after{content:"";position:absolute;left:6px;right:6px;top:-40px;height:62px;background:radial-gradient(ellipse 20% 62% at 28% 100%,#ffe07a,#ff8c1a 50%,transparent 72%),radial-gradient(ellipse 26% 86% at 50% 100%,#fff6c0,#ff9a1a 42%,#e2197a 64%,transparent 76%),radial-gradient(ellipse 20% 62% at 72% 100%,#ffe07a,#ff6a00 50%,transparent 72%);transform-origin:50% 100%;animation:flame .16s ease-in-out infinite alternate;pointer-events:none;z-index:-2}
+@keyframes flame{from{transform:scaleY(.82) scaleX(1.03) skewX(-3deg)}to{transform:scaleY(1.14) scaleX(.95) skewX(3deg)}}
+#rapid{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 86px);transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:linear-gradient(180deg,#ffb030,#ff5a1a 55%,#e2197a);border:3px solid #3b1a5c;box-shadow:0 4px 0 #3b1a5c,0 0 24px rgba(255,140,26,.85);font:400 20px LilitaOne,system-ui;color:#fff;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none;animation:rpulse .35s ease-in-out infinite alternate}
+#rapid .rb{width:72px;height:12px;border-radius:7px;background:#3b1a5c;overflow:hidden;border:2px solid #3b1a5c}#rapid .rb i{display:block;height:100%;width:calc(var(--p,1)*100%);background:linear-gradient(90deg,#fff2a8,#ffd23f)}
+#rapidT{min-width:34px;text-align:right}
+@keyframes rpulse{to{transform:translateX(-50%) scale(1.06)}}
 #start{position:absolute;left:50%;top:52%;transform:translateX(-50%);z-index:9;white-space:nowrap;animation:sbob .9s ease-in-out infinite alternate}
 @keyframes sbob{to{transform:translateX(-50%) translateY(-6px) scale(1.04)}}
 @media (prefers-reduced-motion:reduce){#fire.ready,#fire.ready img,#start{animation:none}}
@@ -103,9 +110,9 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   <div id="combo" class="combo"></div>
   <div id="fx"></div>
   <div id="hint" class="gone">Drag to aim · tap the gold chancla</div>
-  <div id="ammo" aria-label="Chanclas left"><div id="ammoIcons"></div><span id="ammoN">3</span></div>
   <button id="fire" aria-label="Throw the gold chancla"><img src="/crash/chancla-btn.webp" alt="" width="88" height="50" /><span class="cnt" id="fireN">3</span><span class="tap">TAP!</span></button>
   <button class="btn gold hidden" id="start">TAP TO PLAY</button>
+  <div id="rapid" class="hidden" aria-live="polite">🔥 RAPID FIRE <span class="rb"><i></i></span><span id="rapidT">5.0</span></div>
 
   <div class="screen hidden" id="victory"><canvas id="petals"></canvas><div class="card">
     <div class="cameos"><img class="hero cheer" src="/crash/abuela-chibi.webp" alt="Abuela cheering" /><img class="hero cheer d2" src="/crash/sidro-chibi.webp" alt="Sidro cheering" /></div>

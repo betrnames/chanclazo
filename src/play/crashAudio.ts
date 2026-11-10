@@ -195,6 +195,26 @@ export function sfxReload(): void {
   tone(600, 900, 'triangle', t + 0.02, 0.06, 0.08);
 }
 
+/** RAPID FIRE power-up: rising sweep + sparkly arpeggio + cymbal. */
+export function sfxRapid(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(220, 1760, 'sawtooth', t, 0.45, 0.09);
+  [784, 988, 1175, 1568, 1976].forEach((f, i) => { tone(f, f, 'square', t + 0.08 + i * 0.055, 0.12, 0.1); tone(f * 2, f * 2, 'sine', t + 0.1 + i * 0.055, 0.14, 0.05); });
+  burst(t + 0.35, 0.5, 0.22, 'highpass', 5000, 9000, 0.5);
+}
+/** One rapid-fire shot: short punchy thump (rate-limited). */
+export function sfxRapidShot(): void {
+  if (!gate('rshot', 60)) return;
+  const a = c(); if (!a) return; const t = now();
+  tone(260 + Math.random() * 60, 90, 'square', t, 0.08, 0.16);
+  burst(t, 0.07, 0.22, 'bandpass', 2600, 900, 1.5);
+}
+/** Power-up running out: two descending blips. */
+export function sfxRapidEnd(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(988, 740, 'square', t, 0.1, 0.08); tone(740, 494, 'square', t + 0.11, 0.14, 0.08);
+}
+
 /** Haptics (Android/Chrome; iOS ignores navigator.vibrate). */
 export function buzz(p: number | number[]): void {
   try { if ('vibrate' in navigator) navigator.vibrate(p); } catch { /* ignore */ }

@@ -1,8 +1,9 @@
 // Chancla Crash: hyper-casual 3D topple game (three.js + cannon-es).
 // Drag to aim (dotted arc + reticle), tap the gold chancla button to throw; topple the starred pan dulce + cafecito critters.
-// Thrower: Abuela. She walks in facing the player, turns her back to us when the game starts, then winds up and throws.
+// The gold chancla button fires from the bottom centre. RAPID FIRE power-up: hit the floating gold pickup or land a TRIPLE.
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { $, autoUnlockAudio, wireMute, wakeAudio, report } from './common';
 import { markGameStart, markFirstAction, track } from '../analytics';
 import {
@@ -50,7 +51,7 @@ function resize(): void {
   // keep at least ~34° horizontal view on narrow phones, 52° vertical otherwise
   const hv = 31 * Math.PI / 180, vNeeded = 2 * Math.atan(Math.tan(hv / 2) / aspect) * 180 / Math.PI;
   camera.fov = Math.max(48, vNeeded); camera.updateProjectionMatrix();
-  placeAbuela();
+  placeLauncher();
 }
 
 // ───────────────────────── physics ─────────────────────────
@@ -256,6 +257,7 @@ function loadStage(si: number, retry = false): void {
   clearLevel();
   const fl = backdrop!.group.getObjectByName('floor'); if (fl) aimables.push(fl);
   accentI = levelIdx + si; critI = levelIdx * 3 + si;
+  pickup = null; endRapid(true); rapidEarned = false;
   L.stages[si].build(builder);
   const now = performance.now();
   // riders on sliding slabs sleep and are carried exactly (no friction jitter); everything else starts asleep = rock-solid stacks
@@ -275,6 +277,7 @@ function loadStage(si: number, retry = false): void {
   ammo += L.stages[si].ammo;
   starredTotal = ents.filter((e) => e.starred).length; starredDown = 0;
   lastShotAt = -1e9; comboCount = 0; comboShot = 0; timeScale = 1; state = 'play';
+  if (params.has('rapid') || (levelIdx % 2 === 0 ? si === L.stages.length - 1 : si === 0)) spawnPickup();
   for (const id of ['lose', 'pause']) $(id).classList.add('hidden');
   const first = ents.find((e) => e.starred);
   if (first) { const v = new THREE.Vector3(first.body.position.x, first.body.position.y, first.body.position.z).project(camera); aimN.set(v.x, v.y); }
@@ -282,90 +285,116 @@ function loadStage(si: number, retry = false): void {
   updateHud();
 }
 
-// ───────────────────────── thrower: Abuela (front sprite for the entrance, back sprites while throwing) ─────────────────────────
+// ───────────────────────── launcher: the gold chancla button fires from the bottom centre ─────────────────────────
+// (Abuela's art stays in the repo unused: public/crash/abuela-back-*.webp, /play/v2/abuela.webp.)
+const pmrem = new THREE.PMREMGenerator(renderer);
+const goldEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const relicGold = new THREE.MeshStandardMaterial({ color: 0xffcc45, metalness: 0.92, roughness: 0.2, emissive: 0x6a3c00, emissiveIntensity: 0.5, envMap: goldEnv, envMapIntensity: 1.35 });
+const relicStrap = new THREE.MeshStandardMaterial({ color: 0xf2b020, metalness: 0.85, roughness: 0.26, emissive: 0x4a2a00, emissiveIntensity: 0.45, envMap: goldEnv, envMapIntensity: 1.2 });
+function goldChancla(): THREE.Group {
+  const g = makeChancla();
+  g.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? relicGold : relicStrap; });
+  return g;
+}
+function radialTex(size: number, draw: (g: CanvasRenderingContext2D, r: number) => void): THREE.CanvasTexture {
+  const cv = document.createElement('canvas'); cv.width = cv.height = size;
+  const g = cv.getContext('2d')!; g.translate(size / 2, size / 2); draw(g, size / 2);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const haloTex = radialTex(256, (g, r) => {
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
+  gr.addColorStop(0, 'rgba(255,244,190,1)'); gr.addColorStop(0.25, 'rgba(255,214,90,.7)'); gr.addColorStop(0.6, 'rgba(255,150,20,.2)'); gr.addColorStop(1, 'rgba(255,140,0,0)');
+  g.fillStyle = gr; g.fillRect(-r, -r, r * 2, r * 2);
+});
+const sparkTex = radialTex(64, (g, r) => {
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, r * 0.5); gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(1, 'rgba(255,220,120,0)');
+  g.fillStyle = gr; g.fillRect(-r, -r, r * 2, r * 2);
+  g.fillStyle = 'rgba(255,250,220,.95)';
+  for (const rot of [0, Math.PI / 2]) { g.save(); g.rotate(rot); g.beginPath(); g.moveTo(0, -r); g.quadraticCurveTo(r * 0.09, 0, 0, r); g.quadraticCurveTo(-r * 0.09, 0, 0, -r); g.fill(); g.restore(); }
+});
+const addMat = (map: THREE.Texture, opacity: number) => new THREE.SpriteMaterial({ map, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
 const texLoader = new THREE.TextureLoader();
-function spriteTex(url: string): THREE.Texture { const t = texLoader.load(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
-const AB = {
-  front: { t: spriteTex('/play/v2/abuela.webp'), a: 364 / 720 },
-  back: { t: spriteTex('/crash/abuela-back-hold.webp'), a: 370 / 720 },   // back view, gold chancla raised in her right hand
-  rel: { t: spriteTex('/crash/abuela-back-release.webp'), a: 372 / 720 }, // back view, follow-through, empty hand
-};
-type Pose = keyof typeof AB;
-const abMat = new THREE.SpriteMaterial({ map: AB.front.t, transparent: true, fog: false });
-const abuela = new THREE.Sprite(abMat); abuela.center.set(0.5, 0); scene.add(abuela);
-const ab = { base: new THREE.Vector3(), h: 1.2, pose: 'front' as Pose, enterT: -1e9, turnT: -1, throwT: -1e9 };
-function setPose(p: Pose): void { if (ab.pose === p) return; ab.pose = p; abMat.map = AB[p].t; }
-// lander-style stone drum she stands on
-const drum = (() => {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.5, 1, 16), new THREE.MeshLambertMaterial({ color: 0x2c1a3a })); body.position.y = -0.5; g.add(body);
-  const lip = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.1, 16), new THREE.MeshLambertMaterial({ color: 0x4a2a66 })); lip.position.y = -0.05; g.add(lip);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.44), new THREE.MeshLambertMaterial({ map: sugarSkullTex('#a04bff', '#c9a36a'), transparent: true, opacity: 0.55 }));
-  face.position.set(0, -0.5, 0.49); g.add(face);
-  scene.add(g); return g;
-})();
-function placeAbuela(): void {
-  const tall = camera.aspect < 0.6;
-  ab.h = tall ? 1.12 : 1.3;
-  ab.base.set(tall ? -0.12 : -0.22, tall ? 0.6 : 0.74, tall ? 3.0 : 2.7);
-  drum.position.set(ab.base.x, ab.base.y, ab.base.z + 0.05); drum.scale.set(1, ab.base.y, 1);
-}
-// the raised gold chancla in the back-view art sits at ~(0.86, 0.22) of the sprite; launch from there
-function handPos(out: THREE.Vector3): THREE.Vector3 {
-  const w = ab.h * AB.back.a;
-  return out.set(ab.base.x + w * 0.36, ab.base.y + ab.h * 0.78, ab.base.z - 0.3);
-}
-let started = false, introId = 0;
+const iconTex = (() => { const t = texLoader.load('/crash/chancla-btn.webp'); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+
+// throws start just above the bottom edge, centred
+const launch = new THREE.Vector3();
+function placeLauncher(): void { const tall = camera.aspect < 0.6; launch.set(0, tall ? 1.18 : 1.25, tall ? 3.35 : 3.1); }
+function handPos(out: THREE.Vector3): THREE.Vector3 { return out.copy(launch); }
+
+// level 1 waits for TAP TO PLAY; later levels start straight away
+let started = false;
 function beginIntro(): void {
-  state = 'intro'; setPose('front');
-  ab.enterT = performance.now(); ab.turnT = -1; ab.throwT = -1e9;
-  const id = ++introId;
-  $('start').classList.toggle('hidden', started);
-  $('hint').classList.add('gone');
-  if (started) setTimeout(() => { if (id === introId) startTurn(); }, 1250); // later levels: she turns on her own after walking in
+  if (started) { state = 'play'; return; }
+  state = 'intro';
+  $('start').classList.remove('hidden'); $('hint').classList.add('gone');
 }
-function startTurn(): void {
-  if (state !== 'intro' || ab.turnT >= 0) return;
-  if (!started) { started = true; markFirstAction('crash', 'start'); }
+function startGame(): void {
+  if (state !== 'intro') return;
+  started = true; markFirstAction('crash', 'start');
   $('start').classList.add('hidden');
-  ab.turnT = performance.now(); sfx.sfxWhoosh(); sfx.buzz(10);
+  state = 'play'; if (!firedOnce) $('hint').classList.remove('gone');
+  sfx.sfxReload(); sfx.buzz(10);
 }
-const abuelaStage = new THREE.Vector3();
-function animateAbuela(now: number, s: number): void {
-  let x = ab.base.x, y = ab.base.y, z = ab.base.z, sx = 1, sy = 1, rot = 0;
-  // entrance: walk in from the left, facing the player
-  const ek = Math.max(0, Math.min(1, (now - ab.enterT) / 900)), ee = 1 - Math.pow(1 - ek, 3);
-  x -= 1.7 * (1 - ee);
-  if (ek < 1) { y += Math.abs(Math.sin(now * 0.013)) * 0.07; rot = Math.sin(now * 0.013) * 0.07; }
-  if (state === 'intro' && ab.turnT < 0) { sy = 1 + Math.sin(s * 2.6) * 0.015; rot += ek >= 1 ? Math.sin(s * 3) * 0.03 : 0; }
-  // the turn: squash X to nothing, swap to the back sprite, open back up (with a little hop)
-  if (ab.turnT >= 0) {
-    const tk = Math.min(1, (now - ab.turnT) / 320);
-    if (tk < 0.5) { setPose('front'); sx = Math.max(0.02, 1 - tk * 2); } else { setPose('back'); sx = Math.max(0.02, (tk - 0.5) * 2); }
-    y += Math.sin(tk * Math.PI) * 0.14;
-    if (tk >= 1) {
-      ab.turnT = -1;
-      if (state === 'intro') { state = 'play'; if (!firedOnce) $('hint').classList.remove('gone'); sfx.sfxReload(); }
-    }
-  } else if (state !== 'intro') {
-    const dt = now - ab.throwT;
-    if (dt < WINDUP) {                       // wind-up: squash down, lean back, chancla cocked
-      const p = dt / WINDUP; setPose('back');
-      sy = 1 - 0.08 * p; sx = 1 + 0.06 * p; rot = 0.12 * p; z += 0.1 * p; x -= 0.03 * p;
-    } else if (dt < WINDUP + 340) {         // release: stretch up and lunge forward, empty hand follow-through
-      const p = (dt - WINDUP) / 340, q = 1 - p; setPose('rel');
-      sy = 1 + 0.1 * q * q; sx = 1 - 0.05 * q; rot = -0.16 * q; y += 0.06 * q; z -= 0.14 * q; x += 0.04 * q;
-    } else if (ammo > 0) {                  // next chancla pops into her hand
-      const p = Math.min(1, (dt - WINDUP - 340) / 220); setPose('back');
-      const b = p < 1 ? 1 + Math.sin(p * Math.PI) * 0.05 : 1; sx = b; sy = b * (1 + Math.sin(s * 2.4) * 0.012);
-    } else { setPose('rel'); sy = 1 + Math.sin(s * 2.4) * 0.01; }
+
+// ── RAPID FIRE power-up: a glowing gold chancla pickup floats over some stages (hit it), or land a TRIPLE ──
+const RAPID_S = 5, RAPID_MS = 280;
+let rapidOn = false, rapidEnd = 0, rapidEarned = false, lastRapidShot = 0, holding = false;
+interface Pickup { g: THREE.Group; icon: THREE.Sprite; halo: THREE.Sprite; ring: THREE.Mesh; sparks: THREE.Sprite[]; body: CANNON.Body; taken: number; base: THREE.Vector3 }
+let pickup: Pickup | null = null;
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.9, fog: false });
+function spawnPickup(): void {
+  const st = ents.filter((e) => e.starred); if (!st.length) return;
+  const cx = st.reduce((n, e) => n + e.body.position.x, 0) / st.length, cz = st.reduce((n, e) => n + e.body.position.z, 0) / st.length;
+  const top = Math.max(...ents.map((e) => e.body.position.y)) + 1.0;
+  const base = new THREE.Vector3(Math.max(-2.2, Math.min(2.2, cx + (levelIdx % 2 ? 1.2 : -1.2))), Math.min(4.4, top + 0.4), cz + 0.6);
+  const g = new THREE.Group(); g.position.copy(base);
+  const halo = new THREE.Sprite(addMat(haloTex, 0.9)); halo.scale.setScalar(1.6); g.add(halo);
+  const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: iconTex, transparent: true, fog: false, depthWrite: false })); icon.scale.set(0.9, 0.9 * 144 / 256, 1); icon.renderOrder = 4; g.add(icon);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.035, 8, 40), ringMat); g.add(ring);
+  const sparks = Array.from({ length: 6 }, () => { const sp = new THREE.Sprite(addMat(sparkTex, 1)); sp.renderOrder = 5; g.add(sp); return sp; });
+  levelGroup.add(g);
+  const body = new CANNON.Body({ mass: 0, collisionResponse: false, shape: new CANNON.Sphere(0.6), position: new CANNON.Vec3(base.x, base.y, base.z) });
+  world.addBody(body);
+  const pk: Pickup = { g, icon, halo, ring, sparks, body, taken: 0, base };
+  body.addEventListener('collide', (ev: { body: CANNON.Body }) => { if (!pk.taken && projs.some((q) => q.body === ev.body)) { pk.taken = performance.now(); removeQ2.push(pk.body); startRapid(); debris.burst(pk.base.clone(), 40, [0xffd23f, 0xfff2a8, 0xff8c1a, 0xffffff], 6, 0.07); popup('RAPID!', pk.base.clone(), true); } });
+  pickup = pk;
+}
+const removeQ2: CANNON.Body[] = [];
+function animatePickup(now: number, s: number): void {
+  const pk = pickup; if (!pk) return;
+  if (pk.taken) {
+    const k = Math.min(1, (now - pk.taken) / 350);
+    pk.g.scale.setScalar(1 + k * 0.8); (pk.halo.material as THREE.SpriteMaterial).opacity = 0.9 * (1 - k); (pk.icon.material as THREE.SpriteMaterial).opacity = 1 - k; ringMat.opacity = 0.9 * (1 - k);
+    if (k >= 1) { levelGroup.remove(pk.g); pickup = null; ringMat.opacity = 0.9; }
+    return;
   }
-  if (state === 'won' || state === 'stageclear' || state === 'winning') y += Math.abs(Math.sin(s * 7)) * 0.2;
-  const w = ab.h * AB[ab.pose].a;
-  abuela.position.set(x, y, z);
-  abuela.scale.set(w * sx, ab.h * sy, 1);
-  abMat.rotation = rot;
-  abuelaStage.set(x, y, z);
+  pk.g.position.set(pk.base.x, pk.base.y + Math.sin(s * 2.2) * 0.12, pk.base.z);
+  pk.icon.material.rotation = Math.sin(s * 1.8) * 0.25;
+  pk.halo.scale.setScalar(1.5 + Math.sin(s * 4) * 0.12);
+  pk.ring.rotation.set(Math.sin(s * 0.9) * 0.6, s * 2.2, 0);
+  pk.sparks.forEach((sp, i) => { const a = s * 1.6 + (i / pk.sparks.length) * Math.PI * 2, tw = Math.max(0, Math.sin(s * 5 + i * 1.7)); sp.position.set(Math.cos(a) * 0.6, Math.sin(a) * 0.45, 0.05); sp.scale.setScalar(0.22 * tw); });
+}
+function startRapid(): void {
+  if (state !== 'play') return;
+  rapidEnd = world.time + RAPID_S;
+  if (!rapidOn) { rapidOn = true; combo('RAPID FIRE!', 4); sfx.sfxRapid(); sfx.buzz([20, 30, 20, 30, 40]); }
+  $('rapid').classList.remove('hidden'); fireBtn.classList.add('rapid'); updateHud();
+}
+function endRapid(silent = false): void {
+  if (!rapidOn) return;
+  rapidOn = false; holding = false;
+  $('rapid').classList.add('hidden'); fireBtn.classList.remove('rapid');
+  if (!silent) sfx.sfxRapidEnd();
+  updateHud();
+}
+function tickRapid(now: number): void {
+  if (!rapidOn) return;
+  const left = Math.max(0, rapidEnd - world.time);
+  ($('rapid') as HTMLElement).style.setProperty('--p', String(left / RAPID_S));
+  fireBtn.style.setProperty('--p', String(left / RAPID_S));
+  $('rapidT').textContent = left.toFixed(1);
+  if (left <= 0 || state !== 'play') { endRapid(state !== 'play'); return; }
+  if (holding && now - lastRapidShot >= RAPID_MS) fire();
 }
 
 // ───────────────────────── aiming ─────────────────────────
@@ -426,7 +455,7 @@ function drawAim(): void {
 let dragging = false, dragId = -1, lastX = 0, lastY = 0, downT = 0, moved = 0, firstAim = true;
 const canvas = renderer.domElement;
 canvas.addEventListener('pointerdown', (e) => {
-  if (state === 'intro') { wakeAudio(); sfx.unlockCrashAudio(); startTurn(); return; }
+  if (state === 'intro') { wakeAudio(); sfx.unlockCrashAudio(); startGame(); return; }
   if (state !== 'play') return;
   dragging = true; dragId = e.pointerId; lastX = e.clientX; lastY = e.clientY; downT = performance.now(); moved = 0;
   try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
@@ -452,11 +481,14 @@ const fireBtn = $('fire') as HTMLButtonElement;
 fireBtn.addEventListener('pointerdown', (e) => {
   e.preventDefault(); e.stopPropagation(); wakeAudio(); sfx.unlockCrashAudio();
   fireBtn.classList.add('press'); setTimeout(() => fireBtn.classList.remove('press'), 160);
-  if (state === 'intro') startTurn(); else fire();
+  holding = true; try { fireBtn.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+  if (state === 'intro') startGame(); else fire();
 });
-$('start').addEventListener('click', (e) => { e.stopPropagation(); wakeAudio(); sfx.unlockCrashAudio(); startTurn(); });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) fireBtn.addEventListener(ev, () => { holding = false; });
+addEventListener('blur', () => { holding = false; });
+$('start').addEventListener('click', (e) => { e.stopPropagation(); wakeAudio(); sfx.unlockCrashAudio(); startGame(); });
 addEventListener('keydown', (e) => {
-  if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (state === 'intro') startTurn(); else if (state === 'play') fire(); else if (state === 'won') ($('continue') as HTMLButtonElement).click(); else if (state === 'lost') ($('retry') as HTMLButtonElement).click(); }
+  if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (state === 'intro') startGame(); else if (state === 'play') fire(); else if (state === 'won') ($('continue') as HTMLButtonElement).click(); else if (state === 'lost') ($('retry') as HTMLButtonElement).click(); }
   const step = e.shiftKey ? 0.01 : 0.03;
   if (e.code === 'ArrowLeft') aimN.x = Math.max(-0.98, aimN.x - step);
   if (e.code === 'ArrowRight') aimN.x = Math.min(0.98, aimN.x + step);
@@ -468,28 +500,33 @@ addEventListener('keydown', (e) => {
 for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener(ev, () => sfx.unlockCrashAudio(), { capture: true, passive: true });
 
 // ───────────────────────── throwing ─────────────────────────
-const chanclaProto = makeChancla();
-const WINDUP = 110;          // ms of wind-up before the chancla leaves her hand
+const chanclaProto = goldChancla();
 let firedOnce = false;
-// one chancla in the air at a time: the button stays dimmed until it lands (or ~1.3 s)
+// one chancla in the air at a time (except during RAPID FIRE): the button stays dimmed until it lands (or ~1.3 s)
 // measured in physics time so slow devices (where the sim runs behind the wall clock) still wait for the chancla to land
 let lastShotSim = -1e9;
-function busy(): boolean { const t = world.time; return t - lastShotSim < (WINDUP + 520) / 1000 || projs.some((p) => !p.hit && t - p.bornSim < 1.3); }
+function busy(): boolean { if (rapidOn) return false; const t = world.time; return t - lastShotSim < 0.45 || projs.some((p) => !p.hit && t - p.bornSim < 1.3); }
 function fire(): void {
-  if (state !== 'play' || ammo <= 0) return;
-  if (busy()) return;
+  if (state !== 'play') return;
+  const now = performance.now();
+  if (rapidOn) {
+    if (now - lastRapidShot < RAPID_MS) return;
+    lastRapidShot = now; lastShotAt = now; lastShotSim = world.time;
+    if (!firedOnce) { firedOnce = true; $('hint').classList.add('gone'); }
+    release(true); return;
+  }
+  if (ammo <= 0 || busy()) return;
   if (!firedOnce) { firedOnce = true; markFirstAction('crash', 'throw'); $('hint').classList.add('gone'); }
-  ammo--; shotsFired++; comboShot++; comboCount = 0; lastShotAt = performance.now(); lastShotSim = world.time;
-  ab.throwT = lastShotAt;
-  sfx.sfxWhoosh(); sfx.buzz(10);
-  updateHud(); popAmmo();
-  const gen = stageGen;
-  setTimeout(() => { if (gen === stageGen && (state === 'play' || state === 'paused')) release(); }, WINDUP);
+  ammo--; shotsFired++; comboShot++; comboCount = 0; lastShotAt = now; lastShotSim = world.time;
+  updateHud();
+  release(false);
 }
-function release(): void {
+function release(rapid: boolean): void {
   solveAim(); handPos(hand);
-  const v = launchVel(hand, aimPt, new THREE.Vector3());
-  const obj = chanclaProto.clone(); obj.scale.setScalar(1.15); levelGroup.add(obj);
+  const tgt = aimPt.clone();
+  if (rapid) { tgt.x += (Math.random() - 0.5) * 0.5; tgt.y += (Math.random() - 0.5) * 0.3; }
+  const v = launchVel(hand, tgt, new THREE.Vector3());
+  const obj = chanclaProto.clone(); obj.scale.setScalar(1.0); levelGroup.add(obj);
   const body = new CANNON.Body({ mass: 5, material: mProj, shape: new CANNON.Sphere(0.3), position: new CANNON.Vec3(hand.x, hand.y, hand.z), linearDamping: 0.0, angularDamping: 0.4 });
   body.allowSleep = false;
   body.velocity.set(v.x, v.y, v.z);
@@ -502,8 +539,7 @@ function release(): void {
     if (!p.hit && iv > 2) { p.hit = true; sfx.sfxThwack(iv / 14); sfx.buzz(25); shake = Math.min(0.35, shake + iv * 0.012); }
   });
   projs.push(p);
-  sfx.sfxFire(); sfx.buzz(15);
-  setTimeout(() => { if (ammo > 0 && state === 'play') sfx.sfxReload(); }, 450);
+  if (rapid) { sfx.sfxRapidShot(); sfx.buzz(8); } else { sfx.sfxFire(); sfx.sfxWhoosh(); sfx.buzz(15); setTimeout(() => { if (ammo > 0 && state === 'play') sfx.sfxReload(); }, 450); }
 }
 
 // ───────────────────────── hits, breaks, scoring ─────────────────────────
@@ -545,7 +581,7 @@ function markDown(e: Ent): void {
   if (e.critter) { e.critter.setMood('dizzy'); sfx.sfxSquish(); }
   comboCount++;
   sfx.sfxPoint(comboCount);
-  if (comboCount === 2) combo('DOUBLE!', 1); else if (comboCount === 3) combo('TRIPLE!', 2); else if (comboCount === 5) combo('MEGA!', 3); else if (comboCount === 8) combo('¡CHANCLAZO!', 4);
+  if (comboCount === 2) combo('DOUBLE!', 1); else if (comboCount === 3) { if (!rapidOn && !rapidEarned && state === 'play') { rapidEarned = true; startRapid(); } else combo('TRIPLE!', 2); } else if (comboCount === 5) combo('MEGA!', 3); else if (comboCount === 8) combo('¡CHANCLAZO!', 4);
   if (e.starred) {
     starredDown++;
     sfx.buzz(20);
@@ -609,20 +645,15 @@ const debris = (() => {
 })();
 
 // ───────────────────────── HUD / overlays ─────────────────────────
-const CHANCLA_SVG = '<svg viewBox="0 0 24 48" aria-hidden="true"><path d="M12 2c6 0 8 6 7 12-1 5 1 10 0 18-1 9-4 14-7 14s-6-5-7-14c-1-8 1-13 0-18C4 8 6 2 12 2z" fill="#ffc83a" stroke="#7a4a00" stroke-width="2"/><path d="M12 12 6 22M12 12l6 10" stroke="#b07800" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>';
 function updateHud(): void {
   $('lvl').textContent = `Level ${levelIdx + 1}`;
   const nS = LEVELS[levelIdx].stages.length;
   ($('bar') as HTMLElement).style.width = `${((stageIdx + (starredTotal ? starredDown / starredTotal : 0)) / nS) * 100}%`;
   $('stg').textContent = `Stage ${stageIdx + 1}/${nS}`;
   $('coins').textContent = String(save.coins);
-  $('ammoN').textContent = String(ammo);
-  const icons = $('ammoIcons'); icons.innerHTML = '';
-  for (let i = 0; i < Math.min(ammo, 10); i++) { const s = document.createElement('i'); s.className = 'on'; s.innerHTML = CHANCLA_SVG; icons.appendChild(s); }
-  ($('fire') as HTMLButtonElement).disabled = ammo <= 0;
-  $('fireN').textContent = String(ammo);
+  ($('fire') as HTMLButtonElement).disabled = ammo <= 0 && !rapidOn;
+  $('fireN').textContent = rapidOn ? '∞' : String(ammo);
 }
-function popAmmo(): void { const a = $('ammo'); a.classList.remove('bump'); void a.offsetWidth; a.classList.add('bump'); }
 const proj = new THREE.Vector3();
 function toScreen(p: THREE.Vector3): [number, number] { proj.copy(p).project(camera); return [(proj.x * 0.5 + 0.5) * stage.clientWidth, (-proj.y * 0.5 + 0.5) * stage.clientHeight]; }
 function popup(text: string, at: THREE.Vector3, big: boolean): void {
@@ -790,18 +821,19 @@ function frame(now: number): void {
     pp.g.children[0].visible = false;
   }
   // lose: out of chanclas and the dust has settled
-  if (state === 'play' && ammo <= 0) {
+  while (removeQ2.length) { const b = removeQ2.pop()!; if (world.bodies.includes(b)) world.removeBody(b); }
+  if (state === 'play' && ammo <= 0 && !rapidOn) {
     const since = now - lastShotAt;
     const moving = ents.some((e) => !e.done && e.body.sleepState !== CANNON.Body.SLEEPING && e.body.velocity.lengthSquared() > 0.09 && e.body.allowSleep);
     if ((since > 2600 && !moving) || since > 6500) showLose();
   }
   // aim preview
-  const showAim = state === 'play' && ammo > 0;
+  const showAim = state === 'play' && (ammo > 0 || rapidOn);
   dots.visible = reticle.visible = showAim;
   if (showAim) { drawAim(); const k = 0.62 + Math.sin(s * 6) * 0.06; reticle.scale.setScalar(k * (1 + aimPt.distanceTo(camera.position) * 0.03)); }
   // thrower + the gold chancla button state
-  animateAbuela(now, s);
-  const fb = state === 'play' && ammo > 0 && !busy() ? 'ready' : (state === 'play' || state === 'intro') && ammo > 0 ? 'busy' : 'off';
+  tickRapid(now); animatePickup(now, s);
+  const fb = rapidOn ? 'ready' : state === 'play' && ammo > 0 && !busy() ? 'ready' : (state === 'play' || state === 'intro') && ammo > 0 ? 'busy' : 'off';
   if (fb !== fireState) { fireState = fb; fireBtn.classList.toggle('ready', fb === 'ready'); fireBtn.classList.toggle('busy', fb === 'busy'); }
   // camera shake
   shake = Math.max(0, shake - dtReal * 1.4);
@@ -835,8 +867,10 @@ requestAnimationFrame(frame);
     p.x += vx * T; const v = p.project(camera); aimN.set(v.x, v.y);
   },
   fire,
-  start: startTurn,
-  abuela: () => ({ pose: ab.pose, x: abuelaStage.x, y: abuelaStage.y, z: abuelaStage.z, busy: busy(), state }),
+  start: startGame,
+  rapid: () => { startRapid(); return rapidOn; },
+  info: () => ({ busy: busy(), rapidOn, rapidLeft: +(rapidEnd - world.time).toFixed(2), pickup: pickup ? pickup.base.toArray().map((n) => +n.toFixed(2)) : null, launch: launch.toArray(), state }),
+  hold: (on: boolean) => { holding = on; },
   aimInfo: () => { solveAim(); handPos(hand); const v = launchVel(hand, aimPt, new THREE.Vector3()); return { aimN: [aimN.x, aimN.y], aimPt: aimPt.toArray().map((n) => +n.toFixed(2)), hand: hand.toArray().map((n) => +n.toFixed(2)), v: v.toArray().map((n) => +n.toFixed(2)) }; },
   bodies: () => world.bodies.filter((b) => b.mass === 0).map((b) => ({ p: [b.position.x, b.position.y, b.position.z].map((n) => +n.toFixed(2)), q: [b.quaternion.y, b.quaternion.w].map((n) => +n.toFixed(2)), s: b.shapes.map((sh) => (sh as CANNON.Box).halfExtents ? [(sh as CANNON.Box).halfExtents.x, (sh as CANNON.Box).halfExtents.y, (sh as CANNON.Box).halfExtents.z] : sh.type), resp: b.collisionResponse })),
   trace: () => { const t = trace.slice(); trace.length = 0; return t; },
