@@ -317,61 +317,8 @@ const iconTex = (() => { const t = texLoader.load('/crash/chancla-btn.webp'); t.
 
 // throws start just above the bottom edge, centred
 const launch = new THREE.Vector3();
-function placeLauncher(): void { const tall = camera.aspect < 0.6; launch.set(0, tall ? 1.3 : 1.48, tall ? 3.3 : 3.0); }
-// slingshot: the loaded gold chancla floats at the launch point; press anywhere and drag back to pull it, let go to fire
-const loaded = new THREE.Vector3();
-function handPos(out: THREE.Vector3): THREE.Vector3 { return out.copy(loaded); }
-let pulling = false, pullPow = 0, shotShown = false, shotPopT = 0;
-const pull = new THREE.Vector2();
-const shot = new THREE.Group(); scene.add(shot);
-const shotModel = goldChancla(); shotModel.scale.setScalar(0.58); shot.add(shotModel);
-const shotHalo = new THREE.Sprite(addMat(haloTex, 0.7)); shotHalo.renderOrder = 2; scene.add(shotHalo);
-const bandMat = new THREE.MeshBasicMaterial({ color: 0xffc83a, fog: false });
-const bands = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 6), bandMat); scene.add(m); return m; });
-const nubs = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), relicGold); scene.add(m); return m; });
-const Y_UP = new THREE.Vector3(0, 1, 0), tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3();
-function stretch(m: THREE.Mesh, a: THREE.Vector3, b: THREE.Vector3): void {
-  tmpA.subVectors(b, a); const len = tmpA.length();
-  m.position.copy(a).addScaledVector(tmpA, 0.5); m.scale.set(1, Math.max(0.001, len), 1);
-  m.quaternion.setFromUnitVectors(Y_UP, tmpA.normalize());
-}
-function aimFromPull(): void {
-  const r = stage.getBoundingClientRect();
-  const nx = pull.x / r.width, ny = pull.y / r.height;
-  aimN.x = Math.max(-0.98, Math.min(0.98, -nx * 3.0));
-  aimN.y = Math.max(-0.45, Math.min(0.95, -0.4 + Math.max(0, ny) * 3.4));
-  pullPow = Math.min(1, Math.hypot(nx, Math.max(0, ny)) / 0.4);
-}
-function animateShot(now: number, s: number): void {
-  const ready = (state === 'play' || state === 'intro') && (rapidOn || (ammo > 0 && !busy()));
-  if (ready && !shotShown) { shotPopT = now; if (state === 'play' && !rapidOn) sfx.sfxReload(); }
-  shotShown = ready;
-  const pk = pulling && state === 'play' ? pullPow : 0;
-  // pulled position: follows the finger back/down (clamped), floating in place otherwise
-  const r = stage.getBoundingClientRect();
-  const ox = pulling ? Math.max(-0.3, Math.min(0.3, (pull.x / r.width) * 1.3)) : 0;
-  const oy = pulling ? -Math.min(0.24, Math.max(0, pull.y / r.height) * 0.9) : 0;
-  loaded.set(launch.x + ox, launch.y + oy + Math.sin(s * 2.4) * (pulling ? 0.015 : 0.04), launch.z + pk * 0.12);
-  if (pk > 0.95) loaded.x += (Math.random() - 0.5) * 0.012;
-  shot.visible = shotHalo.visible = ready;
-  const pop = Math.min(1, (now - shotPopT) / 260), ps = pop < 1 ? 0.4 + 0.6 * (1 - Math.pow(1 - pop, 3)) + Math.sin(pop * Math.PI) * 0.12 : 1;
-  shot.position.copy(loaded); shot.scale.setScalar(ps);
-  shot.rotation.set(-0.42 + pk * 0.12, (1 - pop) * Math.PI * 2 + Math.sin(s * 1.3) * 0.22 + Math.PI - ox * 0.8, Math.sin(s * 1.7) * 0.08, 'YXZ'); // toe points at the targets, top faces us
-  shotHalo.position.set(loaded.x, loaded.y, loaded.z - 0.1);
-  shotHalo.scale.setScalar((0.7 + pk * 0.55 + Math.sin(s * 3) * 0.05) * ps);
-  shotHalo.material.opacity = (rapidOn ? 0.95 : 0.55 + pk * 0.4);
-  shotHalo.material.color.setRGB(1, rapidOn ? 0.7 : 1 - pk * 0.25, rapidOn ? 0.45 : 1 - pk * 0.5);
-  // rubber bands from the two gold nubs to the chancla (only stretched while pulling)
-  const tall = camera.aspect < 0.6, half = tall ? 0.3 : 0.42;
-  for (const [i, sx] of [[0, -1], [1, 1]] as const) {
-    tmpB.set(launch.x + sx * half, launch.y - 0.04, launch.z - 0.05); nubs[i].position.copy(tmpB);
-    nubs[i].visible = state === 'play' || state === 'intro';
-    bands[i].visible = ready && pulling && pk > 0.02;
-    if (bands[i].visible) stretch(bands[i], tmpB, loaded);
-  }
-  (dots.material as THREE.PointsMaterial).color.setRGB(1, 1 - pk * 0.3, 1 - pk * 0.75);
-  (dots.material as THREE.PointsMaterial).size = 0.2 + pk * 0.06;
-}
+function placeLauncher(): void { const tall = camera.aspect < 0.6; launch.set(0, tall ? 1.18 : 1.25, tall ? 3.35 : 3.1); }
+function handPos(out: THREE.Vector3): THREE.Vector3 { return out.copy(launch); }
 
 // level 1 waits for TAP TO PLAY; later levels start straight away
 let started = false;
@@ -446,7 +393,7 @@ function tickRapid(now: number): void {
   fireBtn.style.setProperty('--p', String(left / RAPID_S));
   $('rapidT').textContent = left.toFixed(1);
   if (left <= 0 || state !== 'play') { endRapid(state !== 'play'); return; }
-  if ((holding || pulling) && now - lastRapidShot >= RAPID_MS) fire();
+  if (holding && now - lastRapidShot >= RAPID_MS) fire();
 }
 
 // ───────────────────────── aiming ─────────────────────────
@@ -503,31 +450,30 @@ function drawAim(): void {
   reticle.position.copy(bounced ? tmpP : aimPt);
 }
 
-// input: press anywhere on the stage (not on buttons) and drag back to pull the slingshot; let go to throw
-let dragId = -1, startX = 0, startY = 0, downT = 0, moved = 0;
+// input: drag anywhere on the stage (not on buttons) to steer the reticle; it never throws
+let dragging = false, dragId = -1, lastX = 0, lastY = 0, moved = 0, firstAim = true;
 const canvas = renderer.domElement;
 canvas.addEventListener('pointerdown', (e) => {
   if (state === 'intro') { wakeAudio(); sfx.unlockCrashAudio(); startGame(); return; }
   if (state !== 'play') return;
-  wakeAudio(); sfx.unlockCrashAudio();
-  pulling = true; dragId = e.pointerId; startX = e.clientX; startY = e.clientY; downT = performance.now(); moved = 0; pull.set(0, 0);
+  dragging = true; dragId = e.pointerId; lastX = e.clientX; lastY = e.clientY; moved = 0;
   try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
 });
 canvas.addEventListener('pointermove', (e) => {
-  if (!pulling || e.pointerId !== dragId) return;
-  pull.set(e.clientX - startX, e.clientY - startY);
-  moved = Math.max(moved, pull.length());
-  if (moved > 8) aimFromPull();
-  if (moved > 8 && pullPow > 0.3 && !firedOnce) $('hint').classList.add('gone');
+  if (!dragging || e.pointerId !== dragId) return;
+  const r = stage.getBoundingClientRect();
+  const k = isTouch ? 2.3 : 2.0;
+  aimN.x = Math.max(-0.98, Math.min(0.98, aimN.x + ((e.clientX - lastX) / r.width) * k));
+  aimN.y = Math.max(-0.45, Math.min(0.95, aimN.y - ((e.clientY - lastY) / r.height) * k));
+  moved += Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY);
+  lastX = e.clientX; lastY = e.clientY;
+  if (firstAim && moved > 20) { firstAim = false; }
 });
 const endDrag = (e: PointerEvent) => {
-  if (!pulling || e.pointerId !== dragId) return;
-  const throwIt = moved > 14 || (e.pointerType === 'mouse' && moved < 6 && performance.now() - downT < 350); // a plain click still throws on desktop
-  if (throwIt && state === 'play') { handPos(hand); fire(); }
-  pulling = false; pull.set(0, 0);
+  if (!dragging || e.pointerId !== dragId) return;
+  dragging = false; // dragging only aims; throws come from the gold chancla button (or Space / Enter)
 };
-canvas.addEventListener('pointerup', endDrag);
-canvas.addEventListener('pointercancel', (e) => { if (e.pointerId === dragId) { pulling = false; pull.set(0, 0); } });
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', (e) => { if (e.pointerId === dragId) dragging = false; });
 const fireBtn = $('fire') as HTMLButtonElement;
 fireBtn.addEventListener('pointerdown', (e) => {
   e.preventDefault(); e.stopPropagation(); wakeAudio(); sfx.unlockCrashAudio();
@@ -883,7 +829,7 @@ function frame(now: number): void {
   dots.visible = reticle.visible = showAim;
   if (showAim) { drawAim(); const k = 0.62 + Math.sin(s * 6) * 0.06; reticle.scale.setScalar(k * (1 + aimPt.distanceTo(camera.position) * 0.03)); }
   // thrower + the gold chancla button state
-  tickRapid(now); animatePickup(now, s); animateShot(now, s);
+  tickRapid(now); animatePickup(now, s);
   const fb = rapidOn ? 'ready' : state === 'play' && ammo > 0 && !busy() ? 'ready' : (state === 'play' || state === 'intro') && ammo > 0 ? 'busy' : 'off';
   if (fb !== fireState) { fireState = fb; fireBtn.classList.toggle('ready', fb === 'ready'); fireBtn.classList.toggle('busy', fb === 'busy'); }
   // camera shake
@@ -898,7 +844,7 @@ function frame(now: number): void {
 addEventListener('resize', resize);
 resize();
 autoUnlockAudio(); wireMute();
-$('hint').textContent = isTouch ? 'Pull back the gold chancla & let go' : 'Drag back to pull the chancla · release to throw';
+$('hint').textContent = isTouch ? 'Drag to aim · tap the gold chancla to throw' : 'Drag to aim · click the gold chancla or press Space';
 markGameStart('crash');
 setWorld(LEVELS[levelIdx].world);
 loadLevel(levelIdx);
@@ -922,8 +868,6 @@ requestAnimationFrame(frame);
   rapid: () => { startRapid(); return rapidOn; },
   info: () => ({ busy: busy(), rapidOn, rapidLeft: +(rapidEnd - world.time).toFixed(2), pickup: pickup ? pickup.base.toArray().map((n) => +n.toFixed(2)) : null, launch: launch.toArray(), state }),
   hold: (on: boolean) => { holding = on; },
-  pullTo: (dx: number, dy: number) => { pulling = true; pull.set(dx, dy); aimFromPull(); },
-  letGo: () => { if (pulling) { handPos(hand); fire(); } pulling = false; pull.set(0, 0); },
   aimInfo: () => { solveAim(); handPos(hand); const v = launchVel(hand, aimPt, new THREE.Vector3()); return { aimN: [aimN.x, aimN.y], aimPt: aimPt.toArray().map((n) => +n.toFixed(2)), hand: hand.toArray().map((n) => +n.toFixed(2)), v: v.toArray().map((n) => +n.toFixed(2)) }; },
   bodies: () => world.bodies.filter((b) => b.mass === 0).map((b) => ({ p: [b.position.x, b.position.y, b.position.z].map((n) => +n.toFixed(2)), q: [b.quaternion.y, b.quaternion.w].map((n) => +n.toFixed(2)), s: b.shapes.map((sh) => (sh as CANNON.Box).halfExtents ? [(sh as CANNON.Box).halfExtents.x, (sh as CANNON.Box).halfExtents.y, (sh as CANNON.Box).halfExtents.z] : sh.type), resp: b.collisionResponse })),
   trace: () => { const t = trace.slice(); trace.length = 0; return t; },
