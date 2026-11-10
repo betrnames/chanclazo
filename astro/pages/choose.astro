@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import PapelPicado from '../components/PapelPicado.astro';
 const games = [
-  { game: 'fling', href: '/chancla-strike?start=1', name: 'Chancla Strike', tag: 'Main game', line: 'Fling the chancla and topple the villains.', img: '/play/v2/abuela.webp', alt: 'The abuela', cls: 'abuela', c: '#f7a21b' },
+  { game: 'fling', href: '/chancla-strike?start=1', name: 'Chancla Strike', tag: 'Main game', line: 'Fling the chancla and topple the villains.', img: '/lp/chancla_gold.webp', alt: 'The gold chancla', cls: 'goldc', c: '#f7a21b' },
   { game: 'crash', href: '/crash', name: 'Chancla Crash', tag: 'New game', line: 'Aim the gold chancla and topple towers of pan dulce and cafecitos.', img: '/crash/kids-card.webp', alt: 'The sugar-skull boy and the Catrina girl', cls: 'kids', c: '#1ec8c8' },
   { game: 'waves', href: '/waves', name: 'Chancla Waves', tag: 'Prototype', line: 'Hold the marigold line: knock out the sugar-skull kids, wave after wave.', img: '/crash/kid-girl.webp', alt: 'The Catrina girl', cls: 'kids', c: '#ff8c1a' },
   { game: 'slots', href: '/slots?start=1', name: 'Piñata Slots', tag: 'Mini game', line: 'Spin the 5×4 reels, smash piñatas, win free spins.', img: '/play/llama_choose.webp', alt: 'The llama piñata', cls: 'llama', c: '#e2197a' },
@@ -72,7 +72,10 @@ const games = [
   .art{position:relative;height:clamp(200px,38svh,340px);display:flex;align-items:flex-end;justify-content:center}
   .glow{position:absolute;left:50%;top:50%;width:80%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--c) 55%,transparent),transparent 65%);animation:pulse 3s ease-in-out infinite}
   .art img{position:relative;height:100%;width:auto;max-width:100%;object-fit:contain;filter:drop-shadow(0 0 2px #14050f) drop-shadow(0 12px 16px rgba(0,0,0,.6));animation:bob 3.2s ease-in-out infinite;user-select:none}
-  .art img.llama,.art img.abuela,.art img.kids{filter:none} /* Gabe's llama cutout: passed through, no filters */
+  .art img.llama,.art img.abuela,.art img.kids,.art img.goldc{filter:none}
+  .art img.goldc{filter:drop-shadow(0 0 18px rgba(255,200,80,.75));animation:gcf 3.2s ease-in-out infinite}
+  @keyframes gcf{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(3deg)}}
+  @media (prefers-reduced-motion:reduce){.art img.goldc{animation:none}} /* Gabe's llama cutout: passed through, no filters */
   .tag{display:inline-block;margin-top:10px;font:700 12px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#14050f;background:var(--c);border-radius:999px;padding:3px 12px}
   .tag + h2{margin-top:6px}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
