@@ -167,7 +167,7 @@ interface Kid {
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number;
   bite?: THREE.Sprite;
 }
-interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean }
+interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean; lane?: number }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
 type State = 'title' | 'play' | 'between' | 'paused' | 'over';
 let state: State = 'title', prevState: State = 'play';
@@ -521,30 +521,94 @@ function updateSnackBtn(): void {
   snackBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
   $('snackN').textContent = String(snacks);
 }
-function feedKid(k: Kid): void {
-  const fresh = k.eat <= 0;
-  k.eat = Math.min(4.2, k.eat + (k.kind === 'lucha' ? 1.25 : 2.6));
-  if (!k.bite) {
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, depthTest: false }));
-    sp.renderOrder = 6;
-    k.root.add(sp);
-    k.bite = sp;
+function ensureBite(k: Kid): void {
+  if (k.bite) return;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, depthTest: false }));
+  sp.renderOrder = 6;
+  k.root.add(sp);
+  k.bite = sp;
+}
+interface Concha { lane: number; z: number; bites: number; max: number; biteT: number; sprite: THREE.Sprite }
+const conchas: Concha[] = [];
+function frontOf(lane: number): number {
+  let z = SPAWN_Z + 1.4, any = false;
+  for (const k of kids) if (alive(k) && k.ko < 0 && k.lane === lane) { any = true; z = Math.max(z, k.z); }
+  return any ? z : SPAWN_Z + 2.2;
+}
+function paintConcha(c: Concha): void {
+  const t = Math.max(0.22, c.bites / Math.max(1, c.max));
+  c.sprite.scale.set(1.35 * t, 1.18 * t, 1);
+  c.sprite.position.set(LANES[c.lane], 0.22 + 0.26 * t, c.z);
+}
+/** Drop a concha on the cobbles, in front of whoever is leading that row. A second throw adds bites. */
+function placeConcha(lane: number): void {
+  const z = Math.min(LINE_Z - 0.7, frontOf(lane) + 0.9);
+  const have = conchas.find((c) => c.lane === lane);
+  if (have) {
+    have.bites = Math.min(8, have.bites + 4);
+    have.max = Math.max(have.max, have.bites);
+    if (z > have.z) have.z = z;
+    paintConcha(have);
+    return;
   }
-  k.bite.visible = true;
-  if (fresh) { popText(k, '¡ÑAM!', ''); sfx.sfxPoint(1); }
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false }));
+  sprite.renderOrder = 3;
+  scene.add(sprite);
+  const c: Concha = { lane, z, bites: 5, max: 5, biteT: 0, sprite };
+  conchas.push(c);
+  paintConcha(c);
+}
+/** How far this kid may walk. Nobody in the row gets past the concha, and they stack up behind whoever is eating. */
+function holdZ(k: Kid): number | undefined {
+  const plate = conchas.find((c) => c.lane === k.lane && c.bites > 0);
+  if (!plate || k.z > plate.z - 0.02) return undefined;
+  let ahead = 0;
+  for (const o of kids) {
+    if (o === k || o.dead || o.ko >= 0 || o.lane !== k.lane) continue;
+    if (o.z > k.z + 0.08 && o.z < plate.z + 0.02) ahead++;
+  }
+  return plate.z - 0.46 - ahead * 0.72;
+}
+function tickConchas(dt: number): void {
+  for (let i = conchas.length - 1; i >= 0; i--) {
+    const c = conchas[i];
+    let eater: Kid | undefined;
+    for (const k of kids) {
+      if (k.dead || k.ko >= 0 || k.lane !== c.lane) continue;
+      if (k.z < c.z - 0.9 || k.z > c.z + 0.08) continue;
+      if (!eater || k.z > eater.z) eater = k;
+    }
+    if (eater) {
+      eater.eat = Math.max(eater.eat, 0.5);
+      ensureBite(eater);
+      c.biteT += dt;
+      if (c.biteT >= 0.38) {
+        c.biteT = 0;
+        c.bites -= 1;
+        paintConcha(c);
+        eater.eat = 1.2;
+        sfx.sfxSquish(0.45);
+      }
+    }
+    if (c.bites <= 0) {
+      scene.remove(c.sprite);
+      (c.sprite.material as THREE.Material).dispose();
+      conchas.splice(i, 1);
+    }
+  }
 }
 function useSnack(): void {
   if ((state !== 'play' && state !== 'between') || snacks <= 0) return;
   const k = threat(); if (!k) return;
   snacks--;
-  const to = leadPoint(k, new THREE.Vector3());
+  const to = new THREE.Vector3(LANES[k.lane], 0.35, Math.min(LINE_Z - 0.7, frontOf(k.lane) + 0.9));
   const T = flightTime(to);
   const v = velFor(to, T, new THREE.Vector3());
   const obj = new THREE.Group();
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false }));
   sp.scale.set(1.15, 1.05, 1);
   obj.add(sp); scene.add(obj); obj.position.copy(LAUNCH);
-  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target: k, born: clock, snack: true });
+  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target: k, born: clock, snack: true, lane: k.lane });
   updateSnackBtn(); sfx.sfxWhoosh();
 }
 snackBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); if (snacks > 0) snackBtn.classList.add('press'); useSnack(); });
@@ -662,7 +726,8 @@ function clearField(): void {
   for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); }
   for (const s of shots) scene.remove(s.obj);
   for (const p of petals) { fxGroup.remove(p.s); p.s.material.dispose(); }
-  kids = []; shots = []; petals = []; fx.clear(); boss = undefined;
+  for (const c of conchas) { scene.remove(c.sprite); (c.sprite.material as THREE.Material).dispose(); }
+  kids = []; shots = []; petals = []; conchas.length = 0; fx.clear(); boss = undefined;
 }
 function newGame(): void {
   clearField();
@@ -713,6 +778,7 @@ function frame(now: number): void {
   if (state === 'play') spawnTick(dt);
   if (state === 'between' && clock >= nextWaveAt) startWave(wave + 1);
   tickAbuela();
+  tickConchas(dt);
   // rapid fire: holding the button or the field keeps spraying
   if (clock < rapidUntil && (state === 'play' || state === 'between')) {
     if (fireHeld) autoThrow();
@@ -741,10 +807,14 @@ function frame(now: number): void {
     }
     if (state === 'play' || state === 'between') {
       if (k.eat > 0) k.eat = Math.max(0, k.eat - dt);
-      const eating = k.eat > 0;
-      const sp = k.stagger > 0 ? k.speed * 0.15 : eating ? k.speed * 0.07 : k.speed;
+      const stop = holdZ(k);
+      let sp = k.stagger > 0 ? k.speed * 0.15 : k.speed;
+      if (stop !== undefined) sp *= 0.32; // the whole row slows down before the concha
       k.stagger = Math.max(0, k.stagger - dt);
-      k.z += sp * dt; k.wob += sp * dt;
+      let nz = k.z + sp * dt;
+      if (stop !== undefined && nz > stop) nz = stop; // nobody in this row walks past it
+      k.z = nz;
+      k.wob += sp * dt;
     }
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
     // walk frames follow distance so the planted feet in the atlas stay on the cobbles. No extra hop (that read as a skip).
@@ -757,8 +827,8 @@ function frame(now: number): void {
       const bit = chew > 0 ? 1 : 0;
       k.body.scale.set(1 + bit * 0.07, 1 - bit * 0.12, 1);
       k.body.rotation.set(0.42 + bit * 0.22, -k.x * 0.04, Math.sin(s * 16 + k.phase) * 0.05);
-      const left = Math.min(1, k.eat / 2.4);
-      const size = k.h * (0.1 + 0.14 * left) * (bit ? 0.78 : 1);
+      const left = Math.min(1, k.eat / 1.2);
+      const size = k.h * (0.08 + 0.06 * left) * (bit ? 0.7 : 1);
       k.bite.visible = true;
       k.bite.scale.set(size, size * 0.9, 1);
       k.bite.position.set(0, k.h * (0.64 - bit * 0.07), 0.35);
@@ -791,23 +861,11 @@ function frame(now: number): void {
           continue;
         }
         if (sh.snack) {
-          const near = (k: Kid, r: number) => alive(k) && Math.hypot(sh.p.x - k.root.position.x, sh.p.z - k.root.position.z) < r && sh.p.y < k.h + 0.4;
-          let ate: Kid | undefined;
-          for (const k of kids) if (near(k, Math.max(1.05, k.w * 0.9))) { ate = k; break; }
-          if (!ate && sh.p.y <= 0.15) {
-            const prefer = sh.target;
-            if (prefer && near(prefer, 2.4)) ate = prefer;
-            else {
-              let best = 1.8;
-              for (const k of kids) {
-                if (!alive(k)) continue;
-                const d = Math.hypot(sh.p.x - k.root.position.x, sh.p.z - k.root.position.z);
-                if (d < best) { best = d; ate = k; }
-              }
-            }
+          // it lands on the row, in front of that line. It is not eaten out of the air.
+          if (sh.p.y <= 0.2) {
+            placeConcha(sh.lane ?? sh.target?.lane ?? 0);
+            sh.spent = 0.61; sh.obj.visible = false; break;
           }
-          if (ate) { feedKid(ate); sh.spent = 0.61; sh.obj.visible = false; break; }
-          if (sh.p.y <= 0.06) { sh.spent = 0; sh.v.set((Math.random() - 0.5) * 0.4, 1.4, 0.4); break; }
           continue;
         }
         for (const k of kids) {
@@ -879,7 +937,8 @@ Promise.all(texLoads).then(() => {
   ready: () => artReady,
   start: newGame,
   state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil, bombs, booms, boss: boss && alive(boss) ? { hp: boss.hp, maxHp: boss.maxHp, z: +boss.root.position.z.toFixed(2) } : null }),
-  kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden })),
+  kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden, lane: k.lane })),
+  conchas: () => conchas.map((c) => ({ lane: c.lane, z: +c.z.toFixed(2), bites: c.bites })),
   screenOf: (i = 0) => { const k = kids.filter(alive).sort((a, b) => b.z - a.z)[i]; if (!k) return null; const v = kidCenter(k).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; },
   auto: autoThrow,
   wave: (n: number) => { clearField(); startWave(n); },
