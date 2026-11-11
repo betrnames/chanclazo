@@ -1,3 +1,4 @@
+import { iosAudioKick } from './common';
 // Shared game music + Music/SFX switches (saved in localStorage, shared across all games).
 // The music is an original, code-generated ranchera-style loop (3/4 oom-pah-pah with a marimba melody).
 const MK = 'chanclazo_music', SK = 'chanclazo_sfx';
@@ -7,7 +8,11 @@ export const musicOn = () => get(MK);
 export const sfxOn = () => get(SK);
 
 type Variant = { bpm: number; key: number; seed: number; soft?: boolean };
-const VARIANTS: Record<string, Variant> = { slots: { bpm: 150, key: 0, seed: 1 }, match: { bpm: 138, key: 5, seed: 2 }, fling: { bpm: 162, key: 7, seed: 3 }, lander: { bpm: 92, key: 3, seed: 5, soft: true } };
+const VARIANTS: Record<string, Variant> = {
+  slots: { bpm: 150, key: 0, seed: 1 }, match: { bpm: 138, key: 5, seed: 2 }, fling: { bpm: 162, key: 7, seed: 3 },
+  waves: { bpm: 128, key: 2, seed: 4 }, crash: { bpm: 144, key: 9, seed: 6 }, cruise: { bpm: 136, key: 4, seed: 7 },
+  lander: { bpm: 92, key: 3, seed: 5, soft: true },
+};
 let ctx: AudioContext | null = null, out: GainNode, started = false, timer = 0, nextT = 0, step = 0, v: Variant = VARIANTS.slots;
 const hz = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 // I - IV - V7 - I progression (major), root offsets from key, 4 bars each loop of 16 bars with a turnaround.
@@ -39,9 +44,17 @@ function start() {
   if (started || !musicOn()) return;
   try { ctx = ctx || new (window.AudioContext || (window as any).webkitAudioContext)(); } catch { return; }
   out = out || (() => { const g = ctx!.createGain(); g.gain.value = v.soft ? 0.045 : 0.07; g.connect(ctx!.destination); return g; })(); // low, under the SFX
-  ctx.resume(); started = true; nextT = ctx.currentTime + 0.1; timer = window.setInterval(schedule, 100);
+  const resumed = ctx.resume();
+  started = true; nextT = ctx.currentTime + 0.1; clearInterval(timer); timer = window.setInterval(schedule, 100);
+  resumed?.then?.(() => { if (ctx && started && ctx.state === 'running') nextT = Math.max(nextT, ctx.currentTime + 0.05); });
 }
 function stop() { started = false; clearInterval(timer); ctx?.suspend(); }
+/** Start on load. If the browser blocks autoplay, the next tap anywhere resumes it. */
+function playFromLoad() {
+  const go = () => { if (!musicOn()) return; iosAudioKick(); if (!started) start(); else if (ctx?.state === 'suspended') { const p = ctx.resume(); p?.then?.(() => { if (!ctx || !started) return; nextT = ctx.currentTime + 0.05; clearInterval(timer); timer = window.setInterval(schedule, 100); }); } };
+  go();
+  for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'] as const) addEventListener(ev, go, { capture: true, passive: true });
+}
 
 /** SFX tap blip for games that lack one (respects the SFX switch). */
 export function tapBlip(freq = 660) {
@@ -77,8 +90,7 @@ export function initAudioControls(game: keyof typeof VARIANTS, setSfxMuted: (m: 
   css.textContent = `button.audio-btn{width:auto!important;border-radius:12px!important;padding:6px 10px!important;font-size:13px!important;font-weight:800;white-space:nowrap;position:relative}@media (max-width:520px){button.audio-btn .albl{display:none}button.audio-btn{padding:6px 8px!important}}button.audio-btn .aoff{position:absolute;left:20%;right:20%;top:50%;border-top:2px solid #ff5a36;transform:rotate(-35deg)}`;
   document.head.appendChild(css);
   draw();
-  const first = () => { start(); removeEventListener('pointerdown', first, true); removeEventListener('keydown', first, true); };
-  addEventListener('pointerdown', first, true); addEventListener('keydown', first, true);
+  playFromLoad();
   document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) { clearInterval(timer); ctx.suspend(); } else if (started && musicOn()) { ctx.resume(); nextT = ctx.currentTime + 0.1; clearInterval(timer); timer = window.setInterval(schedule, 100); } });
   (window as any).__audio = { get music() { return musicOn(); }, get sfx() { return sfxOn(); }, get playing() { return started && ctx?.state === 'running'; } };
 }
@@ -89,9 +101,7 @@ export function initLanderMusic(btn: HTMLButtonElement) {
   const draw = () => { btn.textContent = musicOn() ? '♪ Music on' : '♪ Music off'; btn.setAttribute('aria-pressed', String(musicOn())); };
   btn.onclick = (e) => { e.stopPropagation(); put(MK, !musicOn()); if (musicOn()) start(); else stop(); draw(); };
   draw();
-  const evs = ['pointerdown', 'keydown', 'touchstart', 'wheel'];
-  const first = (e: Event) => { if (e.target === btn) return; start(); if (started) evs.forEach((n) => removeEventListener(n, first, true)); };
-  evs.forEach((n) => addEventListener(n, first, { capture: true, passive: true } as any));
+  playFromLoad();
   document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) { clearInterval(timer); ctx.suspend(); } else if (started && musicOn()) { ctx.resume(); nextT = ctx.currentTime + 0.1; clearInterval(timer); timer = window.setInterval(schedule, 100); } });
   (window as any).__audio = { get music() { return musicOn(); }, get playing() { return started && ctx?.state === 'running'; } };
 }

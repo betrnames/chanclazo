@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { $, autoUnlockAudio, wireMute, report } from './common';
+import { initAudioControls } from './music';
+import { setMuted } from '../game/sound';
 import { WAVES_NAME } from '../gameNames';
 import { markGameStart, markFirstAction, track } from '../analytics';
 import { makeChancla, makeCandle, buildBackdrop, glowTex, dotTex } from './crashArt';
@@ -115,7 +117,7 @@ type AnimName = keyof typeof ANIM;
 // h = world height that a 320px-tall body should be; stride = world units per walk cycle
 const ART = {
   boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3),
-  girl: sheet('catrina-girl', 2576, 1086, 368, 362, 184, 354, 2.02, 1.55, 7, 1, 2, '?v=5'),
+  girl: sheet('catrina-girl', 3360, 1770, 420, 590, 210, 587, 1.38, 1.55, 8, 3, 4, '?v=6'),
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
   calaca: sheet('calaverita-small', 2952, 1323, 492, 441, 246, 435, 1.25, 1.6, 6, 1, 6, '?v=7'),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
@@ -163,8 +165,9 @@ interface Kid {
   sheet: Sheet; map: THREE.Texture; edgeMat: THREE.Material; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number;
+  bite?: THREE.Sprite;
 }
-interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean }
+interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
 type State = 'title' | 'play' | 'between' | 'paused' | 'over';
 let state: State = 'title', prevState: State = 'play';
@@ -175,8 +178,10 @@ let best = (() => { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } 
 const kidGroup = new THREE.Group(); scene.add(kidGroup);
 const fxGroup = new THREE.Group(); scene.add(fxGroup);
 const fx = new FX(scene, 0), hitStop = new HitStop();
-let bombs = 0, bossPending = false, boss: Kid | undefined;
+let bombs = 0, snacks = 0, bossPending = false, boss: Kid | undefined;
 const BOMB_MAX = 3, BOMB_R = 2.4, BOMB_DMG = 4;
+const SNACK_MAX = 4;
+const snackTex = tex('/waves/snack-concha.webp?v=2');
 
 // ───────────────────────── kids ─────────────────────────
 const planeGeo = new Map<string, THREE.PlaneGeometry>();
@@ -208,11 +213,11 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const edgeMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   if (kind === 'jefe') mat.color.setHex(0xd8c8ff); // big brother: a touch of purple
   root.add(body);
-  const bodyW = kind === 'girl' ? w * (210 / a.cw) : kind === 'calaca' ? w * (172 / a.cw) : w;
+  const bodyW = kind === 'girl' ? w * (235 / a.cw) : kind === 'calaca' ? w * (172 / a.cw) : w;
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bodyW * 0.72, bodyW * 0.32), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.8 }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.02, 0.04); root.add(shadow);
   const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w: bodyW, golden, variant, sheet: a, map, edgeMat, anim: 'walk', animT: 0, frameKey: -1,
-    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 4 && Math.random() < 0.35 ? 0.35 + Math.random() * 0.25 : 0, eat: 0 };
+    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0 };
   if (kind === 'jefe') {
     k.pips = [];
     for (let i = 0; i < k.maxHp; i++) { const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: pipTex, depthWrite: false, fog: false })); p.scale.setScalar(0.3); p.position.set((i - (k.maxHp - 1) / 2) * 0.34, h + 0.16, 0.02); body.add(p); k.pips.push(p); }
@@ -239,19 +244,19 @@ function playAnim(k: Kid, anim: AnimName): void { k.anim = anim; k.animT = 0; }
 
 // ───────────────────────── waves ─────────────────────────
 function waveSpec(n: number) {
-  const x = Math.max(0, n - 5); // extra ramp after wave 5 (Gabe, 2026-11-10); waves 1-5 are unchanged
+  const x = Math.max(0, n - 4); // extra ramp from wave 4; the floor is already hot on wave 1
   return {
-    count: 5 + n * 3 + x * 2,
-    speed: Math.min(2.9 + x * 0.06, 3.4, (1.05 + n * 0.17) * (1 + x * 0.04)),
-    gap: Math.max(x ? 0.32 : 0.42, (1.75 - n * 0.13) * Math.max(0.72, 1 - x * 0.05)),
-    girl: Math.min(0.55, 0.15 + n * 0.06),
-    jefe: n >= 3 ? Math.min(0.22, 0.06 + (n - 3) * 0.03) : 0,
-    calaca: Math.min(0.3, 0.14 + n * 0.03),
+    count: 9 + n * 4 + x * 2, // wave 1: 13 (was 8)
+    speed: Math.min(3.3, (1.55 + n * 0.18) * (1 + x * 0.045)), // wave 1: ~1.73 (was 1.22)
+    gap: Math.max(0.28, (1.05 - n * 0.08) * Math.max(0.68, 1 - x * 0.04)), // wave 1: ~0.97s (was 1.62s)
+    girl: Math.min(0.62, 0.28 + n * 0.05),
+    jefe: Math.min(0.3, 0.1 + (n - 1) * 0.03), // big brothers from wave 1 (were wave 3+)
+    calaca: Math.min(0.4, 0.22 + n * 0.03),
   };
 }
 function startWave(n: number): void {
   wave = n; const s = waveSpec(n); abuelaHide();
-  toSpawn = waveTotal = s.count; spawned = 0; spawnT = 0.4;
+  toSpawn = waveTotal = s.count; spawned = 0; spawnT = 0.15;
   bossPending = n % 3 === 0; // the luchador boss shows up every 3rd wave
   state = 'play';
   $('wave').textContent = `Wave ${n}`;
@@ -289,7 +294,8 @@ function checkWaveDone(): void {
   abuelaAt = clock + 0.7; abuelaOutAt = abuelaAt + 0.45 + ABUELA_HOLD; nextWaveAt = abuelaOutAt + 0.55; // banner first, then Abuela's line, then the next wave
   abuelaSay();
   const gotBomb = wave >= 2 && bombs < BOMB_MAX; if (gotBomb) giveBomb(1);
-  banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 bomb` : `+${bonus} bonus`);
+  const gotSnack = snacks < SNACK_MAX; if (gotSnack) giveSnack(1);
+  banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 bomb · +1 pan dulce` : `+${bonus} bonus · +1 pan dulce`);
   sfx.sfxWin();
   track('wave_clear', { game: 'waves', wave, hearts });
 }
@@ -447,6 +453,7 @@ for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) fireBt
 addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'Enter') { if (state === 'play' || state === 'between') { e.preventDefault(); autoThrow(); } }
   if (e.code === 'KeyB') useBomb();
+  if (e.code === 'KeyF') useSnack();
   if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
 });
 
@@ -505,6 +512,43 @@ function updateBombBtn(): void {
   bombBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
   $('bombN').textContent = String(bombs);
 }
+const snackBtn = $('snack') as HTMLButtonElement;
+function giveSnack(n: number): void { snacks = Math.min(SNACK_MAX, snacks + n); updateSnackBtn(); }
+function updateSnackBtn(): void {
+  const on = snacks > 0;
+  snackBtn.classList.toggle('ghost', !on);
+  snackBtn.classList.toggle('ready', on);
+  snackBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
+  $('snackN').textContent = String(snacks);
+}
+function feedKid(k: Kid): void {
+  const fresh = k.eat <= 0;
+  k.eat = Math.min(4.2, k.eat + (k.kind === 'lucha' ? 1.25 : 2.6));
+  if (!k.bite) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, depthTest: false }));
+    sp.renderOrder = 6;
+    k.root.add(sp);
+    k.bite = sp;
+  }
+  k.bite.visible = true;
+  if (fresh) { popText(k, '¡ÑAM!', ''); sfx.sfxPoint(1); }
+}
+function useSnack(): void {
+  if ((state !== 'play' && state !== 'between') || snacks <= 0) return;
+  const k = threat(); if (!k) return;
+  snacks--;
+  const to = leadPoint(k, new THREE.Vector3());
+  const T = flightTime(to);
+  const v = velFor(to, T, new THREE.Vector3());
+  const obj = new THREE.Group();
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false }));
+  sp.scale.set(1.15, 1.05, 1);
+  obj.add(sp); scene.add(obj); obj.position.copy(LAUNCH);
+  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target: k, born: clock, snack: true });
+  updateSnackBtn(); sfx.sfxWhoosh();
+}
+snackBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); if (snacks > 0) snackBtn.classList.add('press'); useSnack(); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) snackBtn.addEventListener(ev, () => snackBtn.classList.remove('press'));
 /** Best spot for the bomb: the boss if he's out, else the densest, closest cluster of kids. */
 function bombTarget(): THREE.Vector3 | undefined {
   const live = kids.filter((k) => alive(k) && k.z > SPAWN_Z + 0.5); if (!live.length) return undefined;
@@ -615,14 +659,14 @@ function popText(k: Kid, text: string, cls: string): void {
   $('fx').appendChild(el); setTimeout(() => el.remove(), 1000);
 }
 function clearField(): void {
-  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); }
+  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); }
   for (const s of shots) scene.remove(s.obj);
   for (const p of petals) { fxGroup.remove(p.s); p.s.material.dispose(); }
   kids = []; shots = []; petals = []; fx.clear(); boss = undefined;
 }
 function newGame(): void {
   clearField();
-  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; updateBombBtn();
+  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; snacks = 2; updateBombBtn(); updateSnackBtn();
   ['title', 'over', 'pause'].forEach((id) => $(id).classList.add('hidden'));
   stage.classList.remove('on-title'); // HUD, hearts, fire and bomb buttons only show once play starts
   $('hint').classList.remove('gone');
@@ -691,22 +735,43 @@ function frame(now: number): void {
       if (k.pips) k.pips.forEach((p) => { p.visible = false; });
       if (k.aura) k.aura.visible = false;
       if (k.hpBar) { k.hpBar.visible = false; k.hpFill!.visible = false; }
-      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); }
+      if (k.bite) k.bite.visible = false;
+      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); }
       continue;
     }
     if (state === 'play' || state === 'between') {
-      const sp = k.stagger > 0 ? k.speed * 0.15 : k.speed;
+      if (k.eat > 0) k.eat = Math.max(0, k.eat - dt);
+      const eating = k.eat > 0;
+      const sp = k.stagger > 0 ? k.speed * 0.15 : eating ? k.speed * 0.07 : k.speed;
       k.stagger = Math.max(0, k.stagger - dt);
       k.z += sp * dt; k.wob += sp * dt;
     }
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
     // walk frames follow distance so the planted feet in the atlas stay on the cobbles. No extra hop (that read as a skip).
     const cyc = (k.wob / (k.sheet.stride * (k.kind === 'jefe' ? 1.3 : 1)) + k.phase) % 1;
-    if (k.anim === 'hit') { k.animT += dt; const i = Math.floor(k.animT * ANIM.hit.fps); if (i >= ANIM.hit.n) playAnim(k, 'walk'); else setFrame(k, 'hit', i); }
-    if (k.anim === 'walk') setFrame(k, 'walk', Math.floor(cyc * k.sheet.walkN));
+    const eating = k.eat > 0 && !!k.bite;
+    if (eating && k.bite) {
+      // planted feet, a chew, and the concha at the mouth getting smaller with every bite
+      setFrame(k, 'walk', 0);
+      const chew = Math.sin(s * 14 + k.phase);
+      const bit = chew > 0 ? 1 : 0;
+      k.body.scale.set(1 + bit * 0.07, 1 - bit * 0.12, 1);
+      k.body.rotation.set(0.42 + bit * 0.22, -k.x * 0.04, Math.sin(s * 16 + k.phase) * 0.05);
+      const left = Math.min(1, k.eat / 2.4);
+      const size = k.h * (0.1 + 0.14 * left) * (bit ? 0.78 : 1);
+      k.bite.visible = true;
+      k.bite.scale.set(size, size * 0.9, 1);
+      k.bite.position.set(0, k.h * (0.64 - bit * 0.07), 0.35);
+      (k.bite.material as THREE.SpriteMaterial).rotation = bit ? -0.35 : 0.2;
+    } else {
+      k.body.scale.set(1, 1, 1);
+      if (k.bite) k.bite.visible = false;
+      if (k.anim === 'hit') { k.animT += dt; const i = Math.floor(k.animT * ANIM.hit.fps); if (i >= k.sheet.hitN) playAnim(k, 'walk'); else setFrame(k, 'hit', i); }
+      if (k.anim === 'walk') setFrame(k, 'walk', Math.floor(cyc * k.sheet.walkN));
+      k.body.rotation.set(0.2, -k.x * 0.04, k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
+    }
     if (k.hpBar) { const pulse = k.hp / k.maxHp < 0.34 ? 1 + Math.sin(s * 12) * 0.06 : 1; k.hpBar.scale.set(1.7 * pulse, 0.32 * pulse, 1); }
     k.root.position.set(k.x, 0, k.z);
-    k.body.rotation.set(0.2, -k.x * 0.04, k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
     if (k.aura) { k.aura.material.opacity = 0.55 + Math.sin(s * 6) * 0.25; }
     if (k.z >= LINE_Z && state === 'play') kidReachedLine(k);
   }
@@ -723,6 +788,26 @@ function frame(now: number): void {
         if (sh.bomb) { // the bomb goes off on the first kid it touches, or where it lands
           const touch = kids.some((k) => alive(k) && Math.abs(sh.p.x - k.root.position.x) < k.w * 0.5 && Math.abs(sh.p.z - k.root.position.z) < 0.6 && sh.p.y < k.h);
           if (touch || sh.p.y <= 0.3) { explode(sh.p); sh.spent = 0.61; sh.obj.visible = false; break; }
+          continue;
+        }
+        if (sh.snack) {
+          const near = (k: Kid, r: number) => alive(k) && Math.hypot(sh.p.x - k.root.position.x, sh.p.z - k.root.position.z) < r && sh.p.y < k.h + 0.4;
+          let ate: Kid | undefined;
+          for (const k of kids) if (near(k, Math.max(1.05, k.w * 0.9))) { ate = k; break; }
+          if (!ate && sh.p.y <= 0.15) {
+            const prefer = sh.target;
+            if (prefer && near(prefer, 2.4)) ate = prefer;
+            else {
+              let best = 1.8;
+              for (const k of kids) {
+                if (!alive(k)) continue;
+                const d = Math.hypot(sh.p.x - k.root.position.x, sh.p.z - k.root.position.z);
+                if (d < best) { best = d; ate = k; }
+              }
+            }
+          }
+          if (ate) { feedKid(ate); sh.spent = 0.61; sh.obj.visible = false; break; }
+          if (sh.p.y <= 0.06) { sh.spent = 0; sh.v.set((Math.random() - 0.5) * 0.4, 1.4, 0.4); break; }
           continue;
         }
         for (const k of kids) {
@@ -778,7 +863,7 @@ function updateBar(): void { const v = spawned * 1000 + kids.filter(alive).lengt
 // ───────────────────────── boot ─────────────────────────
 addEventListener('resize', resize);
 resize();
-autoUnlockAudio(); wireMute();
+autoUnlockAudio(); wireMute(); initAudioControls('waves', setMuted);
 for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener(ev, () => sfx.unlockCrashAudio(), { capture: true, passive: true });
 $('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · or tap the gold chancla' : 'Click or drag at a kid to throw · Space = gold chancla';
 updateHud();

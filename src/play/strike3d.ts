@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { initAudioControls } from './music';
 
 // ---------- story text table (one-line name swap) ----------
 const BOY = 'Sidro';
@@ -58,6 +59,7 @@ function beep(f: number, d = 0.08, type: OscillatorType = 'square', v = 0.08) {
   } catch { /* no audio */ }
 }
 $('mute').onclick = () => { muted = !muted; $('mute').textContent = muted ? '🔇' : '🔊'; };
+initAudioControls('cruise', (m) => { muted = m; });
 
 // ---------- procedural textures (code-drawn, no art files) ----------
 function canvasTex(w: number, h: number, draw: (c: CanvasRenderingContext2D) => void, repeat = false) {

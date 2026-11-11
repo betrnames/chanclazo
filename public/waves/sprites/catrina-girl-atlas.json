@@ -1,10 +1,24 @@
 {
   "meta": {
     "image": "catrina-girl-atlas.webp",
-    "size": { "w": 2576, "h": 1086 },
-    "cell": { "w": 368, "h": 362 },
-    "anchor": { "x": 184, "y": 354, "note": "feet/ground point inside every cell" },
-    "bodyHeightPx": 340,
-    "counts": { "walk": 7, "hit": 1, "ko": 2 }
+    "size": {
+      "w": 3360,
+      "h": 1770
+    },
+    "cell": {
+      "w": 420,
+      "h": 590
+    },
+    "anchor": {
+      "x": 210,
+      "y": 587,
+      "note": "feet/ground point inside every cell"
+    },
+    "bodyHeightPx": 425,
+    "counts": {
+      "walk": 8,
+      "hit": 3,
+      "ko": 4
+    }
   }
 }

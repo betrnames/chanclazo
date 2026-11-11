@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { $, autoUnlockAudio, wireMute, wakeAudio, report } from './common';
+import { initAudioControls } from './music';
+import { setMuted } from '../game/sound';
 import { markGameStart, markFirstAction, track } from '../analytics';
 import {
   makeChancla, makeSkeleton, makePinata, makeJarrito, makeCandle, makeConcha, makeCafe, makePapelRow, buildBackdrop, boxMats, sugarSkullTex, laceTex, crateTex, woodTex,
@@ -848,7 +850,7 @@ function frame(now: number): void {
 // ───────────────────────── boot ─────────────────────────
 addEventListener('resize', resize);
 resize();
-autoUnlockAudio(); wireMute();
+autoUnlockAudio(); wireMute(); initAudioControls('crash', setMuted);
 $('hint').textContent = isTouch ? 'Drag to aim · tap the gold chancla to throw' : 'Drag to aim · click the gold chancla or press Space';
 markGameStart('crash');
 setWorld(LEVELS[levelIdx].world);
