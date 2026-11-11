@@ -302,7 +302,7 @@ function checkWaveDone(): void {
 // ───────────────────────── Abuela between waves ─────────────────────────
 // The ONLY place Abuela appears in Waves (Gabe, 2026-11-10): after each cleared wave she slides in from the left with a
 // one-liner, holds ~2.5 s, slides out, then the next wave starts. Shuffle-bag: no repeats until the pool is used up.
-// Driven by the game clock, so pause freezes her. Tapping her skips straight to the next wave.
+// Driven by the game clock, so pause freezes her timer (she slides out while paused). Tapping her skips straight to the next wave.
 const ABUELA_HOLD = 2.5;
 const ABUELA_LINES: { t: string; mad?: boolean }[] = [
   { t: '¡Mijo, I\'ve seen faster chanclas at a funeral!', mad: true },
@@ -340,7 +340,7 @@ function abuelaSay(): void {
 }
 function abuelaHide(): void { abuelaAt = Infinity; abuelaOutAt = 0; abuelaEl.classList.remove('in'); }
 function tickAbuela(): void {
-  const between = state === 'between' || (state === 'paused' && prevState === 'between');
+  const between = state === 'between'; // she steps out while paused (popups have no backdrop now) and comes back on resume
   abuelaEl.classList.toggle('in', between && clock >= abuelaAt && clock < abuelaOutAt);
 }
 abuelaEl.addEventListener('pointerdown', (e) => {

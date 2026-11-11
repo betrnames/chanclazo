@@ -44,7 +44,7 @@ Internal ids/paths/hooks still say "waves" (`/waves`, `waves.ts`, `window.__wave
 | Others | `/slots`, `/match`, `/lore`, `/arcade` | `slots.ts`, `match.ts`, `lore.html`, `public/arcade*.html` | Not in active work. |
 
 ### Día de los Muertos details (src/play/waves.ts)
-- **Abuela cameo**: after each cleared wave, `checkWaveDone()` shows WAVE CLEAR; 0.7 s later `#abuela` slides in from the LEFT with a speech bubble, holds `ABUELA_HOLD` = 2.5 s, slides out; next wave ~0.55 s later. 16 lines in `ABUELA_LINES` (shuffle bag, no repeats until the pool is used; angry face `/crash/abuela-chibi-angry.webp` on scolding lines, `/crash/abuela-chibi.webp` otherwise). Game-clock driven (pause freezes her). Tap her to skip; taps elsewhere still throw.
+- **Abuela cameo**: after each cleared wave, `checkWaveDone()` shows WAVE CLEAR; 0.7 s later `#abuela` slides in from the LEFT with a speech bubble, holds `ABUELA_HOLD` = 2.5 s, slides out; next wave ~0.55 s later. 16 lines in `ABUELA_LINES` (shuffle bag, no repeats until the pool is used; angry face `/crash/abuela-chibi-angry.webp` on scolding lines, `/crash/abuela-chibi.webp` otherwise). Game-clock driven (pause freezes her timer; she slides out while the pause menu is up and returns on resume). Tap her to skip; taps elsewhere still throw.
 - Title screen: game name + breathing TAP TO PLAY over the live scene. `#stage.on-title` hides HUD/hearts/hint/fire/bomb until `newGame()`.
 - Test hooks: `window.__waves` → `ready()`, `start()`, `state()`, `kids()`, `wave(n)`, `spawn()`, `hurt(n)`, `bomb()`, `giveBomb()`, `rapid()`, `pause(bool)`, `abuela()`, `abuelaLines()`, `clearWave()`. URL params: `?start=1`, `?wave=N`, `?bombs=N`.
 
