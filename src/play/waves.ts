@@ -164,7 +164,7 @@ interface Kid {
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number;
 }
-interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean }
+interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
 type State = 'title' | 'play' | 'between' | 'paused' | 'over';
 let state: State = 'title', prevState: State = 'play';
@@ -175,13 +175,8 @@ let best = (() => { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } 
 const kidGroup = new THREE.Group(); scene.add(kidGroup);
 const fxGroup = new THREE.Group(); scene.add(fxGroup);
 const fx = new FX(scene, 0), hitStop = new HitStop();
-let bombs = 0, snacks = 0, snackNext = 0, bossPending = false, boss: Kid | undefined;
+let bombs = 0, bossPending = false, boss: Kid | undefined;
 const BOMB_MAX = 3, BOMB_R = 2.4, BOMB_DMG = 4;
-const SNACK_MAX = 4;
-const SNACKS = [
-  { id: 'concha', sx: 1.05, sy: 0.92 },
-] as const;
-const snackTex = SNACKS.map((s) => tex(`/waves/snack-${s.id}.webp`));
 
 // ───────────────────────── kids ─────────────────────────
 const planeGeo = new Map<string, THREE.PlaneGeometry>();
@@ -294,8 +289,7 @@ function checkWaveDone(): void {
   abuelaAt = clock + 0.7; abuelaOutAt = abuelaAt + 0.45 + ABUELA_HOLD; nextWaveAt = abuelaOutAt + 0.55; // banner first, then Abuela's line, then the next wave
   abuelaSay();
   const gotBomb = wave >= 2 && bombs < BOMB_MAX; if (gotBomb) giveBomb(1);
-  const gotSnack = snacks < SNACK_MAX; if (gotSnack) giveSnack(1);
-  banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 bomb · +1 snack` : `+${bonus} bonus · +1 snack`);
+  banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 bomb` : `+${bonus} bonus`);
   sfx.sfxWin();
   track('wave_clear', { game: 'waves', wave, hearts });
 }
@@ -312,7 +306,6 @@ const TITLE_QUOTES = [
   'Hold the line. The candles are watching.',
   'Abuela doesn\'t miss. Neither should you.',
   'They march. You throw. That\'s the deal.',
-  'Pan dulce is for sharing. Chanclas are not.',
   'A quiet plaza is a plaza that got the chancla.',
   'Don\'t negotiate with skeletons.',
 ];
@@ -332,7 +325,7 @@ const ABUELA_LINES: { t: string; mad?: boolean }[] = [
   { t: 'Use the wrist, mijo. Like flipping tortillas.' },
   { t: '¡Cuidado! More are coming. My knees told me.' },
   { t: 'Very good. I\'m telling your tía you\'re my favorite.' },
-  { t: 'If they touch my pan dulce, it\'s chancla time.', mad: true },
+  { t: 'If they touch my ofrenda, it\'s chancla time.', mad: true },
   { t: 'Sit up straight! Champions don\'t slouch.', mad: true },
   { t: '¡Eso! Now drink some water, you look pale.' },
 ];
@@ -454,7 +447,6 @@ for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) fireBt
 addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'Enter') { if (state === 'play' || state === 'between') { e.preventDefault(); autoThrow(); } }
   if (e.code === 'KeyB') useBomb();
-  if (e.code === 'KeyF') useSnack();
   if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
 });
 
@@ -513,43 +505,6 @@ function updateBombBtn(): void {
   bombBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
   $('bombN').textContent = String(bombs);
 }
-// ───────────────────────── snacks: pan dulce, they stop to eat ─────────────────────────
-const snackBtn = $('snack') as HTMLButtonElement;
-function giveSnack(n: number): void {
-  snacks = Math.min(SNACK_MAX, snacks + n); updateSnackBtn();
-}
-function updateSnackBtn(): void {
-  const on = snacks > 0;
-  const spec = SNACKS[snackNext % SNACKS.length];
-  snackBtn.classList.toggle('ghost', !on);
-  snackBtn.classList.toggle('ready', on);
-  snackBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
-  (snackBtn.querySelector('img') as HTMLImageElement).src = `/waves/snack-${spec.id}.webp`;
-  $('snackN').textContent = String(snacks);
-}
-function feedKid(k: Kid): void {
-  const fresh = k.eat <= 0;
-  k.eat = Math.min(4.2, k.eat + (k.kind === 'lucha' ? 1.25 : 2.6));
-  if (fresh) { playAnim(k, 'hit'); popText(k, '¡ÑAM!', ''); sfx.sfxPoint(1); }
-}
-function useSnack(): void {
-  if ((state !== 'play' && state !== 'between') || snacks <= 0) return;
-  const k = threat(); if (!k) return;
-  const i = snackNext % SNACKS.length;
-  snacks--; snackNext++;
-  const to = leadPoint(k, new THREE.Vector3());
-  const T = flightTime(to);
-  const v = velFor(to, T, new THREE.Vector3());
-  const spec = SNACKS[i];
-  const obj = new THREE.Group();
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex[i], transparent: true, depthWrite: false }));
-  sp.scale.set(spec.sx, spec.sy, 1);
-  obj.add(sp); scene.add(obj); obj.position.copy(LAUNCH);
-  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target: k, born: clock, snack: true });
-  updateSnackBtn(); sfx.sfxWhoosh();
-}
-snackBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); if (snacks > 0) snackBtn.classList.add('press'); useSnack(); });
-for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) snackBtn.addEventListener(ev, () => snackBtn.classList.remove('press'));
 /** Best spot for the bomb: the boss if he's out, else the densest, closest cluster of kids. */
 function bombTarget(): THREE.Vector3 | undefined {
   const live = kids.filter((k) => alive(k) && k.z > SPAWN_Z + 0.5); if (!live.length) return undefined;
@@ -667,7 +622,7 @@ function clearField(): void {
 }
 function newGame(): void {
   clearField();
-  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; snacks = 2; snackNext = 0; updateBombBtn(); updateSnackBtn();
+  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; updateBombBtn();
   ['title', 'over', 'pause'].forEach((id) => $(id).classList.add('hidden'));
   stage.classList.remove('on-title'); // HUD, hearts, fire and bomb buttons only show once play starts
   $('hint').classList.remove('gone');
@@ -691,8 +646,8 @@ function togglePause(): void {
   if (state !== 'play' && state !== 'between') return;
   prevState = state; state = 'paused'; $('pause').classList.remove('hidden');
 }
-let artReady = false, startWhenReady = false;
-$('play').addEventListener('click', () => { sfx.unlockCrashAudio(); sfx.sfxClick(); if (artReady) newGame(); else startWhenReady = true; });
+let artReady = false;
+$('play').addEventListener('click', () => { sfx.unlockCrashAudio(); sfx.sfxClick(); if (artReady) newGame(); });
 $('retry').addEventListener('click', () => { sfx.sfxClick(); newGame(); });
 $('restart').addEventListener('click', () => { sfx.sfxClick(); newGame(); });
 $('resume').addEventListener('click', () => { sfx.sfxClick(); togglePause(); });
@@ -740,9 +695,7 @@ function frame(now: number): void {
       continue;
     }
     if (state === 'play' || state === 'between') {
-      if (k.eat > 0) k.eat = Math.max(0, k.eat - dt);
-      const eating = k.eat > 0;
-      const sp = k.stagger > 0 ? k.speed * 0.15 : eating ? k.speed * 0.07 : k.speed;
+      const sp = k.stagger > 0 ? k.speed * 0.15 : k.speed;
       k.stagger = Math.max(0, k.stagger - dt);
       k.z += sp * dt; k.wob += sp * dt;
     }
@@ -753,7 +706,7 @@ function frame(now: number): void {
     if (k.anim === 'walk') setFrame(k, 'walk', Math.floor(cyc * k.sheet.walkN));
     if (k.hpBar) { const pulse = k.hp / k.maxHp < 0.34 ? 1 + Math.sin(s * 12) * 0.06 : 1; k.hpBar.scale.set(1.7 * pulse, 0.32 * pulse, 1); }
     k.root.position.set(k.x, 0, k.z);
-    k.body.rotation.set(0.2, -k.x * 0.04, k.eat > 0 ? Math.sin(s * 14) * 0.1 : k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
+    k.body.rotation.set(0.2, -k.x * 0.04, k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
     if (k.aura) { k.aura.material.opacity = 0.55 + Math.sin(s * 6) * 0.25; }
     if (k.z >= LINE_Z && state === 'play') kidReachedLine(k);
   }
@@ -770,16 +723,6 @@ function frame(now: number): void {
         if (sh.bomb) { // the bomb goes off on the first kid it touches, or where it lands
           const touch = kids.some((k) => alive(k) && Math.abs(sh.p.x - k.root.position.x) < k.w * 0.5 && Math.abs(sh.p.z - k.root.position.z) < 0.6 && sh.p.y < k.h);
           if (touch || sh.p.y <= 0.3) { explode(sh.p); sh.spent = 0.61; sh.obj.visible = false; break; }
-          continue;
-        }
-        if (sh.snack) {
-          let ate = false;
-          for (const k of kids) {
-            if (!alive(k)) continue;
-            const dx = sh.p.x - k.root.position.x, dz = sh.p.z - k.root.position.z;
-            if (Math.abs(dx) < k.w * 0.55 + 0.2 && Math.abs(dz) < 0.6 && sh.p.y > 0.02 && sh.p.y < k.h + 0.2) { feedKid(k); ate = true; break; }
-          }
-          if (ate || sh.p.y <= 0.06) { sh.spent = 0; sh.v.set((Math.random() - 0.5) * 0.4, 1.4, 0.4); break; }
           continue;
         }
         for (const k of kids) {
@@ -841,9 +784,7 @@ $('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · or tap the g
 updateHud();
 Promise.all(texLoads).then(() => {
   artReady = true;
-  // title-screen ambience: a few kids already marching in the background
-  for (let i = 0; i < 4; i++) { const k = spawnKid(i % 2 ? 'girl' : 'boy', i, 0); k.z = -7.5 + ((i * 5) % 4) * 2.0; }
-  if (params.has('start') || startWhenReady) newGame();
+  newGame();
   prev = performance.now();
   requestAnimationFrame(frame);
 });

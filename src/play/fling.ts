@@ -20,7 +20,6 @@ let scale = 1, ox = 0, oy = 0, dpr = 1;
 // Visible-area sizing: iOS 100vh/innerHeight can include space under the browser bars, so use
 // visualViewport when it is smaller, size the canvas to it, and respect safe-area insets (notch/home bar).
 let VW = window.innerWidth, VH = window.innerHeight;
-let turned = false;
 const safeProbe = document.createElement('div');
 safeProbe.style.cssText = 'position:fixed;inset:0;pointer-events:none;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
 document.body.appendChild(safeProbe);
@@ -28,7 +27,7 @@ function fit() {
   const vv = window.visualViewport;
   const rw = Math.round(vv ? Math.min(window.innerWidth, vv.width) : window.innerWidth);
   const rh = Math.round(vv ? Math.min(window.innerHeight, vv.height) : window.innerHeight);
-  VW = turned ? rh : rw; VH = turned ? rw : rh;
+  VW = rw; VH = rh;
   if (VW < 2 || VH < 2) return;
   document.documentElement.style.setProperty('--vh', VH + 'px');
   cv.style.width = VW + 'px'; cv.style.height = VH + 'px';
@@ -44,13 +43,6 @@ function fit() {
   oy = top + (avH - (y1 - y0) * scale) / 2 - y0 * scale;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#140a24'; ctx.fillRect(0, 0, VW, VH);
 }
-function setTurned(next: boolean) {
-  turned = next;
-  document.documentElement.classList.toggle('turned', turned);
-  const b = document.getElementById('turn');
-  if (b) { b.textContent = turned ? 'Upright' : 'Rotate'; b.setAttribute('aria-pressed', String(turned)); }
-  onLayout();
-}
 // Orientation: iOS Safari reports the new size late, so re-check a few times after any rotate/resize.
 let portraitNow = false;
 function readPortrait() {
@@ -63,9 +55,7 @@ let a2hsOff = (() => { try { return localStorage.getItem('chanclazo_a2hs_off') =
 setTimeout(() => { a2hsOff = true; updateA2hs(); }, 9000); // auto-hide (not remembered)
 function updateA2hs() { const el = document.getElementById('a2hs'); if (el) el.classList.toggle('hidden', !(IS_IOS && !STANDALONE && !a2hsOff && !portraitNow && window.innerWidth > window.innerHeight)); }
 function onLayout() {
-  const realPortrait = window.innerHeight > window.innerWidth;
-  if (turned && !realPortrait) setTurned(false);
-  else { portraitNow = realPortrait; document.body.classList.toggle('portrait', portraitNow); fit(); updateA2hs(); last = performance.now(); }
+  portraitNow = window.innerHeight > window.innerWidth; document.body.classList.toggle('portrait', portraitNow); fit(); updateA2hs(); last = performance.now();
 }
 function scheduleLayout() { onLayout(); for (const d of [120, 300, 650, 1200, 2000]) setTimeout(onLayout, d); }
 setInterval(() => { if (readPortrait() !== portraitNow) onLayout(); }, 700); // safety net if a rotate event is missed
@@ -502,8 +492,7 @@ function startGame() {
   safe('ui', () => { startScreen.classList.add('hidden'); startScreen.style.display = 'none'; });
   playing = true; last = performance.now();
   safe('level', () => {
-    if (DIRECT) { let i = 0; for (let k = 0; k < LEVELS.length; k++) if (unlocked(k)) { i = k; if (!(save.stars[k] > 0)) break; } build(i); } // from /choose: straight into the next unplayed level
-    else if (totalStars() === 0) build(0); else openMap();
+    let i = 0; for (let k = 0; k < LEVELS.length; k++) if (unlocked(k)) { i = k; if (!(save.stars[k] > 0)) break; } build(i);
   });
   safe('audio', () => { wakeAudio(); A.unlock(); });
 }
@@ -516,22 +505,14 @@ onTap(go, startGame);
 for (const ev of ['touchend', 'click', 'pointerup']) startScreen.querySelector('a')?.addEventListener(ev, (e) => e.stopPropagation());
 onTap($('restart'), () => { if (playing && started) build(level); });
 onTap($('mapBtn'), () => { if (playing && started) openMap(); });
-let turnAt = 0;
-$('turn').addEventListener('click', () => { const n = performance.now(); if (n - turnAt < 400) return; turnAt = n; setTurned(!turned); });
 if (/[?&]debug=1/.test(location.search)) { let taps = 0; for (const ev of ['touchstart', 'touchend']) document.body.addEventListener(ev, (e) => { taps++; report(`taps ${taps}: ${ev} on ${(e.target as HTMLElement).id || (e.target as HTMLElement).tagName}`); }, { capture: true, passive: true }); }
-function maybeCountdown() {
-  if (started || countdown !== null) return;
-  let n = 3; go.textContent = `PLAY! (${n})`;
-  countdown = window.setInterval(() => { n--; if (n <= 0) startGame(); else go.textContent = `PLAY! (${n})`; }, 1000);
-}
-setInterval(maybeCountdown, 500);
 Promise.all(Object.entries(names).map(([k, v]) => loadImg(v).then((im) => { IMG[k] = im; if (k === 'chancla') { TINT.boot = tintImg(im, '#3b2210', 0.62); TINT.triple = tintImg(im, '#29c4e0', 0.5); } }).catch(() => report(`image failed: ${v}`))));
 document.getElementById('a2hsX')?.addEventListener('click', () => { a2hsOff = true; try { localStorage.setItem('chanclazo_a2hs_off', '1'); } catch { /* ignore */ } updateA2hs(); });
 if (/[?&]debug=1/.test(location.search)) setInterval(() => { const a = (window as any).__flingAudio; report(`audio ${a.state} · session ${a.session} · gain ${a.gain === null ? '-' : a.gain.toFixed(2)} · muted ${a.muted} · sounds ${a.played}`); }, 2000);
 safe('wireMute', () => { A.wireMute($('mute') as HTMLButtonElement); initAudioControls('fling', (m) => A.setMuted(m)); });
 safe('level0', () => build(0));
 onLayout(); scheduleLayout();
-if (DIRECT) setTimeout(startGame, 0);
+startGame();
 requestAnimationFrame(frame);
 (window as any).__fling = {
   engine, world, meta, LEVELS, build, openMap, boom: (b: Matter.Body) => { armed = true; damage(b, 99); },

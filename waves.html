@@ -32,16 +32,8 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 #hearts i.off{opacity:.28;filter:grayscale(1);transform:scale(.8)}
 #hearts i.lost{animation:hlost .5s}
 @keyframes hlost{30%{transform:scale(1.6) rotate(-14deg)}100%{transform:scale(.8)}}
-#powers{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom) + 20px);z-index:6;width:70px;height:180px;pointer-events:none}
+#powers{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom) + 20px);z-index:6;width:70px;height:90px;pointer-events:none}
 #bomb{position:absolute;left:0;bottom:22px;top:auto;width:70px;height:70px;border-radius:50%;padding:0;margin:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#ffcf6a,#ff6a1a 55%,#a8101e);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;filter:none;transform:none;animation:none;pointer-events:auto}
-#snack{position:absolute;left:0;bottom:108px;width:70px;height:70px;border-radius:50%;padding:0;margin:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#fff6d4,#ff8c1a 70%,#c45a00);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f;cursor:pointer;touch-action:none;pointer-events:auto}
-#snack img{width:52px;height:52px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 2px 1px rgba(0,0,0,.35))}
-#snack .bn{position:absolute;right:-6px;top:-6px;min-width:24px;height:24px;border-radius:12px;background:#3b1a5c;border:2px solid #ffd23f;color:#fff;font:400 14px/20px LilitaOne,system-ui;text-align:center;pointer-events:none}
-#snack .use{position:absolute;left:50%;top:-16px;bottom:auto;transform:translateX(-50%);font:400 12px LilitaOne,system-ui;letter-spacing:.08em;color:#ffd23f;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none}
-#snack.ghost{opacity:.34;pointer-events:none;box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px rgba(255,210,63,.45)}
-#snack.ghost .use{visibility:hidden}
-#snack.ready{box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f,0 0 16px rgba(255,140,40,.75)}
-#snack.press{transform:translateY(3px)}
 #bomb img{width:52px;height:auto;pointer-events:none;transform:rotate(-24deg);filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
 #bomb .bb{position:absolute;left:-6px;top:-8px;font-size:22px;pointer-events:none;filter:drop-shadow(0 2px 1px rgba(0,0,0,.6))}
 #bomb .bn{position:absolute;right:-6px;top:-6px;min-width:24px;height:24px;border-radius:12px;background:#3b1a5c;border:2px solid #ffd23f;color:#fff;font:400 14px/20px LilitaOne,system-ui;text-align:center;pointer-events:none}
@@ -150,7 +142,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 @media (prefers-reduced-motion:reduce){#title .btn{animation:none}#fire.ready,#fire.ready img,.relic{animation:none}}
 </style>
 </head><body>
-<div id="stage" class="on-title">
+<div id="stage">
   <div class="hud">
     <button class="hbtn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><rect x="5" y="3" width="5" height="18" rx="1.6" fill="#ffd23f"/><rect x="14" y="3" width="5" height="18" rx="1.6" fill="#ffd23f"/></svg></button>
     <div class="lvlbox"><div id="wave">Wave 1</div><div class="barwrap" role="progressbar" aria-label="Wave progress"><div id="bar"></div></div></div>
@@ -164,12 +156,12 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   <div id="fx"></div>
   <div id="hint" class="gone">Tap a kid to throw · or tap the gold chancla</div>
   <div id="rapid" class="hidden" aria-live="polite">🔥 RAPID FIRE <span class="rb"><i></i></span></div>
-  <div id="powers"><button id="snack" class="ghost" aria-label="Throw a pan dulce. A sugar skull stops to eat it." aria-disabled="true"><img src="/waves/snack-concha.webp" alt="" width="52" height="52" /><span id="snackN" class="bn">0</span><span class="use">TAP</span></button><button id="bomb" class="ghost" aria-label="Drop a gold chancla bomb" aria-disabled="true"><img src="/crash/chancla-btn.webp" alt="" width="54" height="30" /><span class="bb">💣</span><span id="bombN" class="bn">0</span><span class="use">TAP</span></button></div>
+  <div id="powers"><button id="bomb" class="ghost" aria-label="Drop a gold chancla bomb" aria-disabled="true"><img src="/crash/chancla-btn.webp" alt="" width="54" height="30" /><span class="bb">💣</span><span id="bombN" class="bn">0</span><span class="use">TAP</span></button></div>
   <div id="abuela" role="status" aria-live="polite" aria-label="Abuela says"><img id="abuelaImg" src="/crash/abuela-chibi.webp" alt="Abuela" width="507" height="1002" /><div class="bubble"><p id="abuelaLine"></p><small>tap to skip</small></div></div>
   <div id="boomflash" aria-hidden="true"></div>
   <button id="fire" aria-label="Throw the gold chancla at the closest kid"><img src="/crash/chancla-btn.webp" alt="" width="84" height="47" /><span class="tap">TAP!</span></button>
 
-  <div class="screen" id="title"><div class="card">
+  <div class="screen hidden" id="title"><div class="card">
     <h1 class="gname">%%WAVES_NAME%%</h1>
     <p class="quote" id="titleQuote"></p>
     <button class="btn gold" id="play" aria-label="Tap to play %%WAVES_NAME%%">TAP TO PLAY</button>
