@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<meta name="theme-color" content="#14061f" />
-<title>Chanclazo · Pick your game on the map</title>
+<meta name="theme-color" content="#0a0418" />
+<title>Chanclazo · Pick your game at the arcade</title>
 <link rel="icon" href="/cruise/logo_chancla.webp" />
-<link rel="stylesheet" href="/src/choose/map.css" />
+<link rel="stylesheet" href="/src/choose/arcade.css" />
 </head>
 <body>
-<!-- vite dev twin of astro/pages/choose.astro: same map from src/choose/map.ts -->
+<!-- vite dev twin of astro/pages/choose.astro: same arcade from src/choose/arcade.ts -->
 <div id="czroot"></div>
 <script type="module">
-import { mapHtml, wireMap } from '/src/choose/map.ts';
-document.getElementById('czroot').outerHTML = mapHtml();
-wireMap();
+import { arcadeHtml, wireArcade } from '/src/choose/arcade.ts';
+document.getElementById('czroot').outerHTML = arcadeHtml();
+wireArcade();
 </script>
 </body>
 </html>

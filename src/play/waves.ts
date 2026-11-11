@@ -251,7 +251,7 @@ function waveSpec(n: number) {
   };
 }
 function startWave(n: number): void {
-  wave = n; const s = waveSpec(n);
+  wave = n; const s = waveSpec(n); abuelaHide();
   toSpawn = waveTotal = s.count; spawned = 0; spawnT = 0.4;
   bossPending = n % 3 === 0; // the luchador boss shows up every 3rd wave
   state = 'play';
@@ -286,12 +286,64 @@ function checkWaveDone(): void {
   if (state !== 'play' || toSpawn > 0 || kids.some(alive)) return;
   const bonus = 250 * wave + hearts * 50;
   score += bonus; updateHud();
-  state = 'between'; nextWaveAt = clock + 2.6; goldenThisWave = false;
+  state = 'between'; goldenThisWave = false;
+  abuelaAt = clock + 0.7; abuelaOutAt = abuelaAt + 0.45 + ABUELA_HOLD; nextWaveAt = abuelaOutAt + 0.55; // banner first, then Abuela's line, then the next wave
+  abuelaSay();
   const gotBomb = wave >= 2 && bombs < BOMB_MAX; if (gotBomb) giveBomb(1);
   banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 chancla BOMB 💣` : `+${bonus} bonus`);
   sfx.sfxWin();
   track('wave_clear', { game: 'waves', wave, hearts });
 }
+
+// ───────────────────────── Abuela between waves ─────────────────────────
+// The ONLY place Abuela appears in Waves (Gabe, 2026-11-10): after each cleared wave she slides in from the left with a
+// one-liner, holds ~2.5 s, slides out, then the next wave starts. Shuffle-bag: no repeats until the pool is used up.
+// Driven by the game clock, so pause freezes her. Tapping her skips straight to the next wave.
+const ABUELA_HOLD = 2.5;
+const ABUELA_LINES: { t: string; mad?: boolean }[] = [
+  { t: '¡Mijo, I\'ve seen faster chanclas at a funeral!', mad: true },
+  { t: '¡Ándale! The tamales won\'t guard themselves.' },
+  { t: 'In my day we threw chanclas uphill. Both ways.' },
+  { t: '¡Ay, qué bonito! Now do it again, but faster.' },
+  { t: 'Did you eat? You throw like you didn\'t eat.' },
+  { t: 'That\'s my grandbaby! Now sweep up those skulls.' },
+  { t: 'Don\'t make me take off MY chancla, mijo.', mad: true },
+  { t: '¡Mira nomás! Not one kid touched my ofrenda.' },
+  { t: 'Your abuelo had better aim. And he wore bifocales.', mad: true },
+  { t: 'Rest? Ten minutes. ¡No! Five. Okay, two.' },
+  { t: 'Use the wrist, mijo. Like flipping tortillas.' },
+  { t: '¡Cuidado! More are coming. My knees told me.' },
+  { t: 'Very good. I\'m telling your tía you\'re my favorite.' },
+  { t: 'If they touch my pan dulce, it\'s chancla time.', mad: true },
+  { t: 'Sit up straight! Champions don\'t slouch.', mad: true },
+  { t: '¡Eso! Now drink some water, you look pale.' },
+];
+const abuelaEl = $('abuela'), abuelaImg = $('abuelaImg') as HTMLImageElement, abuelaLine = $('abuelaLine');
+const ABUELA_IMG = { calm: '/crash/abuela-chibi.webp', mad: '/crash/abuela-chibi-angry.webp' };
+new Image().src = ABUELA_IMG.mad; // warm the cache so the angry face swaps in instantly
+let abuelaBag: number[] = [], abuelaAt = Infinity, abuelaOutAt = 0, abuelaLast = -1;
+function abuelaSay(): void {
+  if (!abuelaBag.length) {
+    abuelaBag = ABUELA_LINES.map((_, i) => i);
+    for (let i = abuelaBag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [abuelaBag[i], abuelaBag[j]] = [abuelaBag[j], abuelaBag[i]]; }
+    if (abuelaBag[abuelaBag.length - 1] === abuelaLast && abuelaBag.length > 1) abuelaBag.unshift(abuelaBag.pop() as number); // no back-to-back repeat across refills
+  }
+  const i = abuelaBag.pop() as number; abuelaLast = i;
+  const L = ABUELA_LINES[i];
+  $('hint').classList.add('gone'); // her bubble replaces the how-to hint
+  abuelaLine.textContent = L.t; abuelaImg.src = L.mad ? ABUELA_IMG.mad : ABUELA_IMG.calm;
+  track('abuela_line', { game: 'waves', wave, line: i });
+}
+function abuelaHide(): void { abuelaAt = Infinity; abuelaOutAt = 0; abuelaEl.classList.remove('in'); }
+function tickAbuela(): void {
+  const between = state === 'between' || (state === 'paused' && prevState === 'between');
+  abuelaEl.classList.toggle('in', between && clock >= abuelaAt && clock < abuelaOutAt);
+}
+abuelaEl.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  if (state !== 'between' || !abuelaEl.classList.contains('in')) return;
+  abuelaOutAt = clock; nextWaveAt = Math.min(nextWaveAt, clock + 0.5); sfx.sfxClick();
+});
 
 // ───────────────────────── throwing ─────────────────────────
 const shotProto = makeChancla(); shotProto.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? relicSole : relicStrap; });
@@ -567,7 +619,7 @@ function newGame(): void {
   startWave(params.has('wave') ? Math.max(1, Number(params.get('wave'))) : 1);
 }
 function gameOver(): void {
-  state = 'over'; aiming = false;
+  state = 'over'; aiming = false; abuelaHide();
   const isBest = score > best; if (isBest) { best = score; try { localStorage.setItem(BEST_KEY, String(best)); } catch { /* ignore */ } }
   $('oWave').textContent = String(wave); $('oScore').textContent = String(score);
   $('oBest').textContent = isBest && score > 0 ? '🏆 New best!' : `Best: ${best}`;
@@ -604,6 +656,7 @@ function frame(now: number): void {
 
   if (state === 'play') spawnTick(dt);
   if (state === 'between' && clock >= nextWaveAt) startWave(wave + 1);
+  tickAbuela();
   // rapid fire: holding the button or the field keeps spraying
   if (clock < rapidUntil && (state === 'play' || state === 'between')) {
     if (fireHeld) autoThrow();
@@ -740,5 +793,8 @@ Promise.all(texLoads).then(() => {
   rapid: startRapid,
   bomb: useBomb,
   giveBomb: (n = 1) => giveBomb(n),
+  abuela: () => ({ on: abuelaEl.classList.contains('in'), line: abuelaLine.textContent, mad: abuelaImg.src.includes('angry'), at: abuelaAt, out: abuelaOutAt, clock, nextWaveAt }),
+  abuelaLines: () => ABUELA_LINES.map((l) => l.t),
+  clearWave: () => { toSpawn = 0; for (const k of kids) if (alive(k)) { kidGroup.remove(k.root); k.dead = true; } checkWaveDone(); },
   pause: (on: boolean) => { if (on !== (state === 'paused')) togglePause(); },
 };

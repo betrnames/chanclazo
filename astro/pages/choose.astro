@@ -1,13 +1,13 @@
 ---
-// /choose = the Chanclazo mini map. Markup, art and layout live in src/choose/map.ts (shared with choose.html for vite dev).
+// /choose = the Chanclazo arcade: a row of glowing Day of the Dead cabinets. Markup lives in src/choose/arcade.ts (shared with choose.html for vite dev).
 import Base from '../layouts/Base.astro';
-import { mapHtml } from '../../src/choose/map';
-import '../../src/choose/map.css';
+import { arcadeHtml } from '../../src/choose/arcade';
+import '../../src/choose/arcade.css';
 ---
-<Base title="Chanclazo: Pick your game on the map" description="The Chanclazo town map: tap a spot to play Chancla Waves, Chancla Strike, Chancla Crash or Piñata Slots. Free Day of the Dead browser games.">
-<Fragment set:html={mapHtml()} />
+<Base title="Chanclazo: Pick your game at the arcade" description="The Chanclazo arcade: pick a glowing cabinet to play Chancla Waves, Chancla Strike, Chancla Crash or Piñata Slots. Free Day of the Dead browser games.">
+<Fragment set:html={arcadeHtml()} />
 </Base>
 <script>
-  import { wireMap } from '../../src/choose/map';
-  wireMap();
+  import { wireArcade } from '../../src/choose/arcade';
+  wireArcade();
 </script>
