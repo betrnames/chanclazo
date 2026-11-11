@@ -1,6 +1,7 @@
 /* /choose arcade: a row of glowing Day of the Dead cabinets (see src/choose/arcade.ts) */
 @font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
 html,body{margin:0;height:100%;background:#0a0418;overflow:hidden}
+.lmusic{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;z-index:20;font:600 12px system-ui,sans-serif;color:#ffe9c2;background:rgba(20,5,40,.6);border:1px solid rgba(255,210,63,.5);border-radius:999px;padding:5px 10px;cursor:pointer}
 *{-webkit-tap-highlight-color:transparent}
 .czarcade{--h:min(66vh,600px);position:fixed;inset:0;overflow:hidden;font-family:LilitaOne,system-ui,sans-serif;color:#fff;
   background:radial-gradient(ellipse 80% 55% at 50% 100%,rgba(226,25,122,.32),transparent 70%),radial-gradient(ellipse 60% 40% at 50% 62%,rgba(24,200,192,.12),transparent 70%),linear-gradient(180deg,#05020f 0%,#170838 45%,#2c0c4a 72%,#14051f 100%);

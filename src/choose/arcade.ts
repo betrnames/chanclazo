@@ -1,4 +1,5 @@
 // /choose: the Chanclazo arcade. A row of glowing Day of the Dead arcade cabinets, one per game.
+import { initLanderMusic } from '../play/music';
 // One source for both pages: astro/pages/choose.astro renders arcadeHtml() at build time; choose.html (vite dev) injects it at runtime.
 // Pure HTML + CSS (src/choose/arcade.css) plus the existing character cut-outs. No Abuela here (Gabe's rule): Strike is the floating gold chancla.
 //
@@ -78,6 +79,16 @@ export function arcadeHtml(): string {
 
 /** Tap = flicker + launch; carousel keeps the centred cabinet lit and the dots in sync. */
 export function wireArcade(): void {
+  let musicBtn = document.getElementById('lmusic') as HTMLButtonElement | null;
+  if (!musicBtn) {
+    musicBtn = document.createElement('button');
+    musicBtn.id = 'lmusic';
+    musicBtn.type = 'button';
+    musicBtn.className = 'lmusic';
+    musicBtn.setAttribute('aria-label', 'Music on or off');
+    document.body.appendChild(musicBtn);
+  }
+  initLanderMusic(musicBtn);
   const row = document.getElementById('czrow');
   const cabs = Array.from(document.querySelectorAll<HTMLAnchorElement>('.czarcade a.cab'));
   const dots = Array.from(document.querySelectorAll<HTMLElement>('#czdots i'));

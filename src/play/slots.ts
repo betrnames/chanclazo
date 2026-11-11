@@ -978,7 +978,7 @@ async function boot() {
     loadImg('/play/t_chancla.webp').then(i => imgs.chancla = i),
     loadImg('/play/t_bottle.webp').then(i => imgs.bottle = i),
     loadImg('/play/t_pinata.webp').then(i => { imgs.pinata = i; }),
-    loadImg('/play/slots/llama_hd.webp').then(i => { imgs.pinata_llama = i; }),
+    loadImg('/play/slots/llama_hd.webp?v=2').then(i => { imgs.pinata_llama = i; }),
   ];
   await Promise.all(loads);
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
