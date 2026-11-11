@@ -164,7 +164,7 @@ interface Kid {
   pips?: THREE.Sprite[]; aura?: THREE.Sprite; hpFill?: THREE.Sprite; hpBar?: THREE.Sprite; variant: number; rage?: boolean;
   sheet: Sheet; map: THREE.Texture; edgeMat: THREE.Material; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
-  phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number;
+  phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number; eatAnim: number;
   bite?: THREE.Sprite; eatBody?: THREE.Mesh;
 }
 interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean; lane?: number }
@@ -183,8 +183,15 @@ const BOMB_MAX = 3, BOMB_R = 2.4, BOMB_DMG = 4;
 const SNACK_MAX = 4;
 const snackTex = tex('/waves/snack-concha.webp?v=2');
 const CONCHA_BITS = 5;
-const EAT_N = 8;
-const eatTex = tex('/waves/eat-boy.webp?v=1');
+// Eating sheets: the boy uses Gabe's eat-boy.webp (8 cells, 168×278) as-is, no squash.
+// Jefe and the flower-crown girl have their own 6-frame strips derived from their walk art
+// (reach, lean-in, bite, chew, chew, swallow). Head leans toward the concha; the face is never flattened.
+interface EatSheet { tex: THREE.Texture; n: number; cw: number; ch: number; fps: number }
+const EAT_SHEETS: Record<string, EatSheet> = {
+  boy:  { tex: tex('/waves/eat-boy.webp?v=1'),  n: 8, cw: 168, ch: 278, fps: 8.33 },
+  jefe: { tex: tex('/waves/eat-jefe.webp?v=1'), n: 6, cw: 168, ch: 278, fps: 10 },
+  girl: { tex: tex('/waves/eat-girl.webp?v=1'), n: 6, cw: 420, ch: 590, fps: 10 },
+};
 
 // ───────────────────────── kids ─────────────────────────
 const planeGeo = new Map<string, THREE.PlaneGeometry>();
@@ -220,7 +227,7 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bodyW * 0.72, bodyW * 0.32), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.8 }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.02, 0.04); root.add(shadow);
   const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w: bodyW, golden, variant, sheet: a, map, edgeMat, anim: 'walk', animT: 0, frameKey: -1,
-    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0 };
+    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0, eatAnim: 0 };
   if (kind === 'jefe') {
     k.pips = [];
     for (let i = 0; i < k.maxHp; i++) { const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: pipTex, depthWrite: false, fog: false })); p.scale.setScalar(0.3); p.position.set((i - (k.maxHp - 1) / 2) * 0.34, h + 0.16, 0.02); body.add(p); k.pips.push(p); }
@@ -525,29 +532,34 @@ function updateSnackBtn(): void {
   $('snackN').textContent = String(snacks);
 }
 function ensureEater(k: Kid): void {
-  if (k.eatBody || (k.kind !== 'boy' && k.kind !== 'jefe')) return;
-  const map = eatTex.clone();
-  map.repeat.set(1 / EAT_N, 1);
+  if (k.eatBody) return;
+  const sheet = EAT_SHEETS[k.kind];
+  if (!sheet) return;
+  const map = sheet.tex.clone();
+  map.repeat.set(1 / sheet.n, 1);
   map.offset.set(0, 0);
   const mat = new THREE.MeshBasicMaterial({ map, transparent: true, alphaTest: 0.12, depthWrite: false, side: THREE.FrontSide, fog: false });
-  const h = k.h, w = h * (168 / 278);
+  // World height matches the walk body; width follows the sheet's true aspect so the face is not stretched.
+  const h = k.h, w = h * (sheet.cw / sheet.ch);
   const g = new THREE.PlaneGeometry(w, h);
-  g.translate(0, h * 0.5, 0);
+  g.translate(0, h * 0.5, 0); // feet on the cobbles
   const mesh = new THREE.Mesh(g, mat);
-  mesh.position.z = 0.04;
+  mesh.position.z = 0.06;
   mesh.visible = false;
   mesh.renderOrder = 2;
   k.root.add(mesh);
   k.eatBody = mesh;
 }
-function showEater(k: Kid, s: number, on: boolean): void {
+function showEater(k: Kid, on: boolean): void {
   if (on) ensureEater(k);
   if (!k.eatBody) return;
   k.eatBody.visible = on;
   if (!on) return;
-  const frame = Math.floor(s * 8.33) % EAT_N;
+  const sheet = EAT_SHEETS[k.kind];
+  const frame = Math.floor(k.eatAnim * sheet.fps) % sheet.n;
   const map = (k.eatBody.material as THREE.MeshBasicMaterial).map!;
-  map.offset.x = frame / EAT_N;
+  map.offset.x = frame / sheet.n;
+  // The same mild card tilt as walking. A bigger rotation.x foreshortens the head into a flat angle — that was the bug.
   k.eatBody.rotation.set(0.2, -k.x * 0.04, 0);
 }
 function ensureBite(k: Kid): void {
@@ -1010,7 +1022,7 @@ function frame(now: number): void {
       continue;
     }
     if (state === 'play' || state === 'between') {
-      if (k.eat > 0) k.eat = Math.max(0, k.eat - dt);
+      if (k.eat > 0) { k.eat = Math.max(0, k.eat - dt); k.eatAnim += dt; } else k.eatAnim = 0;
       const stop = holdZ(k);
       let sp = k.stagger > 0 ? k.speed * 0.15 : k.speed;
       if (stop !== undefined) sp *= 0.32; // the whole row slows down before the concha
@@ -1023,27 +1035,27 @@ function frame(now: number): void {
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
     // walk frames follow distance so the planted feet in the atlas stay on the cobbles. No extra hop (that read as a skip).
     const cyc = (k.wob / (k.sheet.stride * (k.kind === 'jefe' ? 1.3 : 1)) + k.phase) % 1;
-    const eating = k.eat > 0 && (k.kind === 'boy' || k.kind === 'jefe' || !!k.bite);
-    const plateArt = k.eat > 0 && (k.kind === 'boy' || k.kind === 'jefe');
-    showEater(k, s, plateArt);
+    const plateArt = k.eat > 0 && !!EAT_SHEETS[k.kind];
+    const eating = k.eat > 0 && (plateArt || !!k.bite);
+    showEater(k, plateArt);
     if (plateArt) {
       k.body.visible = false;
       k.body.scale.set(1, 1, 1);
       if (k.bite) k.bite.visible = false;
     } else if (eating && k.bite) {
+      // Little skeleton and luchador have no eat sheet: a planted walk frame and a mild nod,
+      // never a Y-squash or a steeper card tilt (those flattened the head into a "chew" angle).
       k.body.visible = true;
-      // planted feet, a chew, and a bite of concha at the mouth
       setFrame(k, 'walk', 0);
-      const chew = Math.sin(s * 14 + k.phase);
-      const bit = chew > 0 ? 1 : 0;
-      k.body.scale.set(1 + bit * 0.07, 1 - bit * 0.12, 1);
-      k.body.rotation.set(0.42 + bit * 0.22, -k.x * 0.04, Math.sin(s * 16 + k.phase) * 0.05);
+      const chew = Math.sin(s * 10 + k.phase);
+      k.body.scale.set(1, 1, 1);
+      k.body.rotation.set(0.2 + chew * 0.05, -k.x * 0.04, 0);
       const left = Math.min(1, k.eat / 1.2);
-      const size = k.h * (0.08 + 0.06 * left) * (bit ? 0.7 : 1);
+      const size = k.h * (0.08 + 0.06 * left) * (chew > 0 ? 0.7 : 1);
       k.bite.visible = true;
       k.bite.scale.set(size, size * 0.9, 1);
-      k.bite.position.set(0, k.h * (0.64 - bit * 0.07), 0.35);
-      (k.bite.material as THREE.SpriteMaterial).rotation = bit ? -0.35 : 0.2;
+      k.bite.position.set(0, k.h * (0.64 - (chew > 0 ? 0.07 : 0)), 0.35);
+      (k.bite.material as THREE.SpriteMaterial).rotation = chew > 0 ? -0.35 : 0.2;
     } else {
       k.body.visible = true;
       k.body.scale.set(1, 1, 1);

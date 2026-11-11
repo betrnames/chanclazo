@@ -11,7 +11,12 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 ## Not on production yet (working tree, ship only when Gabe says push)
 These files are the latest playtest build. They are newer than `4daed0c` / `41da599`.
 
-1. **Boy eating pose.** Gabe sent `IMG_7894.GIF` (8 frames, 120ms, white background, hands at his mouth). Keyed and saved as `public/waves/eat-boy.webp` (8 cells, 168×278, feet on the bottom). In `waves.ts`, `showEater()` swaps **boy and jefe only** onto that strip while they eat the concha (`?` cache `eat-boy.webp?v=1`). Girl, little skeleton, and luchador still use the old chew (body squash + a tiny bite sprite). Do not put this pose on the girl.
+1. **Eating is a natural bite, not a flattened head.** The old chew squashed the body (`scale.y *= 0.88`) and tipped the card to 0.42–0.64 rad, which foreshortened faces into a flat angle. That squash and extra tilt are gone.
+   - **Boy:** Gabe's `eat-boy.webp` (8 cells, 168×278, from `IMG_7894.GIF`) is the right sheet and is wired as-is, correct aspect, feet on the cobbles, the same mild 0.2 card tilt as walking. It is not stretched or used on anyone else.
+   - **Jefe:** his own 6-frame strip `eat-jefe.webp` (168×278), derived from the boy's eat art with the same purple tint as his walk body. Sequence: reach, lean-in, bite, chew, chew, swallow. Head leans toward the concha; the jaw opens and closes.
+   - **Girl:** her own 6-frame strip `eat-girl.webp` (420×590, same cell as her walk), derived from her flower-crown walk frames. Same reach–lean–bite–chew–swallow sequence, same palette and costume. Her hit/KO rows are untouched.
+   - Little skeleton and luchador have no eat sheet: they hold a walk frame with a mild nod and a tiny bite sprite, never a Y-squash or a steeper tilt.
+   - `showEater()` swaps on the matching sheet while they eat. The loaf and crumb shatter are unchanged.
 2. **Concha crumbles into small bits.** Gabe does not need another sprite sheet. The loaf in the lane is the whole `snack-concha.webp`, and it shrinks smoothly on each bite (no spreading wedges). Each bite bursts many small crumbs, textured from that same concha art (pink sugar and golden bread). The bits fall, split into even smaller crumbs when they land, and fade out so nothing piles on the floor. Sprites are pooled (cap 96) to stay cheap on phones. Five bites, ~0.38s each, `sfxSquish`; a second concha in the same lane still refills up to 5. The throw in the air is still the whole concha. `public/waves/concha-bits.webp` is leftover from the old wedge look — leave the file, do not wire it back in.
 3. **Girl fall is no longer the old sticker.** The 3D video (`attachments/…39e99233…mp4`, 10s) is a **run only**. It has no hit and no fall. The hit/KO rows in `catrina-girl-atlas.webp` were an older flat drawing, so she changed costumes when a chancla landed. Those two rows were rebuilt by tipping the 3D walk cell (same girl, flower crown). Sheet is still 3360×1770, cell 420×590, anchor 210,587, walk 8 / hit 3 / ko 4, loaded as `?v=7`. She is still a flat card in the scene, like every other character. A real 3D tumble needs a new clip of **this** girl falling. Do not paste the old sticker frames back.
 4. **Do not use `public/waves/snack-elote.webp`.** It is an unused leftover. Gabe removed elote. Leave it untracked. Pan dulce / concha is the only snack.
@@ -76,6 +81,7 @@ npm run build
 ## Open
 - Girl hit/KO is the 3D render tipped in the cell, not a new fall video. Ask Gabe before replacing it again.
 - Concha crumb burst (counts, sizes, split-on-land, fade) was tuned in the preview. Phone playtest still needed.
+- Eating poses (natural bite, no flattened heads) are on the preview: boy uses Gabe's `eat-boy.webp`, jefe and the girl have new 6-frame strips. Phone playtest still needed.
 - WAVE CLEAR banner can overlap the papel picado. Cosmetic.
 - Strike level map on a short landscape phone can touch the footer.
 - `snack-elote.webp` is junk. Do not add it.
