@@ -20,35 +20,42 @@ let scale = 1, ox = 0, oy = 0, dpr = 1;
 // Visible-area sizing: iOS 100vh/innerHeight can include space under the browser bars, so use
 // visualViewport when it is smaller, size the canvas to it, and respect safe-area insets (notch/home bar).
 let VW = window.innerWidth, VH = window.innerHeight;
+let turned = false;
 const safeProbe = document.createElement('div');
 safeProbe.style.cssText = 'position:fixed;inset:0;pointer-events:none;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
 document.body.appendChild(safeProbe);
 function fit() {
   const vv = window.visualViewport;
-  VW = Math.round(vv ? Math.min(window.innerWidth, vv.width) : window.innerWidth);
-  VH = Math.round(vv ? Math.min(window.innerHeight, vv.height) : window.innerHeight);
+  const rw = Math.round(vv ? Math.min(window.innerWidth, vv.width) : window.innerWidth);
+  const rh = Math.round(vv ? Math.min(window.innerHeight, vv.height) : window.innerHeight);
+  VW = turned ? rh : rw; VH = turned ? rw : rh;
+  if (VW < 2 || VH < 2) return;
   document.documentElement.style.setProperty('--vh', VH + 'px');
   cv.style.width = VW + 'px'; cv.style.height = VH + 'px';
-  dpr = Math.min(2, devicePixelRatio || 1); cv.width = VW * dpr; cv.height = VH * dpr;
-  const cs = getComputedStyle(safeProbe); const sl = parseFloat(cs.paddingLeft) || 0, sr = parseFloat(cs.paddingRight) || 0, sb = parseFloat(cs.paddingBottom) || 0;
-  const VIEW_H = 560, avW = VW - sl - sr, avH = VH - sb;
-  if (VH > VW * 1.15) {
-    // Portrait: zoom onto the launch spot + fort and lift the ground to ~78% height.
-    scale = VW / 1060; ox = VW / 2 - (W / 2) * scale; oy = VH * 0.78 - GROUND * scale;
-  } else { scale = Math.min(avW / W, (avH - 46) / VIEW_H); ox = sl + (avW - W * scale) / 2; oy = avH - (GROUND + 30) * scale; }
+  dpr = Math.min(2, devicePixelRatio || 1); cv.width = Math.max(1, Math.round(VW * dpr)); cv.height = Math.max(1, Math.round(VH * dpr));
+  const cs = getComputedStyle(safeProbe);
+  const sl = parseFloat(cs.paddingLeft) || 0, sr = parseFloat(cs.paddingRight) || 0, st = parseFloat(cs.paddingTop) || 0, sb = parseFloat(cs.paddingBottom) || 0;
+  const x0 = 40, x1 = 1120, y0 = 420, y1 = 990;
+  const avW = Math.max(1, VW - sl - sr);
+  const top = Math.max(st, 6) + 56;
+  const avH = Math.max(1, VH - top - Math.max(sb, 6));
+  scale = Math.min(avW / (x1 - x0), avH / (y1 - y0));
+  ox = sl + (avW - (x1 - x0) * scale) / 2 - x0 * scale;
+  oy = top + (avH - (y1 - y0) * scale) / 2 - y0 * scale;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = '#140a24'; ctx.fillRect(0, 0, VW, VH);
+}
+function setTurned(next: boolean) {
+  turned = next;
+  document.documentElement.classList.toggle('turned', turned);
+  const b = document.getElementById('turn');
+  if (b) { b.textContent = turned ? 'Upright' : 'Rotate'; b.setAttribute('aria-pressed', String(turned)); }
+  onLayout();
 }
 // Orientation: iOS Safari reports the new size late, so re-check a few times after any rotate/resize.
-let forcePlay = false, portraitNow = false;
+let portraitNow = false;
 function readPortrait() {
-  // VW/VH are the most reliable across Safari, Chrome for iOS (CriOS) and in-app views;
-  // visualViewport can lag/zoom in CriOS, and the address bar changes height, so use it only as a tie-break.
-  if (forcePlay) return false;
-  const touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  if (!touch) return false;
   const w = window.innerWidth, h = window.innerHeight;
-  let portrait = h > w;
-  if (Math.abs(w - h) < 40) { const mq = matchMedia('(orientation: portrait)').matches; const vv = window.visualViewport; portrait = vv ? vv.height > vv.width : mq; }
-  return portrait && Math.min(w, h) < 900;
+  return h > w;
 }
 const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const STANDALONE = (navigator as any).standalone === true || matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
@@ -56,7 +63,9 @@ let a2hsOff = (() => { try { return localStorage.getItem('chanclazo_a2hs_off') =
 setTimeout(() => { a2hsOff = true; updateA2hs(); }, 9000); // auto-hide (not remembered)
 function updateA2hs() { const el = document.getElementById('a2hs'); if (el) el.classList.toggle('hidden', !(IS_IOS && !STANDALONE && !a2hsOff && !portraitNow && window.innerWidth > window.innerHeight)); }
 function onLayout() {
-  portraitNow = readPortrait(); document.body.classList.toggle('portrait', portraitNow); fit(); updateA2hs(); last = performance.now();
+  const realPortrait = window.innerHeight > window.innerWidth;
+  if (turned && !realPortrait) setTurned(false);
+  else { portraitNow = realPortrait; document.body.classList.toggle('portrait', portraitNow); fit(); updateA2hs(); last = performance.now(); }
 }
 function scheduleLayout() { onLayout(); for (const d of [120, 300, 650, 1200, 2000]) setTimeout(onLayout, d); }
 setInterval(() => { if (readPortrait() !== portraitNow) onLayout(); }, 700); // safety net if a rotate event is missed
@@ -246,11 +255,13 @@ Events.on(engine, 'collisionStart', (e) => {
 });
 
 // ── Input: drag back anywhere to aim; tap mid-air to split the triple ────────
-function isPortraitPhone() { return portraitNow; }
-const toWorld = (cx: number, cy: number) => ({ x: (cx - ox) / scale, y: (cy - oy) / scale });
+const toWorld = (cx: number, cy: number) => {
+  const r = cv.getBoundingClientRect();
+  return { x: (cx - r.left - ox) / scale, y: (cy - r.top - oy) / scale };
+};
 let dragStart = { x: 0, y: 0 };
 cv.addEventListener('pointerdown', (e) => {
-  wakeAudio(); if (isPortraitPhone() || !playing || ended) return;
+  wakeAudio(); if (!playing || ended) return;
   if (flying.length && shotType === 'triple' && !split && performance.now() - shotAt < 2500) { doSplit(); return; }
   if (flying.length || shotsLeft <= 0) return;
   aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; cv.setPointerCapture(e.pointerId); A.stretchStart();
@@ -391,10 +402,9 @@ function frame(now: number) {
 }
 function frameBody(now: number) {
   const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now; t += dt; // clamp hitches (resize/rotate)
-  const portrait = isPortraitPhone();
   slowT = Math.max(0, slowT - dt); const timeScale = slowT > 0 ? 0.3 : 1;
   zoom += ((slowT > 0 ? 1.35 : 1) - zoom) * Math.min(1, dt * 4);
-  if (playing && !portrait && !ended) {
+  if (playing && !ended) {
     const hs = hitStopT > 0 ? 0.08 : 1; hitStopT = Math.max(0, hitStopT - dt);
     levelT += dt; acc = Math.min(acc + dt * 1000 * timeScale * hs, STEP * 4);
     while (acc >= STEP) {
@@ -496,10 +506,6 @@ function startGame() {
     else if (totalStars() === 0) build(0); else openMap();
   });
   safe('audio', () => { wakeAudio(); A.unlock(); });
-  safe('fullscreen', () => {
-    const el = document.documentElement as any; const req = el.requestFullscreen;
-    if (typeof req === 'function' && !document.fullscreenElement) { const pr = req.call(el); if (pr && typeof pr.then === 'function') pr.then(() => { const lk = (screen.orientation as any)?.lock?.('landscape'); if (lk?.catch) lk.catch(() => {}); }, () => {}); }
-  });
 }
 function onTap(el: Element, fn: () => void) {
   const h = (e: Event) => { e.stopPropagation(); if (e.cancelable && e.type === 'touchend') e.preventDefault(); fn(); };
@@ -508,24 +514,24 @@ function onTap(el: Element, fn: () => void) {
 onTap(startScreen, startGame);
 onTap(go, startGame);
 for (const ev of ['touchend', 'click', 'pointerup']) startScreen.querySelector('a')?.addEventListener(ev, (e) => e.stopPropagation());
-let lastAny = 0;
-onTap($('playAnyway'), () => { const n = performance.now(); if (n - lastAny < 600) return; lastAny = n; forcePlay = true; onLayout(); startGame(); scheduleLayout(); report('play anyway → started'); });
 onTap($('restart'), () => { if (playing && started) build(level); });
 onTap($('mapBtn'), () => { if (playing && started) openMap(); });
-if (/[?&]debug=1/.test(location.search)) { let taps = 0; const card = $('rotate'); for (const ev of ['touchstart', 'touchend']) card.addEventListener(ev, (e) => { taps++; report(`taps ${taps}: ${ev} on ${(e.target as HTMLElement).id || (e.target as HTMLElement).tagName}`); }, { capture: true, passive: true }); }
+let turnAt = 0;
+$('turn').addEventListener('click', () => { const n = performance.now(); if (n - turnAt < 400) return; turnAt = n; setTurned(!turned); });
+if (/[?&]debug=1/.test(location.search)) { let taps = 0; for (const ev of ['touchstart', 'touchend']) document.body.addEventListener(ev, (e) => { taps++; report(`taps ${taps}: ${ev} on ${(e.target as HTMLElement).id || (e.target as HTMLElement).tagName}`); }, { capture: true, passive: true }); }
 function maybeCountdown() {
-  if (started || countdown !== null || portraitNow) return;
+  if (started || countdown !== null) return;
   let n = 3; go.textContent = `PLAY! (${n})`;
-  countdown = window.setInterval(() => { if (portraitNow) { clearInterval(countdown!); countdown = null; go.textContent = 'PLAY!'; return; } n--; if (n <= 0) startGame(); else go.textContent = `PLAY! (${n})`; }, 1000);
+  countdown = window.setInterval(() => { n--; if (n <= 0) startGame(); else go.textContent = `PLAY! (${n})`; }, 1000);
 }
 setInterval(maybeCountdown, 500);
 Promise.all(Object.entries(names).map(([k, v]) => loadImg(v).then((im) => { IMG[k] = im; if (k === 'chancla') { TINT.boot = tintImg(im, '#3b2210', 0.62); TINT.triple = tintImg(im, '#29c4e0', 0.5); } }).catch(() => report(`image failed: ${v}`))));
 document.getElementById('a2hsX')?.addEventListener('click', () => { a2hsOff = true; try { localStorage.setItem('chanclazo_a2hs_off', '1'); } catch { /* ignore */ } updateA2hs(); });
 if (/[?&]debug=1/.test(location.search)) setInterval(() => { const a = (window as any).__flingAudio; report(`audio ${a.state} · session ${a.session} · gain ${a.gain === null ? '-' : a.gain.toFixed(2)} · muted ${a.muted} · sounds ${a.played}`); }, 2000);
 safe('wireMute', () => { A.wireMute($('mute') as HTMLButtonElement); initAudioControls('fling', (m) => A.setMuted(m)); });
-build(0);
+safe('level0', () => build(0));
 onLayout(); scheduleLayout();
-if (DIRECT) setTimeout(startGame, 0); // rotate-to-landscape prompt still shows on portrait phones
+if (DIRECT) setTimeout(startGame, 0);
 requestAnimationFrame(frame);
 (window as any).__fling = {
   engine, world, meta, LEVELS, build, openMap, boom: (b: Matter.Body) => { armed = true; damage(b, 99); },

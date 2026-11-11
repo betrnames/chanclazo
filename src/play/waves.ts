@@ -117,7 +117,7 @@ const ART = {
   boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3),
   girl: sheet('catrina-girl', 2576, 1086, 368, 362, 184, 354, 2.02, 1.55, 7, 1, 2, '?v=5'),
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
-  calaca: sheet('calaverita-small', 1968, 1086, 328, 362, 164, 354, 1.25, 1.6, 6, 1, 3, '?v=6'),
+  calaca: sheet('calaverita-small', 2952, 1323, 492, 441, 246, 435, 1.25, 1.6, 6, 1, 6, '?v=7'),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
   lucha: sheet('luchador-boss', 2744, 1038, 343, 346, 170, 339, 4.1, 3.0), // 1.5x bigger boss (Gabe, 2026-11-10); hp bar follows via BOSS_HEAD
 };
@@ -213,7 +213,7 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const edgeMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   if (kind === 'jefe') mat.color.setHex(0xd8c8ff); // big brother: a touch of purple
   root.add(body);
-  const bodyW = kind === 'girl' ? w * (210 / a.cw) : kind === 'calaca' ? w * (165 / a.cw) : w;
+  const bodyW = kind === 'girl' ? w * (210 / a.cw) : kind === 'calaca' ? w * (172 / a.cw) : w;
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bodyW * 0.72, bodyW * 0.32), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.8 }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.02, 0.04); root.add(shadow);
   const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w: bodyW, golden, variant, sheet: a, map, edgeMat, anim: 'walk', animT: 0, frameKey: -1,
@@ -304,6 +304,19 @@ function checkWaveDone(): void {
 // The ONLY place Abuela appears in Waves (Gabe, 2026-11-10): after each cleared wave she slides in from the left with a
 // one-liner, holds ~2.5 s, slides out, then the next wave starts. Shuffle-bag: no repeats until the pool is used up.
 // Driven by the game clock, so pause freezes her timer (she slides out while paused). Tapping her skips straight to the next wave.
+const TITLE_QUOTES = [
+  'When words fail, the chanclazo speaks.',
+  'One chancla. A whole parade of skulls.',
+  'The ofrenda is closed. The chancla is not.',
+  'Aim with love. Throw with purpose.',
+  'Hold the line. The candles are watching.',
+  'Abuela doesn\'t miss. Neither should you.',
+  'They march. You throw. That\'s the deal.',
+  'Pan dulce is for sharing. Chanclas are not.',
+  'A quiet plaza is a plaza that got the chancla.',
+  'Don\'t negotiate with skeletons.',
+];
+$('titleQuote').textContent = TITLE_QUOTES[Math.floor(Math.random() * TITLE_QUOTES.length)];
 const ABUELA_HOLD = 2.5;
 const ABUELA_LINES: { t: string; mad?: boolean }[] = [
   { t: '¡Mijo, I\'ve seen faster chanclas at a funeral!', mad: true },
