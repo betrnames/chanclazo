@@ -12,7 +12,7 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 These files are the latest playtest build. They are newer than `4daed0c` / `41da599`.
 
 1. **Boy eating pose.** Gabe sent `IMG_7894.GIF` (8 frames, 120ms, white background, hands at his mouth). Keyed and saved as `public/waves/eat-boy.webp` (8 cells, 168×278, feet on the bottom). In `waves.ts`, `showEater()` swaps **boy and jefe only** onto that strip while they eat the concha (`?` cache `eat-boy.webp?v=1`). Girl, little skeleton, and luchador still use the old chew (body squash + a tiny bite sprite). Do not put this pose on the girl.
-2. **Concha breaks into pieces. Gabe does not need another sprite sheet.** `public/waves/concha-bits.webp` is the existing `snack-concha.webp` cut into 5 overlapping wedges (256×256 cells). `placeConcha()` stacks them so it still looks whole. Each bite calls `snapPiece()`: one wedge pops off, spins, and fades (`crumbs`). The pieces left in the lane spread apart. Five bites and it is gone. A second concha in the same lane refills bites and pieces up to 5. The throw in the air still uses the whole `snack-concha.webp`.
+2. **Concha crumbles into small bits.** Gabe does not need another sprite sheet. The loaf in the lane is the whole `snack-concha.webp`, and it shrinks smoothly on each bite (no spreading wedges). Each bite bursts many small crumbs, textured from that same concha art (pink sugar and golden bread). The bits fall, split into even smaller crumbs when they land, and fade out so nothing piles on the floor. Sprites are pooled (cap 96) to stay cheap on phones. Five bites, ~0.38s each, `sfxSquish`; a second concha in the same lane still refills up to 5. The throw in the air is still the whole concha. `public/waves/concha-bits.webp` is leftover from the old wedge look — leave the file, do not wire it back in.
 3. **Girl fall is no longer the old sticker.** The 3D video (`attachments/…39e99233…mp4`, 10s) is a **run only**. It has no hit and no fall. The hit/KO rows in `catrina-girl-atlas.webp` were an older flat drawing, so she changed costumes when a chancla landed. Those two rows were rebuilt by tipping the 3D walk cell (same girl, flower crown). Sheet is still 3360×1770, cell 420×590, anchor 210,587, walk 8 / hit 3 / ko 4, loaded as `?v=7`. She is still a flat card in the scene, like every other character. A real 3D tumble needs a new clip of **this** girl falling. Do not paste the old sticker frames back.
 4. **Do not use `public/waves/snack-elote.webp`.** It is an unused leftover. Gabe removed elote. Leave it untracked. Pan dulce / concha is the only snack.
 
@@ -59,7 +59,7 @@ These files are the latest playtest build. They are newer than `4daed0c` / `41da
 ### Día de los Muertos, short
 - Abuela after each cleared wave, slides in from the left, `ABUELA_LINES` shuffle bag, hold 2.5s, tap her to skip. Pause freezes her clock.
 - Boss luchador every 3rd wave. `bossHp`, `BOSS_DMG` 4, `BOSS_RAGE` 1.4.
-- Hooks: `window.__waves` → `ready`, `start`, `state`, `kids`, `conchas`, `wave(n)`, `spawn(kind, lane, z, speed)`, `clearWave`, `hurt`, `bomb`, `giveBomb`, `rapid`, `pause`, `abuela`, `abuelaLines`. Params: `?start=1`, `?wave=N`, `?bombs=N`.
+- Hooks: `window.__waves` → `ready`, `start`, `state`, `kids`, `conchas`, `crumbs`, `placeConcha(lane)`, `giveSnack`, `snack`, `wave(n)`, `spawn(kind, lane, z, speed)`, `clearWave`, `hurt`, `bomb`, `giveBomb`, `rapid`, `pause`, `abuela`, `abuelaLines`. Params: `?start=1`, `?wave=N`, `?bombs=N`.
 - Atlases load before the first frame (`texLoads`).
 
 ## Build and deploy
@@ -75,13 +75,13 @@ npm run build
 
 ## Open
 - Girl hit/KO is the 3D render tipped in the cell, not a new fall video. Ask Gabe before replacing it again.
-- Concha piece gap and crumb lifetime were tuned once in the preview (`paintConcha` gap 0.2 per missing piece, crumb life 0.85s). Phone playtest still needed.
+- Concha crumb burst (counts, sizes, split-on-land, fade) was tuned in the preview. Phone playtest still needed.
 - WAVE CLEAR banner can overlap the papel picado. Cosmetic.
 - Strike level map on a short landscape phone can touch the footer.
 - `snack-elote.webp` is junk. Do not add it.
 - Boss and `waveSpec` numbers are playtest values. Don't retune unless Gabe says the waves are too easy or too hard.
 
 ## Next, only if Gabe asks
-- Push the eating pose, concha pieces, and 3D girl fall live (that is a `main` release, v1.1.8).
+- Push the eating pose, concha crumble, and 3D girl fall live (that is a `main` release, v1.1.8).
 - A real fall clip of the flower-crown girl, if he wants the knockdown to stop being a tipped card.
 - Crash as a kart racer, with a cabinet, when he asks.
