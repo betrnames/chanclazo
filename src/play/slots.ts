@@ -373,7 +373,7 @@ function enterBonus() {
   bonusMult = 1; bonusHits = 0; bonusTotal = 0; bonusTimer = 12; smashFx = [];
   A.smashFanfare();
   bonusPins = [];
-  const n = 7 + Math.floor(Math.random() * 4);
+  const n = 4;
   for (let i = 0; i < n; i++) {
     bonusPins.push({
       x: W * (0.15 + Math.random() * 0.7), y: H * (0.25 + Math.random() * 0.45),
@@ -430,7 +430,7 @@ function endBonus() {
 }
 
 function fit() {
-  dpr = Math.min(2, devicePixelRatio || 1);
+  dpr = Math.min(3, devicePixelRatio || 1);
   W = canvas.clientWidth; H = canvas.clientHeight;
   canvas.width = Math.floor(W * dpr); canvas.height = Math.floor(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -706,6 +706,8 @@ function hitControls(x: number, y: number) {
 
 function drawLlama(im: HTMLImageElement, x: number, y: number, max: number) {
   const sc = max / Math.max(im.width, im.height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(im, x - im.width * sc / 2, y - im.height * sc / 2, im.width * sc, im.height * sc);
 }
 function drawBonus(dt: number) {
@@ -775,7 +777,7 @@ function drawPick() {
   ctx.fillText(`${pickPicksLeft} picks left · total ${pickTotal}`, W / 2, 94);
   for (const it of pickItems) {
     const im = imgs[HD_LLAMA] || imgs.pinata;
-    if (im && im.complete && !it.revealed) drawLlama(im, it.x, it.y, Math.min(190, W * 0.34));
+    if (im && im.complete && !it.revealed) drawLlama(im, it.x, it.y, Math.min(210, W * 0.30));
     else if (it.revealed) {
       ctx.fillStyle = '#7a1f4f';
       roundRect(it.x - 48, it.y - 28, 96, 56, 12); ctx.fill();
@@ -976,7 +978,7 @@ async function boot() {
     loadImg('/play/t_chancla.webp').then(i => imgs.chancla = i),
     loadImg('/play/t_bottle.webp').then(i => imgs.bottle = i),
     loadImg('/play/t_pinata.webp').then(i => { imgs.pinata = i; }),
-    loadImg('/play/llama_choose.webp').then(i => { imgs.pinata_llama = i; }),
+    loadImg('/play/slots/llama_hd.webp').then(i => { imgs.pinata_llama = i; }),
   ];
   await Promise.all(loads);
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
