@@ -1,0 +1,25 @@
+{
+ "meta": {
+  "generator": "packed from IMG_7861.jpg",
+  "image": "calavera-boy-atlas.webp",
+  "size": {
+   "w": 3328,
+   "h": 1302
+  },
+  "cell": {
+   "w": 416,
+   "h": 434
+  },
+  "anchor": {
+   "x": 208,
+   "y": 422,
+   "note": "feet/ground point inside every cell, y from top"
+  },
+  "bodyHeightPx": 400,
+  "counts": {
+   "walk": 6,
+   "hit": 1,
+   "ko": 3
+  }
+ }
+}

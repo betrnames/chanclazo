@@ -15,7 +15,7 @@ const LEVELS = [
 let level = Math.min(LEVELS.length, Math.max(1, parseInt(new URLSearchParams(location.search).get('level') || '1', 10) || 1));
 let MOVES = LEVELS[level - 1].moves, GOAL = LEVELS[level - 1].goal;
 // Regular tiles reuse the original art; specials: chancla = line clear, sugar skull = bomb, piñata = color clear
-const TILE_SRC = ['/play/t_abuela.webp', '/play/t_lucha.webp', '/play/t_skull.webp', '/play/t_bottle.webp', '/play/abuela_sprite.webp'];
+const TILE_SRC = ['/play/v2/abuela_head.webp', '/play/v2/sidro_head.webp', '/play/t_skull.webp', '/play/t_bottle.webp', '/play/abuela_sprite.webp'];
 // Solid folk-art tile colors: abuela marigold, luchador turquoise, sugar skull magenta, bottle red-orange, marigold flower lime.
 const TILE_BG = ['#f7a21b', '#18b5b0', '#e2197a', '#ff5a36', '#8cc63f'];
 const SP = { none: 0, lineH: 1, lineV: 2, bomb: 3, color: 4 } as const;

@@ -44,10 +44,12 @@ export default function LorePage() {
     <div style={{ minHeight: '100vh', background: '#110d07', color: '#fff', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
 
       {/* Static Chancla Strike night-cemetery background (non-scrolling layer; no parallax, no background-attachment) */}
-      <style>{`.lore-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:url(/lore/cemetery_landscape.webp) center/cover no-repeat}
-@media (max-aspect-ratio:1/1){.lore-bg{background-image:url(/lore/cemetery_portrait.webp)}}
-.lore-dim{position:fixed;inset:0;z-index:1;pointer-events:none;background:rgba(0,0,0,.55)}
-.lore-fade{position:fixed;left:0;right:0;bottom:0;height:32vh;z-index:1;pointer-events:none;background:linear-gradient(to bottom,rgba(12,4,24,0),rgba(12,4,24,.85))}`}</style>
+      <style>{`.lore-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:url(/lp/final/bg-16x9.webp) center/cover no-repeat}
+@media (max-aspect-ratio:1/1){.lore-bg{background-image:url(/lp/final/bg-9x16.webp)}}
+.lore-dim{display:none}
+.lore-box{background:rgba(10,5,20,.75);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-radius:6px;border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 40px rgba(0,0,0,.5)}
+@media (max-width:600px){.lore-box{margin:16px 12px 40px!important;width:auto!important}}
+.lore-fade{display:none;position:fixed;left:0;right:0;bottom:0;height:32vh;z-index:1;pointer-events:none;background:linear-gradient(to bottom,rgba(12,4,24,0),rgba(12,4,24,.85))}`}</style>
       <div className="lore-bg" aria-hidden="true" />
       {/* Neutral dim for text readability + bottom night fade (both sit under the content, z-index 1) */}
       <div className="lore-dim" aria-hidden="true" />
@@ -69,7 +71,7 @@ export default function LorePage() {
       </nav>
 
       {/* Main content */}
-      <main style={{ flex: 1, maxWidth: '560px', margin: '0 auto', padding: '48px 24px 64px', width: '100%', boxSizing: 'border-box', position: 'relative', zIndex: 2 }}>
+      <main className="lore-box" style={{ flex: 1, maxWidth: '560px', margin: '32px auto 56px', padding: '40px 28px 48px', width: '100%', boxSizing: 'border-box', position: 'relative', zIndex: 2 }}>
 
         <p style={{ fontSize: '10px', color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.25em', fontWeight: 700, marginBottom: '16px' }}>
           Latino Culture · Field Guide

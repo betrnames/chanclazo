@@ -9,10 +9,9 @@ import * as A from './flingAudio';
 
 const { Engine, Bodies, Composite, Body, Events, Vector, Sleeping } = Matter;
 const W = 1100, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
-// Abuela throws by hand (no slingshot). HAND = her throwing hand in the release pose; launch + aim guide originate here.
-const ABU = { x: 68, ground: 920 };                 // feet centre (same spot the old sprite stood)
-const WIND = { h: 193, hand: { x: 22, y: 739 } }, REL = { h: 190 };
-const HAND = { x: 105, y: 775 };
+// The gold chancla is the thrower: it floats and glows at SLING (its rest point; launch + aim guide originate here).
+// Pull back on it (or drag anywhere), it follows the pull and glows with power, release to throw.
+const SLING = { x: 176, y: 790 }, VIS = 0.42; // VIS = how far the chancla follows the pull on screen
 const MAXPULL = 140, POWER = 0.21;
 
 const cv = document.createElement('canvas'); (document.body as HTMLElement).insertBefore(cv, document.body.firstChild);
@@ -34,7 +33,7 @@ function fit() {
   const cs = getComputedStyle(safeProbe); const sl = parseFloat(cs.paddingLeft) || 0, sr = parseFloat(cs.paddingRight) || 0, sb = parseFloat(cs.paddingBottom) || 0;
   const VIEW_H = 560, avW = VW - sl - sr, avH = VH - sb;
   if (VH > VW * 1.15) {
-    // Portrait: zoom onto abuela + fort and lift the ground to ~78% height.
+    // Portrait: zoom onto the launch spot + fort and lift the ground to ~78% height.
     scale = VW / 1060; ox = VW / 2 - (W / 2) * scale; oy = VH * 0.78 - GROUND * scale;
   } else { scale = Math.min(avW / W, (avH - 46) / VIEW_H); ox = sl + (avW - W * scale) / 2; oy = avH - (GROUND + 30) * scale; }
 }
@@ -68,7 +67,7 @@ document.addEventListener('visibilitychange', scheduleLayout);
 fit();
 
 const IMG: Record<string, HTMLImageElement> = {};
-const names = { bg: '/play/night_bg.webp', bgMercado: '/play/mercado_bg.webp', bgCata: '/play/cata_bg.webp', abuela: '/play/abuela_windup.webp?v=9724bca5', abuelaRel: '/play/abuela_release.webp?v=f47e24e0', lucha: '/play/t_lucha.webp', calaca: '/play/t_skull.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
+const names = { bg: '/play/night_bg.webp', bgMercado: '/play/mercado_bg.webp', bgCata: '/play/cata_bg.webp', lucha: '/play/t_lucha.webp', calaca: '/play/t_skull.webp', chancla: '/play/t_chancla.webp', pinata: '/play/t_pinata.webp' };
 const TINT: Record<string, HTMLCanvasElement> = {};
 function tintImg(img: HTMLImageElement, color: string, a: number) {
   const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d')!;
@@ -109,7 +108,7 @@ const LEVELS: Level[] = [
   { area: 1, shots: 4, tip: 'Light the fireworks to chain the blast.', build: (l) => { for (const x of [880, 930, 980]) l.add('tnt', x, 0); const p = l.add('picado', 930, 46, 170, 16); l.add('lucha', 890, p); l.add('calaca', 970, p); l.add('ghost', 790, 200); l.add('ghost', 1050, 260); } },
   { area: 2, shots: 4, tip: 'New: Triple chancla! Tap mid-air to split it.', build: (l) => { for (const x of [780, 900, 1020]) { const t = l.stack(x, 0, [['stone', 40, 90], ['wood', 80, 20]]); l.add('calaca', x, t); } } },
   { area: 2, shots: 4, tip: 'Break the walls to reach the armored heads.', build: (l) => { l.add('stone', 820, 0, 30, 140); l.add('armor', 880, 0); l.add('stone', 940, 0, 30, 140); const t = l.add('wood', 880, 140, 170, 20); l.add('tnt', 880, t); l.add('armor', 1030, 0); l.add('ghost', 960, 290); } },
-  { area: 2, shots: 5, tip: 'The final fortress. ¡Ándale, Abuela!', build: (l) => { const a = l.bridge(800, 110, 100, 0, 'stone', 'wood'); l.add('lucha', 800, 0); l.add('armor', 800, a); const b = l.bridge(970, 120, 120, 0, 'wood', 'stone'); l.add('tnt', 970, 0); l.add('calaca', 970, b); l.add('pinata', 885, 0); l.add('ghost', 1060, 300); l.add('tnt', 1050, 0); } },
+  { area: 2, shots: 5, tip: 'The final fortress. ¡Ándale!', build: (l) => { const a = l.bridge(800, 110, 100, 0, 'stone', 'wood'); l.add('lucha', 800, 0); l.add('armor', 800, a); const b = l.bridge(970, 120, 120, 0, 'wood', 'stone'); l.add('tnt', 970, 0); l.add('calaca', 970, b); l.add('pinata', 885, 0); l.add('ghost', 1060, 300); l.add('tnt', 1050, 0); } },
 ];
 const PICADO = ['#f72585', '#4cc9f0', '#ffd166', '#06d6a0', '#9b5de5'];
 
@@ -126,12 +125,20 @@ const engine = Engine.create({ enableSleeping: true, positionIterations: 10, vel
 const world = engine.world;
 let level = 0, score = 0, shotsLeft = 0, flying: Matter.Body[] = [], shotAt = 0, ended = false, playing = false, armed = false, split = false;
 let shotType: ShotType = 'chancla', throwKOs = 0, slowT = 0, focus = { x: 880, y: 800 }, zoom = 1, levelT = 0;
-let aiming = false, pull = { x: 0, y: 0 }, abuelaKick = 0, relT = 0, shake = 0, flashT = 0;
+let aiming = false, pull = { x: 0, y: 0 }, relT = 0, shake = 0, flashT = 0;
 interface Part { x: number; y: number; vx: number; vy: number; life: number; c: string; s: number }
 const parts: Part[] = [];
 interface Pop { x: number; y: number; t: string; life: number; big?: boolean }
 const pops: Pop[] = [];
 const ghosts: Matter.Body[] = [];
+// polish: gold shockwave rings, marigold petals that flutter and fade before the ground, short hit-stop on knock-outs
+interface Ring { x: number; y: number; r: number; life: number; c: string }
+const rings: Ring[] = [];
+interface Petal { x: number; y: number; vx: number; vy: number; a: number; va: number; life: number; c: string; s: number }
+const petals: Petal[] = [];
+let hitStopT = 0;
+const MARIGOLD = ['#ff8c1a', '#ffb000', '#ffd23f', '#ff6a00', '#e2197a'];
+function petalBurst(x: number, y: number, n = 18) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 5; petals.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, life: 1, c: MARIGOLD[i % MARIGOLD.length], s: 6 + Math.random() * 5 }); } }
 
 function burst(x: number, y: number, colors: string[], n = 16) {
   for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - 0.5) * 9, vy: -Math.random() * 8, life: 1, c: colors[i % colors.length], s: 4 + Math.random() * 6 });
@@ -190,6 +197,7 @@ function damage(b: Matter.Body, amt: number) {
     if (m.kind === 'ghost') A.wail(); else A.knockout();
     if (throwKOs > 1) { const bonus = 1000 * (throwKOs - 1); score += bonus; pops.push({ x: b.position.x, y: b.position.y - 70, t: `COMBO ×${throwKOs}  +${bonus}`, life: 1.6, big: true }); A.explosion(); }
     shake = 10; burst(b.position.x, b.position.y, m.kind === 'lucha' || m.kind === 'armor' ? ['#d62828', '#ffd166', '#fff'] : ['#fbf6ea', '#9be7ff', '#f72585'], 26);
+    rings.push({ x: b.position.x, y: b.position.y, r: 10, life: 1, c: '255,214,102' }); petalBurst(b.position.x, b.position.y, 20); hitStopT = Math.max(hitStopT, 0.07);
     if (villainsLeft() === 0) { slowT = 1.5; focus = { x: b.position.x, y: b.position.y }; vib([40, 40, 80]); }
   } else { if (m.kind === 'wood') A.breakWood(); else if (m.kind === 'stone') A.breakStone(); else A.ripPaper(); burst(b.position.x, b.position.y, m.kind === 'wood' ? ['#8b5a2b', '#c08a4f'] : m.kind === 'stone' ? ['#8a8597', '#5d5868'] : PICADO, 12); }
   hud();
@@ -226,6 +234,8 @@ Events.on(engine, 'collisionStart', (e) => {
     const rel = Vector.magnitude(Vector.sub(p.bodyA.velocity, p.bodyB.velocity));
     if (rel < 2.4) continue; // ignore resting/settle contacts
     const km = meta.get(p.bodyA.id) || meta.get(p.bodyB.id); if (km && rel > 3) A.knock(km.kind === 'armor' ? 'stone' : km.kind, rel);
+    const shotB = isShot(p.bodyA) ? p.bodyA : isShot(p.bodyB) ? p.bodyB : null;
+    if (shotB && rel > 5 && !(shotB as any).__hit) { (shotB as any).__hit = 1; const c = p.collision.supports[0] || shotB.position; rings.push({ x: c.x, y: c.y, r: 6, life: 0.7, c: '255,236,170' }); burst(c.x, c.y, ['#ffe08a', '#fff6c8', '#ffb000'], 10); }
     const massF = (b: Matter.Body) => (b.isStatic ? 3 : Math.min(isShot(b) ? 4 : 3, b.mass / 2));
     for (const [a, o] of [[p.bodyA, p.bodyB], [p.bodyB, p.bodyA]] as const) {
       const ma = meta.get(a.id); if (!ma) continue;
@@ -243,12 +253,12 @@ cv.addEventListener('pointerdown', (e) => {
   wakeAudio(); if (isPortraitPhone() || !playing || ended) return;
   if (flying.length && shotType === 'triple' && !split && performance.now() - shotAt < 2500) { doSplit(); return; }
   if (flying.length || shotsLeft <= 0) return;
-  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; cv.setPointerCapture(e.pointerId);
+  aiming = true; dragStart = toWorld(e.clientX, e.clientY); pull = { x: 0, y: 0 }; cv.setPointerCapture(e.pointerId); A.stretchStart();
 });
 cv.addEventListener('pointermove', (e) => {
   if (!aiming) return; const p = toWorld(e.clientX, e.clientY);
   let dx = p.x - dragStart.x, dy = p.y - dragStart.y; const d = Math.hypot(dx, dy);
-  if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy };
+  if (d > MAXPULL) { dx *= MAXPULL / d; dy *= MAXPULL / d; } pull = { x: dx, y: dy }; A.stretch(Math.min(1, d / MAXPULL));
 });
 function makeShot(x: number, y: number, vx: number, vy: number) { markFirstAction('fling', 'throw');
   const si = SHOT_INFO[shotType];
@@ -257,9 +267,9 @@ function makeShot(x: number, y: number, vx: number, vy: number) { markFirstActio
 }
 const release = () => {
   if (!aiming) return; aiming = false;
-  if (Math.hypot(pull.x, pull.y) < 25) { pull = { x: 0, y: 0 }; return; }
-  makeShot(HAND.x, HAND.y, -pull.x * POWER, -pull.y * POWER); relT = 0.45;
-  armed = true; split = false; shotAt = performance.now(); shotsLeft--; throwKOs = 0; abuelaKick = 1; vib(15);
+  if (Math.hypot(pull.x, pull.y) < 25) { pull = { x: 0, y: 0 }; A.stretchStop(); return; }
+  makeShot(SLING.x, SLING.y, -pull.x * POWER, -pull.y * POWER); relT = 0.45; A.stretchStop(); A.twang(Math.hypot(pull.x, pull.y) / MAXPULL);
+  armed = true; split = false; shotAt = performance.now(); shotsLeft--; throwKOs = 0; vib(15);
   { const pw = Math.hypot(pull.x, pull.y) / MAXPULL; A.whoosh(pw); } pull = { x: 0, y: 0 }; hud();
 };
 function doSplit() { markBonus('fling', 'triple_split');
@@ -291,7 +301,7 @@ function finish(win: boolean) {
   ($('retry') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); e.stopPropagation(); build(level); };
   ($('toMap') as HTMLAnchorElement).onclick = (e) => { e.preventDefault(); e.stopPropagation(); openMap(); };
   // X handle + Share on X only on game over (out of chanclas) or after clearing the final level.
-  if (!win || last) showLeaderboard('fling', 'Chancla Strike', score, level + 1, '/fling'); else hideLeaderboard();
+  if (!win || last) showLeaderboard('fling', 'Chancla Strike', score, level + 1, '/chancla-strike'); else hideLeaderboard();
   setTimeout(() => $('end').classList.remove('hidden'), win ? 300 : 600);
 }
 function checkFlow() {
@@ -334,12 +344,43 @@ function drawImg(img: CanvasImageSource & { width: number; height: number }, x: 
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.drawImage(img, -w / 2, -h / 2, w, h); ctx.restore();
 }
 function shotImg(): (CanvasImageSource & { width: number; height: number }) | undefined { return shotType === 'boot' ? TINT.boot : shotType === 'triple' ? TINT.triple : IMG.chancla; }
+function drawRelic(loaded: boolean) {
+  const pl = Math.hypot(pull.x, pull.y), pw = aiming ? Math.min(1, pl / MAXPULL) : 0;
+  // soft gold pool of light on the ground under the launch spot (the relic's "pedestal" is just light)
+  { const r = ctx.createRadialGradient(SLING.x, GROUND - 4, 4, SLING.x, GROUND - 4, 70); r.addColorStop(0, `rgba(255,200,90,${loaded ? 0.35 + pw * 0.2 : 0.15})`); r.addColorStop(1, 'rgba(255,200,90,0)');
+    ctx.fillStyle = r; ctx.save(); ctx.translate(SLING.x, GROUND - 4); ctx.scale(1, 0.32); ctx.beginPath(); ctx.arc(0, 0, 70, 0, 7); ctx.restore(); ctx.fill(); }
+  if (!loaded) return;
+  const bob = !aiming ? Math.sin(t * 2.4) * 6 : 0, tilt = !aiming ? Math.sin(t * 1.7) * 0.1 : 0;
+  const jit = pw > 0.92 ? (Math.random() - 0.5) * 2.4 : 0;
+  const c = { x: SLING.x + pull.x * VIS + jit, y: SLING.y + pull.y * VIS + bob + jit };
+  // light rays behind it, turning slowly (faster with power)
+  ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(t * (0.25 + pw * 1.2));
+  for (let i = 0; i < 10; i++) { ctx.rotate(Math.PI / 5); const g = ctx.createLinearGradient(0, 0, 0, -(70 + pw * 40)); g.addColorStop(0, `rgba(255,226,130,${0.22 + pw * 0.2})`); g.addColorStop(1, 'rgba(255,226,130,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(0, -(70 + pw * 40)); ctx.lineTo(5, 0); ctx.fill(); }
+  ctx.restore();
+  // glow halo grows with pull power; idle it breathes
+  const hr = 46 + pw * 46 + Math.sin(t * 4) * 4, g = ctx.createRadialGradient(c.x, c.y, 4, c.x, c.y, hr);
+  g.addColorStop(0, `rgba(255,236,150,${0.55 + pw * 0.35})`); g.addColorStop(0.45, `rgba(255,190,60,${0.25 + pw * 0.3})`); g.addColorStop(1, 'rgba(255,170,40,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, hr, 0, 7); ctx.fill();
+  // sparkles orbiting the relic
+  ctx.fillStyle = '#fff6c8'; for (let i = 0; i < 6; i++) { const a = t * (1.2 + pw * 2) + i * 1.047, r = 36 + Math.sin(t * 3 + i) * 6 + pw * 14; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 5 + i * 2); ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r * 0.6, 2.2, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
+  const si = shotType === 'chancla' ? IMG.chancla : shotImg();
+  if (si) { ctx.save(); ctx.shadowColor = 'rgba(255,214,90,1)'; ctx.shadowBlur = 18 + pw * 26; drawImg(si, c.x, c.y, SHOT_INFO[shotType].r * (2.6 + pw * 0.3), (aiming && pl >= 25 ? Math.atan2(-pull.y, -pull.x) * 0.5 : -0.25) + tilt); ctx.restore(); }
+  if (aiming && pl >= 25) { // power meter above the chancla's rest spot
+    const bw = 92, bx = SLING.x - bw / 2, by = SLING.y - 92;
+    ctx.fillStyle = 'rgba(20,10,36,.75)'; ctx.fillRect(bx - 3, by - 3, bw + 6, 14);
+    const pg = ctx.createLinearGradient(bx, 0, bx + bw, 0); pg.addColorStop(0, '#ffe08a'); pg.addColorStop(1, '#ff5a1f');
+    ctx.fillStyle = pg; ctx.fillRect(bx, by, bw * pw, 8);
+    ctx.font = '900 18px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#1a0c2c'; const tx = `${Math.round(pw * 100)}%`;
+    ctx.strokeText(tx, SLING.x, by - 8); ctx.fillStyle = '#ffd166'; ctx.fillText(tx, SLING.x, by - 8);
+  } else if (!aiming) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 4); ctx.strokeStyle = '#ffd68c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(SLING.x, SLING.y + bob, 54, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
+}
 function trajectory() {
   if (!aiming || Math.hypot(pull.x, pull.y) < 25) return;
-  let x = HAND.x, y = HAND.y, vx = -pull.x * POWER, vy = -pull.y * POWER;
+  let x = SLING.x, y = SLING.y, vx = -pull.x * POWER, vy = -pull.y * POWER;
+  const pw = Math.min(1, Math.hypot(pull.x, pull.y) / MAXPULL);
   const g = engine.gravity.y * 0.001 * (1000 / 60) ** 2;
-  ctx.fillStyle = 'rgba(255,214,140,.8)';
-  for (let i = 0; i < 40; i++) { for (let k = 0; k < 2; k++) { vy += g; x += vx; y += vy; } ctx.globalAlpha = 1 - i / 40; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill(); }
+  ctx.fillStyle = `rgb(255,${Math.round(230 - pw * 70)},${Math.round(150 - pw * 110)})`;
+  for (let i = 0; i < 40; i++) { for (let k = 0; k < 2; k++) { vy += g; x += vx; y += vy; } ctx.globalAlpha = 1 - i / 40; ctx.beginPath(); ctx.arc(x, y, 3.5 + pw * 2, 0, 7); ctx.fill(); }
   ctx.globalAlpha = 1;
 }
 const STEP = 1000 / 60; let acc = 0;
@@ -354,7 +395,8 @@ function frameBody(now: number) {
   slowT = Math.max(0, slowT - dt); const timeScale = slowT > 0 ? 0.3 : 1;
   zoom += ((slowT > 0 ? 1.35 : 1) - zoom) * Math.min(1, dt * 4);
   if (playing && !portrait && !ended) {
-    levelT += dt; acc = Math.min(acc + dt * 1000 * timeScale, STEP * 4);
+    const hs = hitStopT > 0 ? 0.08 : 1; hitStopT = Math.max(0, hitStopT - dt);
+    levelT += dt; acc = Math.min(acc + dt * 1000 * timeScale * hs, STEP * 4);
     while (acc >= STEP) {
       for (const gb of ghosts) { const m = meta.get(gb.id); if (m && !m.dead) Body.setPosition(gb, { x: gb.position.x, y: m.baseY! + Math.sin(levelT * 1.6 + m.phase!) * 14 }); }
       Engine.update(engine, STEP); acc -= STEP;
@@ -362,7 +404,7 @@ function frameBody(now: number) {
     settledFor = settled() ? settledFor + dt : 0;
     checkFlow();
   }
-  abuelaKick = Math.max(0, abuelaKick - dt * 3); relT = Math.max(0, relT - dt); shake = Math.max(0, shake - dt * 34);
+  relT = Math.max(0, relT - dt); shake = Math.max(0, shake - dt * 34);
   const area = AREAS[LEVELS[level].area];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#140a24'; ctx.fillRect(0, 0, VW, VH);
@@ -376,20 +418,12 @@ function frameBody(now: number) {
   ctx.fillStyle = gg; ctx.fillRect(-W, GROUND, W * 3, H - GROUND + 200);
   ctx.fillStyle = '#ff9f1c'; for (let i = 0; i < 40; i++) { ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc((i * 97) % (W + 200) - 100, GROUND + 8 + (i * 37) % 60, 4, 0, 7); ctx.fill(); } ctx.globalAlpha = 1;
   for (const cx of [60, 420, 1080]) { const r = ctx.createRadialGradient(cx, GROUND - 10, 2, cx, GROUND - 10, 60 + Math.sin(t * 7 + cx) * 4); r.addColorStop(0, 'rgba(255,170,60,.55)'); r.addColorStop(1, 'rgba(255,170,60,0)'); ctx.fillStyle = r; ctx.fillRect(cx - 70, GROUND - 80, 140, 140); ctx.fillStyle = '#fbf3d5'; ctx.fillRect(cx - 4, GROUND - 22, 8, 22); ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.ellipse(cx, GROUND - 28, 4, 7, 0, 0, 7); ctx.fill(); }
-  { // Abuela: wind-up pose while loaded/aiming, release pose right after a throw
-    const rel = (relT > 0 || flying.length > 0) && IMG.abuelaRel, im = rel ? IMG.abuelaRel! : IMG.abuela;
-    if (im) { const h = rel ? REL.h : WIND.h, w = h * (im.width / im.height), bob = rel ? 0 : Math.sin(t * 2) * 1.5; ctx.drawImage(im, ABU.x - w / 2, ABU.ground - h + bob, w, h); }
-  }
   const loaded = playing && !ended && !flying.length && shotsLeft > 0;
-  if (loaded && relT <= 0) {
-    // special shots: show the loaded ammo in her raised hand (the gold chancla is already in the art)
-    if (shotType !== 'chancla') { const si = shotImg(); if (si) drawImg(si, WIND.hand.x, WIND.hand.y, SHOT_INFO[shotType].r * 1.9, -0.4); }
-    if (!aiming) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 4); ctx.strokeStyle = '#ffd68c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(HAND.x, HAND.y, 50, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; }
-  }
+  drawRelic(loaded && relT <= 0);
   trajectory();
   for (const b of Composite.allBodies(world)) {
     if (b.isStatic && !ghosts.includes(b)) continue;
-    if (isShot(b)) { const si = shotImg(); if (si) drawImg(si, b.position.x, b.position.y, SHOT_INFO[shotType].r * 2.2, b.angle); continue; }
+    if (isShot(b)) { const si = shotImg(); if (si) { ctx.save(); ctx.shadowColor = 'rgba(255,210,90,.95)'; ctx.shadowBlur = 16; drawImg(si, b.position.x, b.position.y, SHOT_INFO[shotType].r * 2.2, b.angle); ctx.restore(); } continue; }
     const m = meta.get(b.id); if (!m || m.dead) continue;
     ctx.save(); ctx.translate(b.position.x, b.position.y); ctx.rotate(b.angle);
     const dmg = 1 - m.hp / m.maxHp;
@@ -432,6 +466,12 @@ function frameBody(now: number) {
     }
     ctx.restore();
   }
+  for (const f of flying) if (Math.random() < 0.8 && !(f as any).__hit) parts.push({ x: f.position.x + (Math.random() - 0.5) * 8, y: f.position.y + (Math.random() - 0.5) * 8, vx: (Math.random() - 0.5) * 0.6, vy: -0.6, life: 0.55, c: Math.random() < 0.5 ? '#ffe08a' : '#fff6c8', s: 2.5 + Math.random() * 2.5 });
+  for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.life -= dt * 2.6; if (r.life <= 0) { rings.splice(i, 1); continue; } const k = 1 - r.life; ctx.strokeStyle = `rgba(${r.c},${r.life * 0.9})`; ctx.lineWidth = 3 + r.life * 6; ctx.beginPath(); ctx.arc(r.x, r.y, r.r + k * 95, 0, 7); ctx.stroke(); }
+  for (let i = petals.length - 1; i >= 0; i--) { const p = petals[i]; p.vy += 0.22; p.vx *= 0.97; p.vy *= 0.97; p.x += p.vx + Math.sin(p.a) * 0.6; p.y += p.vy; p.a += p.va; p.life -= dt * 0.9;
+    const fade = Math.min(1, p.life * 2, Math.max(0, (GROUND - 60 - p.y) / 60)); if (p.life <= 0 || fade <= 0) { petals.splice(i, 1); continue; } // gone before the ground
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = fade; ctx.fillStyle = p.c; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, 7); ctx.fill(); ctx.restore(); }
+  ctx.globalAlpha = 1;
   for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.life -= dt * 1.4; if (p.life <= 0) { parts.splice(i, 1); continue; } ctx.globalAlpha = Math.min(1, p.life); ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.s, p.s); }
   ctx.globalAlpha = 1; ctx.textAlign = 'center';
   for (let i = pops.length - 1; i >= 0; i--) { const p = pops[i]; p.life -= dt; p.y -= dt * (p.big ? 24 : 40); if (p.life <= 0) { pops.splice(i, 1); continue; } ctx.font = p.big ? '900 38px system-ui' : p.t.length > 14 ? '800 26px system-ui' : '900 30px system-ui'; ctx.globalAlpha = Math.min(1, p.life); ctx.lineWidth = 6; ctx.strokeStyle = '#1a0c2c'; ctx.strokeText(p.t, p.x, p.y); ctx.fillStyle = p.big ? '#ffe36e' : '#ffd166'; ctx.fillText(p.t, p.x, p.y); }
@@ -491,6 +531,8 @@ requestAnimationFrame(frame);
   engine, world, meta, LEVELS, build, openMap, boom: (b: Matter.Body) => { armed = true; damage(b, 99); },
   snapshot: () => Composite.allBodies(world).filter((b) => meta.has(b.id) && !meta.get(b.id)!.dead && meta.get(b.id)!.kind !== 'ghost').map((b) => ({ id: b.id, x: b.position.x, y: b.position.y, a: b.angle })),
   fire: (px: number, py: number, type?: ShotType) => { if (type) shotType = type; aiming = true; pull = { x: px, y: py }; release(); },
+  aim: () => ({ aiming, pull: { ...pull }, power: Math.min(1, Math.hypot(pull.x, pull.y) / MAXPULL), sling: SLING }),
+  toScreen: (x: number, y: number) => ({ x: ox + x * scale, y: oy + y * scale }),
   split: () => doSplit(),
   finish: (win: boolean) => { ended = false; finish(win); },
   get state() { return { level, score, shotsLeft, ended, villains: villainsLeft(), alive: [...meta.values()].filter((m) => !m.dead).length, shotType }; },

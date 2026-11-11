@@ -1,0 +1,150 @@
+{
+ "meta": {
+  "generator": "Agent Sprite Forge (MIT) host_image route: GenerateImage keyframe sheets -> assemble_frames.py chroma soft-matte + ownership slicing -> scale_frames.py (one scale, stance root, feet/torso locks) -> pack.py",
+  "image": "calaverita-small-atlas.webp",
+  "size": {
+   "w": 2432,
+   "h": 1014
+  },
+  "cell": {
+   "w": 304,
+   "h": 338
+  },
+  "anchor": {
+   "x": 155,
+   "y": 331,
+   "note": "feet/ground point inside every cell"
+  },
+  "bodyHeightPx": 320
+ },
+ "frames": {
+  "walk_0": {
+   "x": 0,
+   "y": 0,
+   "w": 304,
+   "h": 338
+  },
+  "walk_1": {
+   "x": 304,
+   "y": 0,
+   "w": 304,
+   "h": 338
+  },
+  "walk_2": {
+   "x": 608,
+   "y": 0,
+   "w": 304,
+   "h": 338
+  },
+  "walk_3": {
+   "x": 912,
+   "y": 0,
+   "w": 304,
+   "h": 338
+  },
+  "walk_4": {
+   "x": 1216,
+   "y": 0,
+   "w": 304,
+   "h": 338
+  },
+  "walk_5": {
+   "x": 1520,
+   "y": 0,
+   "w": 304,
+   "h": 338
+  },
+  "walk_6": {
+   "x": 1824,
+   "y": 0,
+   "w": 304,
+   "h": 338
+  },
+  "walk_7": {
+   "x": 2128,
+   "y": 0,
+   "w": 304,
+   "h": 338
+  },
+  "hit_0": {
+   "x": 0,
+   "y": 338,
+   "w": 304,
+   "h": 338
+  },
+  "hit_1": {
+   "x": 304,
+   "y": 338,
+   "w": 304,
+   "h": 338
+  },
+  "hit_2": {
+   "x": 608,
+   "y": 338,
+   "w": 304,
+   "h": 338
+  },
+  "ko_0": {
+   "x": 0,
+   "y": 676,
+   "w": 304,
+   "h": 338
+  },
+  "ko_1": {
+   "x": 304,
+   "y": 676,
+   "w": 304,
+   "h": 338
+  },
+  "ko_2": {
+   "x": 608,
+   "y": 676,
+   "w": 304,
+   "h": 338
+  },
+  "ko_3": {
+   "x": 912,
+   "y": 676,
+   "w": 304,
+   "h": 338
+  }
+ },
+ "animations": {
+  "walk": {
+   "frames": [
+    "walk_0",
+    "walk_1",
+    "walk_2",
+    "walk_3",
+    "walk_4",
+    "walk_5",
+    "walk_6",
+    "walk_7"
+   ],
+   "fps": 10,
+   "loop": true,
+   "row": 0
+  },
+  "hit": {
+   "frames": [
+    "hit_0",
+    "hit_1",
+    "hit_2"
+   ],
+   "fps": 12,
+   "loop": false,
+   "row": 1
+  },
+  "ko": {
+   "frames": [
+    "ko_0",
+    "ko_1",
+    "ko_2",
+    "ko_3"
+   ],
+   "fps": 10,
+   "loop": false,
+   "row": 2
+  }
+ }
+}

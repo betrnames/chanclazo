@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2a0f4a">
+<title>Chancla Arcade · Chanclazo</title>
+<meta name="description" content="Defend Abuela's house! Set up her slingshot, pick a throw, and stop the calavera waves. Free Day of the Dead tower defense.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://chanclazo.com/arcade">
+<meta property="og:title" content="Chancla Arcade · Chanclazo">
+<meta property="og:description" content="Defend Abuela's house! Set up her slingshot, pick a throw, and stop the calavera waves. Free Day of the Dead tower defense.">
+<meta property="og:image" content="https://chanclazo.com/og/chanclazo-share-1200x630.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/cruise/logo_chancla.webp">
+<style>
+@font-face{font-family:Bungee;src:url(/fonts/Bungee-400.woff2) format('woff2');font-display:swap}
+@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf);font-display:swap}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#1a0833;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:LilitaOne,system-ui,sans-serif;color:#fff}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:fixed;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:calc(6px + env(safe-area-inset-top)) 10px 6px;z-index:5;pointer-events:none;font-size:clamp(13px,3.6vw,20px)}
+.pill{background:rgba(36,9,58,.85);border:2px solid #ffd23f;border-radius:999px;padding:4px 12px;color:#ffd23f;white-space:nowrap}
+#hud .pill b{color:#fff}
+#hud button{pointer-events:auto;font:inherit;cursor:pointer}
+#tray{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:6px;justify-content:center;padding:6px 6px calc(6px + env(safe-area-inset-bottom));overflow-x:auto;background:linear-gradient(transparent,rgba(20,6,40,.9) 35%)}
+.card{flex:0 0 auto;width:min(92px,calc((100vw - 54px)/8));background:#2a0f52;border:2px solid #6b4a94;border-radius:10px;padding:4px 3px 3px;text-align:center;cursor:pointer;position:relative;color:#ffe9a8;font-size:clamp(9px,2.4vw,13px);line-height:1.05}
+.card .ic{height:clamp(28px,7vw,56px);display:flex;align-items:center;justify-content:center;border-radius:8px;margin-bottom:2px}
+.card img{max-height:100%;max-width:100%;object-fit:contain}
+.card .c{display:block;color:#ffd23f;font-size:clamp(11px,2.6vw,14px)}
+.card.sel{border-color:#ffd23f;box-shadow:0 0 0 2px #ffd23f,0 0 16px #ffd23f88;transform:translateY(-3px)}
+.card.poor{opacity:.45}
+.card .cd{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);border-radius:0 0 8px 8px}
+#msg{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:6;font-family:Bungee,LilitaOne,sans-serif;color:#ffd23f;font-size:clamp(22px,6vw,46px);text-shadow:0 3px 0 #7a1f9e,0 0 18px #000;pointer-events:none;text-align:center;opacity:0;transition:opacity .3s;white-space:nowrap}
+#msg.on{opacity:1}
+#tip{position:fixed;left:50%;bottom:calc(clamp(80px,16vw,120px) + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:5;background:rgba(36,9,58,.88);border:1px solid #ffd23f;border-radius:10px;padding:5px 12px;color:#ffe9a8;font-size:clamp(11px,3vw,15px);pointer-events:none;max-width:92vw;text-align:center}
+.ov{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.6vh;background:radial-gradient(ellipse at 50% 40%,#4a2a8fee,#140833f5 75%);padding:16px;text-align:center}
+.ov.hide{display:none}
+.ov h1{font-family:Bungee,LilitaOne,sans-serif;color:#ffd23f;font-size:clamp(30px,9vw,64px);margin:0;text-shadow:0 4px 0 #7a1f9e}
+.ov p{margin:0;max-width:560px;color:#e8dcf8;font-size:clamp(14px,3.6vw,19px);line-height:1.3}
+.ov .cast{display:flex;align-items:flex-end;gap:2vw}
+.ov .cast img{height:min(22vh,180px);width:auto}
+.ov button{background:linear-gradient(#ffe066,#ffb703);color:#3a0d5c;border:0;border-radius:999px;font-family:Bungee,LilitaOne,sans-serif;font-size:clamp(20px,6vw,32px);padding:12px 44px;box-shadow:0 6px 0 #b86b00;cursor:pointer}
+.ov a{color:#bba6d8;font-size:14px}
+#ld{color:#ffd23f}
+@media (max-height:500px){.card{width:min(70px,calc((100vw - 54px)/8))}.card .ic{height:24px}#tip{display:none!important}.ov .cast img{height:min(18vh,120px)}.ov h1{font-size:clamp(26px,6vw,44px)}}
+</style>
+</head><body>
+<canvas id="c"></canvas>
+<div id="hud">
+ <span class="pill" id="hp">Petals <b id="pet">0</b></span>
+ <span class="pill">Wave <b id="wv">0</b>/<b id="wmax">8</b></span>
+ <span class="pill">House <b id="hh">♥♥♥♥♥</b></span>
+ <button class="pill" id="pause" aria-label="Pause">II</button>
+</div>
+<div id="msg"></div>
+<div id="tip">Pick a card, then tap a tile on the yard.</div>
+<div id="tray"></div>
+<div class="ov" id="start">
+ <h1>Chancla Arcade</h1>
+ <div class="cast"><img src="/play/calaca_sprite.webp" alt="Sugar skull boy"><img src="/play/v2/abuela.webp" alt="Abuela"><img src="/play/calavera_gabe.webp" alt="Sugar skull girl"></div>
+ <p>The calaveras are coming for Abuela's house! Set up her slingshots, pick how she throws the chancla, and send the sugar skull kids to help. Survive all 8 waves.</p>
+ <button id="go">PLAY</button>
+ <span id="ld">Loading…</span>
+ <a href="/choose">← More games</a>
+</div>
+<div class="ov hide" id="end"><h1 id="endt">¡Ganaste!</h1><p id="endp"></p><button id="again">PLAY AGAIN</button><a href="/choose">← More games</a></div>
+<script type="importmap">{"imports":{"three":"/vendor/three/three.module.min.js"}}</script>
+<script type="module" src="/arcade-td/td.js"></script>
+</body></html>

@@ -4,8 +4,8 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/fling",
-      "destination": "/fling.html"
+      "source": "/chancla-strike",
+      "destination": "/chancla-strike.html"
     },
     {
       "source": "/match",
@@ -21,6 +21,16 @@
     }
   ],
   "redirects": [
+    {
+      "source": "/fling",
+      "destination": "/chancla-strike",
+      "permanent": true
+    },
+    {
+      "source": "/fling.html",
+      "destination": "/chancla-strike",
+      "permanent": true
+    },
     {
       "source": "/demos",
       "destination": "/",
@@ -64,7 +74,7 @@
   ],
   "headers": [
     {
-      "source": "/(fling|match|lore|slots)?(.html)?",
+      "source": "/(chancla-strike|match|lore|slots)?(.html)?",
       "headers": [
         {
           "key": "Cache-Control",
@@ -73,7 +83,7 @@
       ]
     },
     {
-      "source": "/fling.webmanifest",
+      "source": "/chancla-strike.webmanifest",
       "headers": [
         {
           "key": "Content-Type",

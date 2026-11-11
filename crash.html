@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#14061f" />
+<meta name="robots" content="noindex" />
+<title>Chancla Crash · Chanclazo</title>
+<meta name="description" content="Aim the gold chancla and topple towers of pan dulce and cafecitos. A free Day of the Dead physics game." />
+<link rel="icon" href="/cruise/logo_chancla.webp" />
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
+html,body{margin:0;height:100%;background:#0b0312 url(/play/night_bg.webp) center/cover;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backdrop-filter:blur(6px)}
+#stage{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100vh * 3 / 4));overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.8);touch-action:none}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.hidden{display:none!important}
+/* HUD */
+.hud{position:absolute;left:0;right:0;top:env(safe-area-inset-top);display:flex;align-items:center;gap:8px;padding:10px;z-index:5;pointer-events:none}
+.hbtn{pointer-events:auto;width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff2a8,#ffd23f 50%,#f4a000);border:3px solid #3b1a5c;border-radius:14px;box-shadow:0 4px 0 #3b1a5c;color:#3b1a5c;font:900 18px system-ui;cursor:pointer;padding:0;text-decoration:none}
+.hbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #3b1a5c}
+.lvlbox{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+#stg{font:700 10px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#ffe9c2;text-shadow:0 1px 2px #000;margin-top:-2px}
+#lvl{font:400 22px LilitaOne,system-ui;color:#fff;-webkit-text-stroke:4px #3b1a5c;paint-order:stroke fill;line-height:1}
+.barwrap{width:min(180px,100%);height:14px;border-radius:9px;background:#24092f;border:3px solid #3b1a5c;overflow:hidden;box-shadow:0 2px 0 rgba(0,0,0,.4)}
+#bar{height:100%;width:0;background:linear-gradient(180deg,#9dff7a,#3cc85a 60%,#239a3f);border-radius:6px;transition:width .35s cubic-bezier(.3,1.6,.5,1)}
+.coins{display:flex;align-items:center;gap:5px;background:rgba(36,9,47,.9);border:3px solid #3b1a5c;border-radius:999px;padding:4px 10px 4px 5px;font:400 18px LilitaOne,system-ui;color:#ffd23f}
+.coin{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c0,#ffd23f 45%,#d48a00);border:2px solid #7a4a00}
+#mute{pointer-events:auto;background:rgba(36,9,47,.9);border:3px solid #3b1a5c;border-radius:12px;width:40px;height:40px;font-size:16px;cursor:pointer;color:#fff}
+#fire{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 44px);z-index:6;width:104px;height:104px;border-radius:50%;padding:0;border:5px solid #3b1a5c;background:radial-gradient(circle at 50% 36%,#7a35ad,#46196b 58%,#24092f);box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f;cursor:pointer;touch-action:none;transition:filter .25s,transform .09s,box-shadow .09s;display:flex;align-items:center;justify-content:center}
+#fire img{width:88px;height:auto;pointer-events:none;filter:drop-shadow(0 4px 2px rgba(0,0,0,.55));transform:rotate(-24deg) translateY(-3px);transition:transform .2s cubic-bezier(.2,1.6,.4,1),opacity .2s}
+#fire .cnt{position:absolute;right:-8px;top:-8px;min-width:36px;height:36px;padding:0 6px;border-radius:18px;background:#ff3d9a;border:3px solid #3b1a5c;box-shadow:0 3px 0 #3b1a5c;display:flex;align-items:center;justify-content:center;font:400 21px LilitaOne,system-ui;color:#fff;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;pointer-events:none}
+#fire .tap{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);font:400 13px LilitaOne,system-ui;letter-spacing:.08em;color:#ffd23f;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none}
+#fire.ready{animation:fglow 1.25s ease-in-out infinite}
+#fire.ready img{animation:fbob 1.25s ease-in-out infinite}
+@keyframes fglow{0%,100%{box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f,0 0 8px 2px rgba(255,210,63,.35)}50%{box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #fff2a8,0 0 26px 9px rgba(255,210,63,.8)}}
+@keyframes fbob{50%{transform:rotate(-16deg) translateY(-7px) scale(1.07)}}
+#fire.press{transform:translateY(5px) scale(.9);box-shadow:0 2px 0 #1a0826,inset 0 0 0 4px #ffd23f,0 0 30px 10px rgba(255,236,150,.9)!important;animation:none}
+#fire.press img{transform:rotate(-40deg) translateY(-14px) scale(1.12);animation:none}
+#fire.busy{filter:saturate(.3) brightness(.62);animation:none}
+#fire.busy img{animation:none;opacity:.45;transform:rotate(-24deg) translateY(2px) scale(.8)}
+#fire.busy .tap,#fire:disabled .tap{opacity:0}
+#fire:disabled{filter:grayscale(1) brightness(.5);animation:none}
+#fire:disabled img{opacity:.35;animation:none}
+#fire.rapid{background:radial-gradient(circle at 50% 38%,#ffd27a,#ff6a1a 52%,#b5121b);filter:none!important;animation:rglow .22s ease-in-out infinite alternate!important}
+#fire.rapid img{animation:rshake .12s linear infinite alternate!important;opacity:1!important}
+@keyframes rglow{from{box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f,0 0 18px 6px rgba(255,120,20,.7)}to{box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #fff2a8,0 0 34px 14px rgba(255,170,40,.95)}}
+@keyframes rshake{from{transform:rotate(-30deg) translateY(-4px) scale(1.05)}to{transform:rotate(-18deg) translateY(-7px) scale(1.12)}}
+#fire.rapid::before{content:"";position:absolute;inset:-14px;border-radius:50%;background:conic-gradient(#ffd23f calc(var(--p,1)*360deg),rgba(255,255,255,.14) 0);-webkit-mask:radial-gradient(circle,transparent 59px,#000 60px);mask:radial-gradient(circle,transparent 59px,#000 60px);z-index:-1;pointer-events:none}
+#fire.rapid::after{content:"";position:absolute;left:6px;right:6px;top:-40px;height:62px;background:radial-gradient(ellipse 20% 62% at 28% 100%,#ffe07a,#ff8c1a 50%,transparent 72%),radial-gradient(ellipse 26% 86% at 50% 100%,#fff6c0,#ff9a1a 42%,#e2197a 64%,transparent 76%),radial-gradient(ellipse 20% 62% at 72% 100%,#ffe07a,#ff6a00 50%,transparent 72%);transform-origin:50% 100%;animation:flame .16s ease-in-out infinite alternate;pointer-events:none;z-index:-2}
+@keyframes flame{from{transform:scaleY(.82) scaleX(1.03) skewX(-3deg)}to{transform:scaleY(1.14) scaleX(.95) skewX(3deg)}}
+#rapid{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 86px);transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:linear-gradient(180deg,#ffb030,#ff5a1a 55%,#e2197a);border:3px solid #3b1a5c;box-shadow:0 4px 0 #3b1a5c,0 0 24px rgba(255,140,26,.85);font:400 20px LilitaOne,system-ui;color:#fff;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none;animation:rpulse .35s ease-in-out infinite alternate}
+#rapid .rb{width:72px;height:12px;border-radius:7px;background:#3b1a5c;overflow:hidden;border:2px solid #3b1a5c}#rapid .rb i{display:block;height:100%;width:calc(var(--p,1)*100%);background:linear-gradient(90deg,#fff2a8,#ffd23f)}
+#rapidT{min-width:34px;text-align:right}
+@keyframes rpulse{to{transform:translateX(-50%) scale(1.06)}}
+#start{position:absolute;left:50%;top:52%;transform:translateX(-50%);z-index:9;white-space:nowrap;animation:sbob .9s ease-in-out infinite alternate}
+@keyframes sbob{to{transform:translateX(-50%) translateY(-6px) scale(1.04)}}
+@media (prefers-reduced-motion:reduce){#fire.ready,#fire.ready img,#start{animation:none}}
+#hint{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 46%);text-align:center;font:800 15px system-ui;color:#fff;text-shadow:0 2px 4px #000,0 0 10px #000;z-index:5;pointer-events:none;transition:opacity .4s}
+#hint.gone{opacity:0}
+/* fx */
+#fx{position:absolute;inset:0;pointer-events:none;z-index:7;overflow:hidden}
+.pop{position:absolute;transform:translate(-50%,-50%);font:400 24px LilitaOne,system-ui;color:#fff;-webkit-text-stroke:4px #3b1a5c;paint-order:stroke fill;animation:rise 1s ease-out forwards;white-space:nowrap}
+.pop.big{font-size:30px;color:#ffd23f}
+@keyframes rise{0%{transform:translate(-50%,-30%) scale(.4);opacity:0}15%{transform:translate(-50%,-60%) scale(1.15);opacity:1}100%{transform:translate(-50%,-190%) scale(1);opacity:0}}
+.combo{position:absolute;left:0;right:0;top:24%;text-align:center;z-index:8;pointer-events:none;font:400 54px LilitaOne,system-ui;color:#ffd23f;-webkit-text-stroke:7px #3b1a5c;paint-order:stroke fill;text-shadow:0 6px 0 #3b1a5c;opacity:0;transform:rotate(-8deg) scale(.3)}
+.combo.show{animation:comic 1.1s cubic-bezier(.2,1.6,.4,1) forwards}
+.combo.l2{color:#1ec8c8}.combo.l3{color:#ff3d9a;font-size:64px}.combo.l4{color:#ff8c1a;font-size:min(58px,12vw)}
+@keyframes comic{0%{opacity:0;transform:rotate(-14deg) scale(.3)}18%{opacity:1;transform:rotate(-6deg) scale(1.15)}70%{opacity:1;transform:rotate(-8deg) scale(1)}100%{opacity:0;transform:rotate(-8deg) scale(1.05) translateY(-20px)}}
+.banner{position:absolute;left:0;right:0;top:15%;text-align:center;z-index:6;pointer-events:none;opacity:0}
+.banner b{display:block;font:400 40px LilitaOne,system-ui;color:#fff;-webkit-text-stroke:6px #3b1a5c;paint-order:stroke fill}
+.banner span{display:inline-block;margin-top:4px;font:700 13px system-ui;letter-spacing:.14em;text-transform:uppercase;background:#ffd23f;color:#3b1a5c;border-radius:999px;padding:4px 12px}
+.banner.show{animation:ban 1.9s ease-out forwards}
+@keyframes ban{0%{opacity:0;transform:translateY(-12px)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+@keyframes pop{50%{transform:scale(1.15)}}
+/* overlays */
+.screen{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,rgba(61,23,96,.75),rgba(10,3,15,.9));padding:16px}
+#petals{position:absolute;inset:0;z-index:21;pointer-events:none}
+.card{position:relative;z-index:22;width:min(360px,100%);text-align:center;background:radial-gradient(ellipse at 50% 25%,#4a1f6e,#24092f 72%);border:4px solid #ffd23f;border-radius:26px;padding:18px 18px 20px;box-shadow:0 0 0 4px #14050f,0 0 40px rgba(255,190,60,.35),0 18px 40px rgba(0,0,0,.6);animation:cardin .35s cubic-bezier(.2,1.5,.4,1)}
+@keyframes cardin{from{transform:scale(.7);opacity:0}}
+.card h1{margin:0;font:400 46px LilitaOne,system-ui;color:#ffd23f;-webkit-text-stroke:7px #3b1a5c;paint-order:stroke fill;text-shadow:0 5px 0 #3b1a5c}
+.card .sub{margin:4px 0 2px;font:600 14px system-ui;color:#ffe9c2}
+.vstars{display:flex;justify-content:center;gap:4px;margin:6px 0 2px}
+.st{font-size:52px;line-height:1;color:#3d2252;-webkit-text-stroke:3px #14050f;transform:scale(.8);transition:transform .3s cubic-bezier(.2,1.8,.4,1),color .2s}
+.st:nth-child(2){font-size:62px;transform:translateY(-8px) scale(.8)}
+.st.on{color:#ffd23f;transform:scale(1.05);text-shadow:0 0 16px rgba(255,210,63,.8)}.st.on:nth-child(2){transform:translateY(-8px) scale(1.1)}
+.reward{display:inline-flex;align-items:center;gap:6px;font:400 26px LilitaOne,system-ui;color:#ffd23f;background:#14050f;border-radius:999px;padding:4px 14px;margin:6px 0}
+.small{font:600 13px system-ui;color:#c9b39a;margin:0 0 6px;min-height:1em}
+.btn{display:inline-block;font:400 26px LilitaOne,system-ui;color:#3b1a5c;text-decoration:none;background:linear-gradient(180deg,#9dff7a,#3cc85a 50%,#239a3f);border:4px solid #3b1a5c;border-radius:999px;padding:8px 40px;box-shadow:0 6px 0 #3b1a5c;cursor:pointer;margin-top:6px}
+.btn.gold{background:linear-gradient(180deg,#fff2a8,#ffd23f 45%,#f4a000)}
+.btn:active{transform:translateY(3px);box-shadow:0 3px 0 #3b1a5c}
+.link{display:block;margin-top:12px;color:#ffd23f;font:600 14px system-ui}
+.hero{height:150px;display:block;margin:-60px auto 0;filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))}
+.cameos{display:flex;justify-content:center;align-items:flex-end;gap:2px;margin-top:-64px}.cameos .hero{margin:0;height:140px}.hero.d2{animation-delay:-.35s}
+.hero.relicx{height:auto;width:170px;margin:-40px auto 4px;filter:grayscale(.5) brightness(.8) drop-shadow(0 8px 10px rgba(0,0,0,.6));transform:rotate(-12deg)}
+.hero.cheer{animation:cheer .7s ease-in-out infinite alternate}
+@keyframes cheer{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-10px) rotate(3deg)}}
+.menu{display:flex;flex-direction:column;gap:10px;align-items:center}
+.xbtn{display:inline-flex;align-items:center;gap:8px;background:#000;color:#fff;border:3px solid #fff;border-radius:999px;padding:9px 22px;font:700 16px system-ui;text-decoration:none;margin-top:10px}
+.cz-copy{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(max(4px,env(safe-area-inset-bottom)) + 6px);z-index:30;pointer-events:none;font:10px system-ui,sans-serif;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.7);display:flex;align-items:center;gap:8px;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.hero.cheer{animation:none}}
+</style>
+</head><body>
+<div id="stage">
+  <div class="hud">
+    <button class="hbtn" id="pauseBtn" aria-label="Pause"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1.5" fill="#3b1a5c"/><rect x="14" y="4" width="5" height="16" rx="1.5" fill="#3b1a5c"/></svg></button>
+    <div class="lvlbox"><div id="lvl">Level 1</div><div id="stg">Stage 1/2</div><div class="barwrap" role="progressbar" aria-label="Level progress"><div id="bar"></div></div></div>
+    <div class="coins" aria-label="Coins"><i class="coin"></i><span id="coins">0</span></div>
+    <button id="mute" aria-label="Sound on or off">🔊</button>
+  </div>
+  <div id="banner" class="banner"></div>
+  <div id="combo" class="combo"></div>
+  <div id="fx"></div>
+  <div id="hint" class="gone">Drag to aim · tap the gold chancla</div>
+  <button id="fire" aria-label="Throw the gold chancla"><img src="/crash/chancla-btn.webp" alt="" width="88" height="50" /><span class="cnt" id="fireN">3</span><span class="tap">TAP!</span></button>
+  <button class="btn gold hidden" id="start">TAP TO PLAY</button>
+  <div id="rapid" class="hidden" aria-live="polite">🔥 RAPID FIRE <span class="rb"><i></i></span><span id="rapidT">5.0</span></div>
+
+  <div class="screen hidden" id="victory"><canvas id="petals"></canvas><div class="card">
+    <div class="cameos"><img class="hero cheer" src="/crash/kids-card.webp" alt="The sugar-skull kids cheering" /><img class="hero cheer d2" src="/crash/sidro-chibi.webp" alt="Sidro cheering" /></div>
+    <h1 id="vTitle">PERFECT!</h1>
+    <p class="sub" id="vSub"></p>
+    <div class="vstars" id="vStars"></div>
+    <div class="reward"><i class="coin"></i><span id="vCoins">+0</span></div>
+    <p class="small" id="vAmmo"></p>
+    <button class="btn" id="continue">CONTINUE</button>
+  </div></div>
+
+  <div class="screen hidden" id="lose"><div class="card">
+    <img class="hero relicx" src="/crash/chancla-btn.webp" alt="The gold chancla, all thrown out" />
+    <h1>Out of chanclas!</h1>
+    <p class="sub" id="lSub"></p>
+    <button class="btn gold" id="retry">RETRY</button>
+    <a class="link" href="/choose">All games</a>
+  </div></div>
+
+  <div class="screen hidden" id="pause"><div class="card menu">
+    <h1>Paused</h1>
+    <button class="btn" id="resume">RESUME</button>
+    <button class="btn gold" id="restart">RESTART LEVEL</button>
+    <a class="link" href="/choose">All games</a>
+  </div></div>
+
+  <div class="screen hidden" id="final"><div class="card">
+    <div class="cameos"><img class="hero cheer d2" src="/crash/kids-card.webp" alt="The sugar-skull kids cheering" /><img class="hero cheer" src="/crash/sidro-chibi.webp" alt="Sidro cheering" /></div>
+    <h1>¡Chanclazo!</h1>
+    <p class="sub">You cleared every stage in all three worlds.</p>
+    <div class="reward" id="fStars">0 ★</div>
+    <div class="reward"><i class="coin"></i><span id="fCoins">0</span></div>
+    <div><a class="xbtn" id="share" href="https://x.com/intent/post" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="fill:currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>Share on X</a></div>
+    <button class="btn" id="again">PLAY AGAIN</button>
+    <a class="link" href="/choose">All games</a>
+  </div></div>
+
+  <div class="cz-copy">© 2023 Chanclazo™ <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener" aria-label="Chanclazo on X (@ChanclaStrike)" style="pointer-events:auto;color:inherit;text-decoration:none;text-transform:none;letter-spacing:.05em;display:inline-flex;align-items:center;gap:4px"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" style="vertical-align:-1px;fill:currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@ChanclaStrike</a><span class="cz-build" style="font-size:8px;letter-spacing:.08em;text-transform:none;opacity:.6">%%CZ_BUILD%%</span></div>
+</div>
+<script type="module" src="/src/play/crash.ts"></script>
+<script type="module" src="/src/analytics-boot.ts"></script>
+</body></html>

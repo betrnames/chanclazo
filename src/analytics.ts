@@ -13,10 +13,14 @@ const PAGE_TITLES: Record<string, string> = {
   '/index.html': 'Home',
   '/fling': 'Chancla Strike',
   '/fling.html': 'Chancla Strike',
+  '/chancla-strike': 'Chancla Strike',
+  '/chancla-strike.html': 'Chancla Strike',
   '/match': 'Chanclazo Match',
   '/match.html': 'Chanclazo Match',
   '/slots': 'Piñata Slots',
   '/slots.html': 'Piñata Slots',
+  '/crash': 'Chancla Crash',
+  '/crash.html': 'Chancla Crash',
   '/lore': 'Lore',
   '/lore.html': 'Lore',
 };
@@ -57,7 +61,7 @@ export function sendPageView(pathname = location.pathname): void {
   });
 }
 
-type Game = 'home' | 'fling' | 'match' | 'slots' | 'lore';
+type Game = 'home' | 'fling' | 'match' | 'slots' | 'lore' | 'crash' | 'waves';
 
 export function track(event: string, params: Record<string, string | number | boolean | undefined> = {}): void {
   if (!GA_ID || !window.gtag) return;
@@ -68,10 +72,12 @@ export function track(event: string, params: Record<string, string | number | bo
 
 export function gameFromPath(pathname = location.pathname): Game {
   const p = pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
-  if (p === '/fling') return 'fling';
+  if (p === '/fling' || p === '/chancla-strike') return 'fling';
   if (p === '/match') return 'match';
   if (p === '/slots') return 'slots';
   if (p === '/lore') return 'lore';
+  if (p === '/crash') return 'crash';
+  if (p === '/waves') return 'waves';
   return 'home';
 }
 

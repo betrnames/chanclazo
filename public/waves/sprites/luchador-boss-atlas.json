@@ -1,0 +1,150 @@
+{
+ "meta": {
+  "generator": "Agent Sprite Forge (MIT) host_image route: GenerateImage keyframe sheets -> assemble_frames.py chroma soft-matte + ownership slicing -> scale_frames.py (one scale, stance root, feet/torso locks) -> pack.py",
+  "image": "luchador-boss-atlas.webp",
+  "size": {
+   "w": 2744,
+   "h": 1038
+  },
+  "cell": {
+   "w": 343,
+   "h": 346
+  },
+  "anchor": {
+   "x": 170,
+   "y": 339,
+   "note": "feet/ground point inside every cell"
+  },
+  "bodyHeightPx": 320
+ },
+ "frames": {
+  "walk_0": {
+   "x": 0,
+   "y": 0,
+   "w": 343,
+   "h": 346
+  },
+  "walk_1": {
+   "x": 343,
+   "y": 0,
+   "w": 343,
+   "h": 346
+  },
+  "walk_2": {
+   "x": 686,
+   "y": 0,
+   "w": 343,
+   "h": 346
+  },
+  "walk_3": {
+   "x": 1029,
+   "y": 0,
+   "w": 343,
+   "h": 346
+  },
+  "walk_4": {
+   "x": 1372,
+   "y": 0,
+   "w": 343,
+   "h": 346
+  },
+  "walk_5": {
+   "x": 1715,
+   "y": 0,
+   "w": 343,
+   "h": 346
+  },
+  "walk_6": {
+   "x": 2058,
+   "y": 0,
+   "w": 343,
+   "h": 346
+  },
+  "walk_7": {
+   "x": 2401,
+   "y": 0,
+   "w": 343,
+   "h": 346
+  },
+  "hit_0": {
+   "x": 0,
+   "y": 346,
+   "w": 343,
+   "h": 346
+  },
+  "hit_1": {
+   "x": 343,
+   "y": 346,
+   "w": 343,
+   "h": 346
+  },
+  "hit_2": {
+   "x": 686,
+   "y": 346,
+   "w": 343,
+   "h": 346
+  },
+  "ko_0": {
+   "x": 0,
+   "y": 692,
+   "w": 343,
+   "h": 346
+  },
+  "ko_1": {
+   "x": 343,
+   "y": 692,
+   "w": 343,
+   "h": 346
+  },
+  "ko_2": {
+   "x": 686,
+   "y": 692,
+   "w": 343,
+   "h": 346
+  },
+  "ko_3": {
+   "x": 1029,
+   "y": 692,
+   "w": 343,
+   "h": 346
+  }
+ },
+ "animations": {
+  "walk": {
+   "frames": [
+    "walk_0",
+    "walk_1",
+    "walk_2",
+    "walk_3",
+    "walk_4",
+    "walk_5",
+    "walk_6",
+    "walk_7"
+   ],
+   "fps": 10,
+   "loop": true,
+   "row": 0
+  },
+  "hit": {
+   "frames": [
+    "hit_0",
+    "hit_1",
+    "hit_2"
+   ],
+   "fps": 12,
+   "loop": false,
+   "row": 1
+  },
+  "ko": {
+   "frames": [
+    "ko_0",
+    "ko_1",
+    "ko_2",
+    "ko_3"
+   ],
+   "fps": 10,
+   "loop": false,
+   "row": 2
+  }
+ }
+}

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#ff8c1a" />
+<title>Chanclazo</title>
+<meta name="description" content="When words fail, the Chanclazo speaks. Day of the Dead browser games." />
+<link rel="icon" href="/cruise/logo_chancla.webp" />
+<link rel="apple-touch-icon" href="/play/icon-180.png" />
+<style>
+@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
+html,body{margin:0;background:#04020c;overflow:hidden}
+.home{position:relative;height:100svh;width:100vw;overflow:hidden;font-family:LilitaOne,system-ui,sans-serif;background:#04020c}
+.home .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
+.home .bg.fit{inset:auto;object-fit:fill;max-width:none;max-height:none}
+.home .bg.fadeY{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 6%,#000 88%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0,#000 6%,#000 88%,transparent 100%)}
+.home .bg.fadeX{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 5%,#000 95%,transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 5%,#000 95%,transparent 100%)}
+.glows{position:absolute;inset:0;z-index:2;pointer-events:none}
+.glows i{position:absolute;border-radius:50%;transform:translate(-50%,-50%);mix-blend-mode:screen;background:radial-gradient(circle,rgba(255,190,90,.55) 0%,rgba(255,140,40,.18) 40%,rgba(255,120,30,0) 70%);animation:flick var(--d,2.3s) ease-in-out infinite alternate}
+@keyframes flick{0%{opacity:.55;transform:translate(-50%,-50%) scale(.92)}35%{opacity:.85}60%{opacity:.6;transform:translate(-50%,-52%) scale(1.04)}100%{opacity:.9;transform:translate(-50%,-50%) scale(.98)}}
+.lmusic{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;z-index:20;font:600 12px system-ui,sans-serif;color:#ffe9c2;background:rgba(20,5,40,.6);border:1px solid rgba(255,210,63,.5);border-radius:999px;padding:5px 10px;cursor:pointer}
+.ttlwrap{margin:0;position:absolute;z-index:6;left:0;top:0;line-height:0}
+#ttl{position:absolute;visibility:hidden;max-width:none;animation:glow 3s ease-in-out infinite}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 6px rgba(255,183,3,.45));transform:scale(1)}50%{filter:drop-shadow(0 0 22px rgba(255,183,3,.9));transform:scale(1.03)}}
+.rib{position:absolute;z-index:7;visibility:hidden;white-space:nowrap;box-sizing:border-box;width:max-content;left:50%;transform:translateX(-50%);text-align:center;color:#ffe7a8;font:800 16px system-ui,-apple-system,'Segoe UI',sans-serif;letter-spacing:.3px;padding:.42em 1.4em;background:linear-gradient(180deg,#6a22a8 0%,#4d1585 55%,#3a0f66 100%);border:2px solid #f2c94c;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 14px rgba(0,0,0,.55);text-shadow:0 2px 0 #2a0a48,0 0 6px rgba(0,0,0,.4)}
+.grp{position:absolute;z-index:4;visibility:hidden;animation:bob 3.2s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes bob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.2%) scale(1.008,.995)}}
+.herogrp{position:absolute;left:0;top:0;width:100%;height:100%;max-width:none;filter:drop-shadow(0 12px 14px rgba(0,0,0,.55))}
+.grp::before{content:'';position:absolute;left:8%;right:8%;bottom:-2%;height:7%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.6),rgba(0,0,0,0))}
+.lpart{position:absolute;max-width:none;will-change:transform}
+#mouth,#jaw{z-index:2}
+#jaw{transform-origin:2% 8%}
+#earL{transform-origin:34.0% 93.5%;animation:twL 7.3s ease-in-out infinite}
+#earR{transform-origin:84.6% 89.1%;animation:twR 9.1s ease-in-out 1.7s infinite}
+@keyframes twL{0%,62%,100%{transform:rotate(0)}66%{transform:rotate(-5deg)}69%{transform:rotate(2deg)}72%{transform:rotate(-3deg)}76%{transform:rotate(0)}88%{transform:rotate(-2deg)}93%{transform:rotate(0)}}
+@keyframes twR{0%,48%,100%{transform:rotate(0)}52%{transform:rotate(5deg)}55%{transform:rotate(-2deg)}58%{transform:rotate(3deg)}62%{transform:rotate(0)}84%{transform:rotate(3deg)}90%{transform:rotate(0)}}
+#jaw.chew{animation:chew 1.8s ease-in-out}
+@keyframes chew{0%,100%{transform:rotate(0)}9%{transform:rotate(7.5deg)}18%{transform:rotate(.5deg)}28%{transform:rotate(7deg)}37%{transform:rotate(.5deg)}47%{transform:rotate(7.5deg)}56%{transform:rotate(.5deg)}66%{transform:rotate(6.5deg)}75%{transform:rotate(.5deg)}85%{transform:rotate(6deg)}93%{transform:rotate(0)}}
+.cta{position:absolute;z-index:7;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;visibility:hidden}
+.play{font-size:clamp(24px,4.2vh,40px);color:#3b1a5c;text-decoration:none;letter-spacing:.02em;background:linear-gradient(180deg,#fff2a8 0%,#ffd23f 45%,#f4a000 100%);border:4px solid #3b1a5c;border-radius:999px;padding:10px 54px;box-shadow:0 7px 0 #3b1a5c,0 0 28px rgba(255,200,60,.6),inset 0 3px 0 rgba(255,255,255,.7);text-shadow:0 2px 0 rgba(255,255,255,.6);animation:pp 1.5s ease-in-out infinite;position:relative;overflow:hidden}
+.play:hover{filter:brightness(1.08)}
+.play:active{transform:translateY(3px)}
+.play::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.7) 45%,transparent 55%);background-size:300% 100%;animation:shine 3.5s ease-in-out infinite}
+@keyframes pp{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes shine{0%,60%{background-position:120% 0}100%{background-position:-120% 0}}
+.fine{margin:0;font-family:system-ui,sans-serif;font-size:12px;color:#d9c8f0;text-shadow:0 1px 3px #000}
+.fine a{color:#ffd23f}
+.cz-copy{position:fixed;left:50%;transform:translateX(-50%);bottom:max(8px,env(safe-area-inset-bottom));z-index:30;pointer-events:none;font:11px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.9);text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap}
+.cz-build{color:#ffd23f;letter-spacing:.04em;text-transform:none}
+#relic{position:absolute;z-index:5;pointer-events:none;visibility:hidden;height:auto;transform-origin:50% 60%;filter:drop-shadow(0 0 18px rgba(255,200,70,.9)) drop-shadow(0 12px 8px rgba(0,0,0,.45))}
+#relic.on{animation:relicIn 1.15s cubic-bezier(.15,1.15,.3,1) both,relicFloat 2.8s ease-in-out 1.15s infinite}
+@keyframes relicIn{0%{opacity:0;transform:translateY(-70px) rotate(-540deg) scale(.12)}62%{opacity:1;transform:translateY(8px) rotate(18deg) scale(1.08)}100%{opacity:1;transform:translateY(0) rotate(-8deg) scale(1)}}
+@keyframes relicFloat{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-14px) rotate(7deg)}}
+@media (prefers-reduced-motion:reduce){.home *{animation:none!important}}
+</style>
+</head>
+<body>
+<main class="home">
+  <picture>
+    <source media="(max-aspect-ratio: 1/1)" type="image/webp" srcset="/lp/v2/lander-mobile-720.webp 720w, /lp/v2/lander-mobile-1008.webp 1008w" sizes="100vw" />
+    <source type="image/webp" srcset="/lp/v2/lander-desktop-1280.webp 1280w, /lp/v2/lander-desktop-1792.webp 1792w" sizes="100vw" />
+    <img id="bg" class="bg" src="/lp/v2/lander-desktop-1280.webp" width="1792" height="1008" alt="A Day of the Dead plaza at night" />
+  </picture>
+  <div id="glows" class="glows" aria-hidden="true"></div>
+  <h1 class="ttlwrap"><img id="ttl" src="/lp/lander-title.webp" width="1681" height="363" alt="Chanclazo" /></h1>
+  <div id="rib" class="rib">When words fail, the chanclazo speaks!</div>
+  <img id="relic" src="/crash/chancla-btn.webp" alt="The gold chancla" width="256" height="144" />
+  <div class="cta" id="cta">
+    <a class="play" href="/choose" id="playNow">PLAY NOW</a>
+    <p class="fine">Free play only · No real money · <a href="/lore">Lore</a></p>
+  </div>
+  <button id="lmusic" class="lmusic" type="button" aria-label="Music on or off">♪ Music</button>
+</main>
+<footer class="cz-copy">© 2026 Chanclazo · <span class="cz-build">%%CZ_BUILD%%</span></footer>
+<script type="module">
+import { initLanderMusic } from '/src/play/music.ts';
+const DESK = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, logoW: 0.33, logoTop: 0.03, gap: [0.235, 0.725], feet: 0.8, candles: [[.152,.875,1],[.291,.865,1],[.38,.865,1],[.407,.825,1],[.553,.76,.9],[.6,.865,.9],[.627,.835,1],[.627,.93,1],[.748,.835,1],[.845,.875,1]] };
+const MOB = { W: 1008, H: 1792, safe: [0.025, 0.985], ay: 0.35, logoW: 0.86, logoTop: 0.03, gap: [0.2, 0.8], feet: 0.735, candles: [[.05,.68,1],[.243,.67,1],[.39,.67,1],[.425,.64,1],[.615,.61,.9],[.685,.66,.9],[.735,.655,1],[.735,.695,1],[.912,.655,1],[.98,.7,1]] };
+const T = { w: 1681, h: 363 };
+const $ = (id) => document.getElementById(id);
+const home = document.querySelector('.home'), bg = $('bg'), ttl = $('ttl'), rib = $('rib'), cta = $('cta'), glows = $('glows');
+const portrait = matchMedia('(max-aspect-ratio: 1/1)');
+const put = (el, x, y, w, h) => Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', ...(h != null ? { height: h + 'px' } : {}), visibility: 'visible' });
+let glowMode = '';
+const place = () => {
+  const vw = home.clientWidth, vh = home.clientHeight, mob = portrait.matches, A = mob ? MOB : DESK;
+  const sw = (A.safe[1] - A.safe[0]) * A.W, cx = (A.safe[0] + A.safe[1]) / 2;
+  const s = Math.min(Math.max(vw / A.W, vh / A.H), vw / sw);
+  const iw = A.W * s, ih = A.H * s;
+  let ix = vw / 2 - cx * iw; ix = Math.min(0, Math.max(vw - iw, ix)); if (iw < vw) ix = (vw - iw) / 2;
+  let iy = (vh - ih) * A.ay; if (ih > vh) iy = (vh - ih) * 0.5;
+  bg.classList.add('fit'); bg.classList.toggle('fadeY', ih < vh - 2); bg.classList.toggle('fadeX', iw < vw - 2);
+  put(bg, ix, iy, iw, ih);
+  const X = (f) => ix + f * iw, Y = (f) => iy + f * ih;
+  const pad = Math.max(8, vw * 0.03);
+  const ctaH = cta.offsetHeight || 96;
+  const relicRatio = 144 / 256;
+  let tw = Math.min(vw - 2 * pad, mob ? vw * 0.78 : vw * 0.34, 560);
+  let th = tw * T.h / T.w;
+  const logoCap = Math.max(64, vh * (mob ? 0.12 : 0.15));
+  if (th > logoCap) { th = logoCap; tw = th * T.w / T.h; }
+  const ty = Math.max(vh * (mob ? 0.16 : 0.18), mob ? 88 : 96);
+  rib.style.fontSize = Math.max(12, Math.min(mob ? 16 : 20, tw * 0.042, vw * 0.026)) + 'px';
+  rib.style.width = 'max-content';
+  rib.style.left = '50%';
+  rib.style.transform = 'translateX(-50%)';
+  rib.style.visibility = 'visible';
+  const rh = rib.offsetHeight;
+  const ry = ty + th + Math.max(8, th * 0.06);
+  rib.style.top = ry + 'px';
+  const relic = $('relic');
+  let rW = Math.min(vw * (mob ? 0.6 : 0.32), vh * 0.29, 400);
+  let rH = rW * relicRatio;
+  let rY = ry + rh + Math.max(18, vh * 0.04);
+  const limit = vh - ctaH - 16;
+  if (rY + rH + 12 > limit) {
+    const room = Math.max(80, limit - (ry + rh) - 20);
+    rH = Math.min(rH, room);
+    rW = rH / relicRatio;
+    rY = ry + rh + 12;
+  }
+  put(ttl, (vw - tw) / 2, ty, tw, th);
+  put(relic, (vw - rW) / 2, rY, rW, rH);
+  if (!relic.classList.contains('on')) relic.classList.add('on');
+  cta.style.bottom = 'auto';
+  cta.style.top = Math.min(limit, rY + rH + 10) + 'px';
+  cta.style.visibility = 'visible';
+  const key = mob + '|' + Math.round(iw) + '|' + Math.round(ix) + '|' + Math.round(iy);
+  if (key !== glowMode) {
+    glowMode = key; glows.textContent = '';
+    for (const [fx, fy, kk] of A.candles) {
+      const g = document.createElement('i'), d = Math.max(26, iw * 0.05 * kk);
+      Object.assign(g.style, { left: X(fx) + 'px', top: Y(fy) + 'px', width: d + 'px', height: d + 'px' });
+      g.style.setProperty('--d', (1.6 + Math.random() * 1.6).toFixed(2) + 's');
+      g.style.animationDelay = (-Math.random() * 2).toFixed(2) + 's';
+      glows.appendChild(g);
+    }
+  }
+};
+place(); addEventListener('resize', place); bg.addEventListener('load', place); document.fonts?.ready.then(place);
+portrait.addEventListener?.('change', place);
+initLanderMusic($('lmusic'));
+</script>
+</body>
+</html>

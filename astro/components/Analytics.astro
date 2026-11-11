@@ -13,7 +13,7 @@ const gaId = (import.meta.env.PUBLIC_GA_ID || import.meta.env.VITE_GA_ID || '').
     s.dataset.ga = gaId;
     document.head.appendChild(s);
     var path = location.pathname.replace(/\.html$/, '') || '/';
-    var titles = { '/': 'Home', '/choose': 'Choose a Game', '/fling': 'Chancla Strike', '/match': 'Chanclazo Match', '/slots': 'Piñata Slots', '/lore': 'Lore' };
+    var titles = { '/': 'Home', '/choose': 'Choose a Game', '/chancla-strike': 'Chancla Strike', '/fling': 'Chancla Strike', '/match': 'Chanclazo Match', '/slots': 'Piñata Slots', '/lore': 'Lore' };
     window.gtag('event', 'page_view', {
       page_title: titles[path] || document.title,
       page_path: path,
@@ -24,7 +24,7 @@ const gaId = (import.meta.env.PUBLIC_GA_ID || import.meta.env.VITE_GA_ID || '').
       if (!a) return;
       var href = a.getAttribute('href') || '';
       var game = null;
-      if (href.indexOf('/fling') === 0) game = 'fling';
+      if ((href.indexOf('/chancla-strike') === 0 || href.indexOf('/fling') === 0)) game = 'fling';
       else if (href.indexOf('/match') === 0) game = 'match';
       else if (href.indexOf('/slots') === 0) game = 'slots';
       else if (href.indexOf('/lore') === 0) game = 'lore';

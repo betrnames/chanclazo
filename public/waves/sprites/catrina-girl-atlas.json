@@ -1,0 +1,10 @@
+{
+  "meta": {
+    "image": "catrina-girl-atlas.webp",
+    "size": { "w": 2576, "h": 1086 },
+    "cell": { "w": 368, "h": 362 },
+    "anchor": { "x": 184, "y": 354, "note": "feet/ground point inside every cell" },
+    "bodyHeightPx": 340,
+    "counts": { "walk": 7, "hit": 1, "ko": 2 }
+  }
+}
