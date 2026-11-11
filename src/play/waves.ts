@@ -115,9 +115,9 @@ type AnimName = keyof typeof ANIM;
 // h = world height that a 320px-tall body should be; stride = world units per walk cycle
 const ART = {
   boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3),
-  girl: sheet('catrina-girl', 2576, 1086, 368, 362, 184, 354, 2.02, 1.55, 7, 1, 2, '?v=4'),
+  girl: sheet('catrina-girl', 2576, 1086, 368, 362, 184, 354, 2.02, 1.55, 7, 1, 2, '?v=5'),
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
-  calaca: sheet('calaverita-small', 1968, 1086, 328, 362, 164, 354, 1.25, 1.6, 6, 1, 3, '?v=5'),
+  calaca: sheet('calaverita-small', 1968, 1086, 328, 362, 164, 354, 1.25, 1.6, 6, 1, 3, '?v=6'),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
   lucha: sheet('luchador-boss', 2744, 1038, 343, 346, 170, 339, 4.1, 3.0), // 1.5x bigger boss (Gabe, 2026-11-10); hp bar follows via BOSS_HEAD
 };
@@ -203,21 +203,14 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const scale = kind === 'jefe' ? 1.3 : 1;
   const h = a.h * scale * (a.ch / 320), w = h * (a.cw / a.ch); // plane = one atlas cell
   const map = a.tex.clone(); map.repeat.set(a.cw / a.W, a.ch / a.H); // the clone shares the image (no extra memory)
-  const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.45, side: THREE.FrontSide, fog: kind !== 'girl' && kind !== 'calaca' });
+  const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   const flashMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   const root = new THREE.Group();
   const gk = `${kind}${variant}`;
   const body = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), mat); body.castShadow = true;
   const flash = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), flashMat); flash.position.z = 0.01; body.add(flash);
-  // a dark card behind the cutout reads as a black stain on the white faces, so the girl and the little skeleton stay a single clean layer
-  const edgeMat = new THREE.MeshBasicMaterial({ map, color: 0x241028, alphaTest: 0.45, side: THREE.FrontSide, fog: true });
-  if (kind !== 'girl' && kind !== 'calaca') {
-    for (let i = 1; i <= 4; i++) {
-      const edge = new THREE.Mesh(body.geometry, edgeMat);
-      edge.position.set(0, -0.012 * i, -0.028 * i);
-      edge.castShadow = false; body.add(edge);
-    }
-  }
+  // no dark copy behind the cutout: it showed through the white faces as a black stain
+  const edgeMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   if (kind === 'jefe') mat.color.setHex(0xd8c8ff); // big brother: a touch of purple
   root.add(body);
   const bodyW = kind === 'girl' ? w * (210 / a.cw) : kind === 'calaca' ? w * (165 / a.cw) : w;
