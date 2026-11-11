@@ -1,6 +1,7 @@
 import path from "path"
 import react from "@vitejs/plugin-react"
 import { defineConfig, type Plugin } from "vite"
+import { WAVES_NAME } from "./src/gameNames"
 
 function htmlEnv(): Plugin {
   const site = process.env.VITE_SITE_URL || 'https://chanclazo.com';
@@ -11,7 +12,7 @@ function htmlEnv(): Plugin {
     // In a build, %%CZ_BUILD%% is left in place so scripts/merge-dist.mjs stamps it with "v<version> · <commit>"
     // (same as the Astro pages). The dev server shows "dev".
     transformIndexHtml(html: string) {
-      const out = html.replaceAll('%VITE_SITE_URL%', site);
+      const out = html.replaceAll('%VITE_SITE_URL%', site).replaceAll('%%WAVES_NAME%%', WAVES_NAME); // game display name lives in src/gameNames.ts
       return serve ? out.replaceAll('%%CZ_BUILD%%', 'dev') : out;
     },
   };

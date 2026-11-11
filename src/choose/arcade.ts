@@ -2,8 +2,11 @@
 // One source for both pages: astro/pages/choose.astro renders arcadeHtml() at build time; choose.html (vite dev) injects it at runtime.
 // Pure HTML + CSS (src/choose/arcade.css) plus the existing character cut-outs. No Abuela here (Gabe's rule): Strike is the floating gold chancla.
 //
-// Desktop/landscape: four cabinets side by side. Phones (portrait): a horizontal scroll-snap carousel, one cabinet centred,
+// Chancla Crash is parked (2026-11-10, may return as a kart racer), so it has no cabinet; /crash still works.
+// Desktop/landscape: three cabinets side by side. Phones (portrait): a horizontal scroll-snap carousel, one cabinet centred,
 // neighbours peeking, dots underneath. The centred cabinet gets .lit (same glow as hover) so touch users see which one is "on".
+
+import { WAVES_NAME, marqueeLines } from '../gameNames';
 
 export interface Cab {
   id: string; href: string; name: string; line1: string; line2: string; tag?: string; attract: string;
@@ -11,9 +14,8 @@ export interface Cab {
 }
 
 export const CABS: Cab[] = [
-  { id: 'waves', href: '/waves', name: 'Chancla Waves', line1: 'CHANCLA', line2: 'WAVES', tag: 'NEW', attract: 'HOLD THE LINE', art: '/play/v2/sidro.webp', artW: 306, artH: 720, artCls: 'char', c: '#ff8c1a', c2: '#e2197a' },
+  { id: 'waves', href: '/waves', name: WAVES_NAME, line1: marqueeLines(WAVES_NAME)[0], line2: marqueeLines(WAVES_NAME)[1], tag: 'NEW', attract: 'HOLD THE LINE', art: '/play/v2/sidro.webp', artW: 306, artH: 720, artCls: 'char', c: '#ff8c1a', c2: '#e2197a' },
   { id: 'strike', href: '/chancla-strike?start=1', name: 'Chancla Strike', line1: 'CHANCLA', line2: 'STRIKE', tag: 'MAIN GAME', attract: 'FLING THE RELIC', art: '/lp/chancla_gold.webp', artW: 800, artH: 800, artCls: 'relic', c: '#ffd23f', c2: '#ff8c1a' },
-  { id: 'crash', href: '/crash', name: 'Chancla Crash', line1: 'CHANCLA', line2: 'CRASH', attract: 'TOPPLE THE TOWERS', art: '/crash/kids-card.webp', artW: 523, artH: 440, artCls: 'kids', c: '#18c8c0', c2: '#7a35ad' },
   { id: 'slots', href: '/slots?start=1', name: 'Piñata Slots', line1: 'PIÑATA', line2: 'SLOTS', tag: 'MINI GAME', attract: 'SPIN TO WIN', art: '/play/llama_choose.webp', artW: 504, artH: 954, artCls: 'char', c: '#e2197a', c2: '#18c8c0' },
 ];
 

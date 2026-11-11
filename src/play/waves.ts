@@ -1,10 +1,11 @@
-// Chancla Waves: a Plants-vs-Zombies-style lane defence (three.js).
+// The /waves game, now called "Día de los Muertos" (display name: WAVES_NAME in src/gameNames.ts): a Plants-vs-Zombies-style lane defence (three.js).
 // The sugar-skull boy and Catrina girl march on the ofrenda in waves; throw the gold chancla to knock them out.
 // Tap / drag at a kid to throw (aim follows the finger, release throws), or tap the gold chancla button to auto-aim.
 // Each kid that crosses the marigold line costs a heart. Waves get bigger and faster; there is no last wave.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { $, autoUnlockAudio, wireMute, report } from './common';
+import { WAVES_NAME } from '../gameNames';
 import { markGameStart, markFirstAction, track } from '../analytics';
 import { makeChancla, makeCandle, buildBackdrop, glowTex, dotTex } from './crashArt';
 import * as sfx from './crashAudio';
@@ -118,7 +119,7 @@ const ART = {
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
   calaca: sheet('calaverita-small', 2432, 1014, 304, 338, 155, 331, 1.2, 1.6),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
-  lucha: sheet('luchador-boss', 2744, 1038, 343, 346, 170, 339, 2.75, 2.0),
+  lucha: sheet('luchador-boss', 2744, 1038, 343, 346, 170, 339, 4.1, 3.0), // 1.5x bigger boss (Gabe, 2026-11-10); hp bar follows via BOSS_HEAD
 };
 const pmrem = new THREE.PMREMGenerator(renderer);
 const goldEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -158,7 +159,7 @@ dotGroup.visible = ring.visible = false;
 type Kind = 'boy' | 'girl' | 'jefe' | 'calaca' | 'lucha';
 interface Kid {
   kind: Kind; root: THREE.Group; body: THREE.Mesh; flash: THREE.Mesh; shadow: THREE.Mesh; mat: THREE.MeshBasicMaterial; flashMat: THREE.MeshBasicMaterial;
-  pips?: THREE.Sprite[]; aura?: THREE.Sprite; hpFill?: THREE.Sprite; hpBar?: THREE.Sprite; variant: number;
+  pips?: THREE.Sprite[]; aura?: THREE.Sprite; hpFill?: THREE.Sprite; hpBar?: THREE.Sprite; variant: number; rage?: boolean;
   sheet: Sheet; map: THREE.Texture; edgeMat: THREE.Material; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number;
@@ -188,7 +189,9 @@ const hpBgTex = canvasTex(128, 24, (g) => { g.fillStyle = '#1a0826'; g.beginPath
 const hpFillTex = canvasTex(64, 16, (g) => { const gr = g.createLinearGradient(0, 0, 0, 16); gr.addColorStop(0, '#ff8a5c'); gr.addColorStop(1, '#d6122a'); g.fillStyle = gr; g.fillRect(0, 0, 64, 16); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(0, 2, 64, 4); });
 // luchador atlas: head centre x and the top of his head (px inside a cell, measured from the walk frames)
 const BOSS_HEAD = { x: 180, top: 12 };
-function bossHp(n: number): number { return 8 + Math.floor(n / 3) * 3; } // wave 3: 11, wave 6: 14, ...
+function bossHp(n: number): number { return 14 + Math.floor(n / 3) * 5; } // tougher boss: wave 3: 19, wave 6: 24, wave 9: 29 ...
+const BOSS_DMG = 4; // hearts lost if the luchador reaches the marigold line (was 3)
+const BOSS_RAGE = 1.4; // speed multiplier once he drops under half health
 function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid {
   const variant = 0;
   const a = kind === 'girl' ? ART.girl : kind === 'calaca' ? ART.calaca : kind === 'lucha' ? ART.lucha : ART.boy;
@@ -241,10 +244,11 @@ function playAnim(k: Kid, anim: AnimName): void { k.anim = anim; k.animT = 0; }
 
 // ───────────────────────── waves ─────────────────────────
 function waveSpec(n: number) {
+  const x = Math.max(0, n - 5); // extra ramp after wave 5 (Gabe, 2026-11-10); waves 1-5 are unchanged
   return {
-    count: 5 + n * 3,
-    speed: Math.min(2.9, 1.05 + n * 0.17),
-    gap: Math.max(0.42, 1.75 - n * 0.13),
+    count: 5 + n * 3 + x * 2,
+    speed: Math.min(2.9 + x * 0.06, 3.4, (1.05 + n * 0.17) * (1 + x * 0.04)),
+    gap: Math.max(x ? 0.32 : 0.42, (1.75 - n * 0.13) * Math.max(0.72, 1 - x * 0.05)),
     girl: Math.min(0.55, 0.15 + n * 0.06),
     jefe: n >= 3 ? Math.min(0.22, 0.06 + (n - 3) * 0.03) : 0,
     calaca: Math.min(0.3, 0.14 + n * 0.03),
@@ -270,7 +274,7 @@ function spawnTick(dt: number): void {
   const r = Math.random();
   const bossNow = bossPending && spawned >= Math.floor(waveTotal / 2);
   const kind: Kind = bossNow ? 'lucha' : r < s.jefe ? 'jefe' : r < s.jefe + s.calaca ? 'calaca' : r < s.jefe + s.calaca + s.girl ? 'girl' : 'boy';
-  const sp = s.speed * (kind === 'girl' ? 1.3 : kind === 'jefe' ? 0.62 : kind === 'calaca' ? 1.55 : kind === 'lucha' ? 0.42 : 1) * (0.9 + Math.random() * 0.2);
+  const sp = s.speed * (kind === 'girl' ? 1.3 : kind === 'jefe' ? 0.62 : kind === 'calaca' ? 1.55 : kind === 'lucha' ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
   if (bossNow) { bossPending = false; banner('¡EL LUCHADOR!', 'Lots of hits · or drop a chancla BOMB 💣'); sfx.sfxCombo(3); shake = 0.5; }
   // avoid stacking two in the same lane back to back
   let lane = Math.floor(Math.random() * LANES.length);
@@ -452,7 +456,8 @@ function hitKid(k: Kid, s?: Shot, dmg = 1): void {
   if (k.pips) k.pips.forEach((p, i) => { p.visible = i < k.hp; });
   if (k.hpFill) k.hpFill.scale.x = 1.56 * (k.hp / k.maxHp);
   if (k.hp > 0) {
-    const big = k.kind === 'lucha'; playAnim(k, 'hit'); k.stagger = big ? 0.18 : 0.45; k.z -= big ? 0.2 : 0.55; sfx.sfxWood(0.7, pan);
+    const big = k.kind === 'lucha'; playAnim(k, 'hit'); k.stagger = big ? 0.1 : 0.45; k.z -= big ? 0.1 : 0.55;
+    if (big && !k.rage && k.hp <= k.maxHp / 2) { k.rage = true; k.speed *= BOSS_RAGE; shake = 0.6; popText(k, '¡FURIA!', 'bad'); banner('¡EL LUCHADOR IS MAD!', 'He\'s charging · drop a BOMB 💣'); } sfx.sfxWood(0.7, pan);
     popText(k, big ? (dmg > 1 ? `BOOM −${dmg}` : `${k.hp}/${k.maxHp}`) : 'OUCH!', 'bad'); return;
   }
   // knocked out
@@ -567,7 +572,7 @@ function tickPetals(dt: number): void {
 }
 function kidReachedLine(k: Kid): void {
   k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose();
-  hearts = Math.max(0, hearts - (k.kind === 'lucha' ? 3 : 1)); if (k === boss) boss = undefined; updateHud();
+  hearts = Math.max(0, hearts - (k.kind === 'lucha' ? BOSS_DMG : 1)); if (k === boss) boss = undefined; updateHud();
   const hs = $('hearts').children; const lostEl = hs[hearts] as HTMLElement | undefined;
   if (lostEl) { lostEl.classList.remove('lost'); void lostEl.offsetWidth; lostEl.classList.add('lost'); }
   const h = $('hurt'); h.classList.add('on'); setTimeout(() => h.classList.remove('on'), 90);
@@ -623,7 +628,7 @@ function gameOver(): void {
   const isBest = score > best; if (isBest) { best = score; try { localStorage.setItem(BEST_KEY, String(best)); } catch { /* ignore */ } }
   $('oWave').textContent = String(wave); $('oScore').textContent = String(score);
   $('oBest').textContent = isBest && score > 0 ? '🏆 New best!' : `Best: ${best}`;
-  const txt = `I held the marigold line to wave ${wave} with ${score} points in Chancla Waves 🥿💀🌼`;
+  const txt = `I held the marigold line to wave ${wave} with ${score} points in ${WAVES_NAME} 🥿💀🌼`;
   ($('share') as HTMLAnchorElement).href = `https://x.com/intent/post?text=${encodeURIComponent(txt)}&url=${encodeURIComponent('https://chanclazo.com/waves')}`;
   sfx.sfxLose();
   setTimeout(() => { if (state === 'over') $('over').classList.remove('hidden'); }, 900);

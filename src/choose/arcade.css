@@ -36,6 +36,7 @@ html,body{margin:0;height:100%;background:#0a0418;overflow:hidden}
   border:3px solid #2a0f3f;box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 70%,#fff),0 0 18px 2px var(--c),inset 0 -6px 12px rgba(42,15,63,.35);overflow:hidden}
 .marquee::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.0) 0 14px,rgba(255,255,255,.12) 14px 16px);pointer-events:none}
 .marquee span{position:relative;display:block;color:#fff;-webkit-text-stroke:calc(var(--h) * .009) #2a0f3f;paint-order:stroke fill;text-shadow:0 3px 0 #2a0f3f;line-height:.92}
+.marquee .m1:empty{display:none}
 .marquee .m1{font-size:calc(var(--h) * .036);letter-spacing:.14em}
 .marquee .m2{font-size:calc(var(--h) * .066);letter-spacing:.04em}
 .marquee .tag{position:absolute;right:-34px;top:12px;transform:rotate(38deg);width:120px;text-align:center;font:900 calc(var(--h) * .016)/1.6 system-ui,sans-serif;letter-spacing:.1em;font-style:normal;color:#2a0f3f;background:#fff2a8;box-shadow:0 1px 3px rgba(0,0,0,.4)}

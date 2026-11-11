@@ -3,8 +3,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
 <meta name="theme-color" content="#14061f" />
 <meta name="robots" content="noindex" />
-<title>Chancla Waves · Chanclazo</title>
-<meta name="description" content="The sugar-skull kids are marching on the ofrenda. Throw the gold chancla and hold the line, wave after wave. A free Day of the Dead browser game." />
+<title>%%WAVES_NAME%% · Chanclazo</title>
+<meta property="og:title" content="%%WAVES_NAME%% · Chanclazo" />
+<meta name="application-name" content="%%WAVES_NAME%%" />
+<meta name="description" content="The sugar-skull kids are marching on the ofrenda. Throw the gold chancla and hold the line, wave after wave. %%WAVES_NAME%% is a free Day of the Dead browser game." />
 <link rel="icon" href="/cruise/logo_chancla.webp" />
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -118,7 +120,20 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 .menu{display:flex;flex-direction:column;gap:10px;align-items:center}
 .xbtn{display:inline-flex;align-items:center;gap:8px;background:#000;color:#fff;border:3px solid #fff;border-radius:999px;padding:8px 20px;font:700 15px system-ui;text-decoration:none;margin-top:10px}
 .cz-copy{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(max(4px,env(safe-area-inset-bottom)) + 6px);z-index:30;pointer-events:none;font:10px system-ui,sans-serif;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.85);text-shadow:0 1px 3px rgba(0,0,0,.9);display:flex;align-items:center;gap:8px;white-space:nowrap}
-@media (prefers-reduced-motion:reduce){#fire.ready,#fire.ready img,.relic{animation:none}}
+/* popups = buttons (and a little stroked text) floating over the live game: no panel, no box, no dim (Gabe, 2026-11-10) */
+.screen{background:none!important}
+#title.screen{align-items:flex-end;padding-bottom:calc(env(safe-area-inset-bottom) + 30%)}
+.card{background:none!important;border:0!important;box-shadow:none!important;padding:0!important;border-radius:0}
+.card .sub,.card .small,.link{text-shadow:0 2px 3px #000,0 0 10px #000,0 0 18px rgba(0,0,0,.8)}
+.card .sub{font-size:16px;color:#fff}
+.stat{background:none!important;padding:0 6px!important}
+.stat small{color:#fff;text-shadow:0 1px 3px #000,0 0 8px #000}
+.stat b{font-size:34px;-webkit-text-stroke:6px #3b1a5c;paint-order:stroke fill;text-shadow:0 4px 0 #3b1a5c}
+#title .gname{margin:0 0 18px;font-size:clamp(40px,11vw,58px);text-shadow:0 5px 0 #3b1a5c,0 0 24px rgba(255,140,26,.8)}
+#title .btn{font-size:30px;padding:10px 46px;box-shadow:0 6px 0 #3b1a5c,0 0 30px rgba(255,200,60,.75);animation:pbreath 1.6s ease-in-out infinite}
+@keyframes pbreath{50%{transform:scale(1.06)}}
+.btn{box-shadow:0 6px 0 #3b1a5c,0 0 22px rgba(0,0,0,.55)}
+@media (prefers-reduced-motion:reduce){#title .btn{animation:none}#fire.ready,#fire.ready img,.relic{animation:none}}
 </style>
 </head><body>
 <div id="stage" class="on-title">
@@ -141,8 +156,8 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   <button id="fire" aria-label="Throw the gold chancla at the closest kid"><img src="/crash/chancla-btn.webp" alt="" width="84" height="47" /><span class="tap">TAP!</span></button>
 
   <div class="screen" id="title"><div class="card">
-    <img class="relic" src="/crash/chancla-btn.webp" alt="The gold chancla" />
-    <button class="btn gold" id="play">TAP TO PLAY</button>
+    <h1 class="gname">%%WAVES_NAME%%</h1>
+    <button class="btn gold" id="play" aria-label="Tap to play %%WAVES_NAME%%">TAP TO PLAY</button>
   </div></div>
 
   <div class="screen hidden" id="pause"><div class="card menu">
@@ -153,7 +168,6 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   </div></div>
 
   <div class="screen hidden" id="over"><div class="card">
-    <img class="hero" src="/crash/kids-card.webp" alt="The sugar-skull kids, very pleased with themselves" />
     <h1>¡Ay, no!</h1>
     <p class="sub">The kids made it to the ofrenda.</p>
     <div class="stats"><div class="stat"><small>Wave</small><b id="oWave">1</b></div><div class="stat"><small>Score</small><b id="oScore">0</b></div></div>
