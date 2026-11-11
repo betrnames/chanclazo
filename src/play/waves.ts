@@ -165,7 +165,7 @@ interface Kid {
   sheet: Sheet; map: THREE.Texture; edgeMat: THREE.Material; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number; eatAnim: number;
-  bite?: THREE.Sprite; eatBody?: THREE.Mesh;
+  bite?: THREE.Sprite; eatBody?: THREE.Mesh; fallBody?: THREE.Sprite;
 }
 interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean; lane?: number }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
@@ -467,7 +467,48 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
 });
 
-// ───────────────────────── hits + knock-outs ─────────────────────────
+// ───────────────────────── girl knock-out: billboard, not a tipped card ─────────────────────────
+// The atlas KO cells were made by tipping her walk frame inside a 420×590 box. The rotated
+// character runs off the right edge, so a hard flat crop shows as she falls. During her KO we
+// hide that card, put a complete face-on frame (her hit art) on a camera-facing sprite, and
+// tumble in screen space with a 2D rotation. Other characters keep the atlas KO row.
+function ensureGirlFall(k: Kid): void {
+  if (k.fallBody || k.kind !== 'girl') return;
+  const sh = k.sheet;
+  const map = sh.tex.clone();
+  map.repeat.set(sh.cw / sh.W, sh.ch / sh.H);
+  map.offset.set(0, 1 - (ANIM.hit.row + 1) * sh.ch / sh.H); // hit frame 0: full character, reacting
+  const mat = new THREE.SpriteMaterial({ map, transparent: true, alphaTest: 0.05, depthWrite: false, depthTest: false, fog: false });
+  const h = k.h, w = h * (sh.cw / sh.ch);
+  const sp = new THREE.Sprite(mat);
+  // feet on the cobbles, same anchor as the walk card, so she tips over rather than spinning mid-air
+  sp.center.set(sh.ax / sh.cw, 1 - sh.ay / sh.ch);
+  sp.scale.set(w, h, 1);
+  sp.position.set(0, 0, 0.08);
+  sp.renderOrder = 5;
+  sp.visible = false;
+  k.root.add(sp);
+  k.fallBody = sp;
+}
+function paintGirlFall(k: Kid): void {
+  ensureGirlFall(k);
+  if (!k.fallBody) return;
+  k.fallBody.visible = true;
+  k.body.visible = false;
+  k.body.rotation.set(0, 0, 0);
+  k.body.scale.set(1, 1, 1);
+  // Hold hit frame 0: a complete, uncropped reacting pose. (Cycling through hit 1, a lean
+  // the other way, fought the tumble.) The fall is the 2D rotation, not a new costume.
+  const sh = k.sheet;
+  const map = (k.fallBody.material as THREE.SpriteMaterial).map!;
+  map.offset.set(0, 1 - ((ANIM.hit.row + 1) * sh.ch) / sh.H);
+  const t = Math.min(1, k.ko / 0.65);
+  const ease = t * t * (3 - 2 * t); // smoothstep
+  const dir = k.koSpin || -1;
+  (k.fallBody.material as THREE.SpriteMaterial).rotation = dir * ease * 1.45; // ~83° by 0.65s, always face-on
+  k.fallBody.position.x = dir * ease * -0.22;
+}
+
 function hitKid(k: Kid, s?: Shot, dmg = 1): void {
   k.hp = Math.max(0, k.hp - dmg); k.flashT = 1; shake = Math.min(0.5, shake + 0.18);
   const pan = THREE.MathUtils.clamp(k.root.position.x / 3, -1, 1);
@@ -485,7 +526,7 @@ function hitKid(k: Kid, s?: Shot, dmg = 1): void {
     popText(k, big ? (dmg > 1 ? `BOOM −${dmg}` : `${k.hp}/${k.maxHp}`) : 'OUCH!', 'bad'); return;
   }
   // knocked out
-  k.ko = 0; k.koSpin = 0; k.koVy = 2.6; k.koY = 0; playAnim(k, 'ko');
+  k.ko = 0; k.koSpin = k.kind === 'girl' ? -1 : 0; k.koVy = 2.6; k.koY = 0; playAnim(k, 'ko');
   k.mat.transparent = true; k.mat.alphaTest = 0.05; k.mat.depthWrite = false;
   sfx.sfxRattle(pan);
   knocked++;
@@ -943,7 +984,7 @@ function popText(k: Kid, text: string, cls: string): void {
   $('fx').appendChild(el); setTimeout(() => el.remove(), 1000);
 }
 function clearField(): void {
-  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } }
+  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.map?.dispose(); m.dispose(); } }
   for (const s of shots) scene.remove(s.obj);
   for (const p of petals) { fxGroup.remove(p.s); p.s.material.dispose(); }
   for (const c of conchas) freeLoaf(c.loaf);
@@ -1015,17 +1056,23 @@ function frame(now: number): void {
       // knock-out: small pop, the atlas KO frames do the fall, then fade
       k.ko += dt; k.koVy -= 14 * dt; k.koY = Math.max(0, k.koY + k.koVy * dt);
       k.root.position.y = k.koY;
-      setFrame(k, 'ko', Math.floor(k.ko * ANIM.ko.fps)); k.body.rotation.set(0.28, 0, 0); k.body.scale.set(1, 1, 1);
       k.root.position.z -= dt * 1.2;
-      k.mat.opacity = THREE.MathUtils.clamp((1.15 - k.ko) / 0.45, 0, 1);
-      (k.shadow.material as THREE.MeshBasicMaterial).opacity = k.mat.opacity;
+      const fade = THREE.MathUtils.clamp((1.15 - k.ko) / 0.45, 0, 1);
+      if (k.kind === 'girl') {
+        paintGirlFall(k);
+        (k.fallBody!.material as THREE.SpriteMaterial).opacity = fade;
+      } else {
+        setFrame(k, 'ko', Math.floor(k.ko * ANIM.ko.fps)); k.body.rotation.set(0.28, 0, 0); k.body.scale.set(1, 1, 1);
+        k.mat.opacity = fade;
+        k.body.visible = true;
+      }
+      (k.shadow.material as THREE.MeshBasicMaterial).opacity = fade;
       if (k.pips) k.pips.forEach((p) => { p.visible = false; });
       if (k.aura) k.aura.visible = false;
       if (k.hpBar) { k.hpBar.visible = false; k.hpFill!.visible = false; }
       if (k.bite) k.bite.visible = false;
       if (k.eatBody) k.eatBody.visible = false;
-      k.body.visible = true;
-      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } }
+      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.map?.dispose(); m.dispose(); } }
       continue;
     }
     if (state === 'play' || state === 'between') {
