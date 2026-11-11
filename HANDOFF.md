@@ -4,12 +4,12 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 
 ## Current state (2026-11-11, afternoon PT)
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
-- **Live right now is v1.1.7.** Footer stamp on chanclazo.com: `v1.1.7 · 41da599` (main). The matching feature commit is `4daed0c` ("concha lands in front of its row and gets eaten in bites").
+- **Live right now is v1.1.8.** Gabe said "Perfect push live" at 2:20 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.8 ·` plus the short SHA of the Release v1.1.8 commit on `main`. The matching feature commit is the Release v1.1.8 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.7 · 41da599`.
 - Preview of the feature branch: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
-- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7. He has not said it for the work below.
+- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7 and v1.1.8.
 
-## Not on production yet (working tree, ship only when Gabe says push)
-These files are the latest playtest build. They are newer than `4daed0c` / `41da599`.
+## What v1.1.8 shipped (2026-11-11)
+These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to it) and are now on production.
 
 1. **Eating is a natural bite, not a flattened head.** The old chew squashed the body (`scale.y *= 0.88`) and tipped the card to 0.42–0.64 rad, which foreshortened faces into a flat angle. That squash and extra tilt are gone.
    - **Boy:** Gabe's `eat-boy.webp` (8 cells, 168×278, from `IMG_7894.GIF`) is the right sheet and is wired as-is, correct aspect, feet on the cobbles, the same mild 0.2 card tilt as walking. It is not stretched or used on anyone else.
@@ -21,13 +21,13 @@ These files are the latest playtest build. They are newer than `4daed0c` / `41da
 3. **Girl fall is no longer the old sticker.** The 3D video (`attachments/…39e99233…mp4`, 10s) is a **run only**. It has no hit and no fall. The hit/KO rows in `catrina-girl-atlas.webp` were an older flat drawing, so she changed costumes when a chancla landed. Those two rows were rebuilt by tipping the 3D walk cell (same girl, flower crown). Sheet is still 3360×1770, cell 420×590, anchor 210,587, walk 8 / hit 3 / ko 4, loaded as `?v=7`. She is still a flat card in the scene, like every other character. A real 3D tumble needs a new clip of **this** girl falling. Do not paste the old sticker frames back.
 4. **Do not use `public/waves/snack-elote.webp`.** It is an unused leftover. Gabe removed elote. Leave it untracked. Pan dulce / concha is the only snack.
 
-## Concha rules (Gabe, 2026-11-11) — already in v1.1.7, pieces are the extra
+## Concha rules (Gabe, 2026-11-11) — in v1.1.7; crumb shatter and the round loaf are the v1.1.8 extra
 - Lands on the cobbles **in front of one row** (the lane of `threat()`), not in the air on a kid.
 - That row slows down (`holdZ`, speed ×0.32) and **cannot walk past** the concha. Kids stack behind the one who is eating.
 - Other lanes are not blocked.
 - It is eaten in bites (~0.38s each, `sfxSquish`). When the pieces are gone the row walks again.
 
-## What v1.1.7 already has (do not redo)
+## What v1.1.7 already had (still true in v1.1.8; do not redo)
 - Homepage: lowered logo, tagline centered under the logo, gold chancla floating in the middle, PLAY NOW under it going to `/choose`. No trio. No loading screen. PLAY NOW must not flash in the header. **Do not put a promo video on `/`.** Gabe is cutting the X video in another app. `vite.config.ts` `/` must stay `home.html`.
 - Día de los Muertos title is a card: game name, one rotating chanclazo quote (`#titleQuote`), TAP TO PLAY. No character lineup on that card.
 - Waves are hard from wave 1 (`waveSpec` in `waves.ts`).
@@ -80,14 +80,14 @@ npm run build
 
 ## Open
 - Girl hit/KO is the 3D render tipped in the cell, not a new fall video. Ask Gabe before replacing it again.
-- Concha crumb burst (counts, sizes, split-on-land, fade) was tuned in the preview. Phone playtest still needed.
-- Eating poses (natural bite, no flattened heads) are on the preview: boy uses Gabe's `eat-boy.webp`, jefe and the girl have new 6-frame strips. Phone playtest still needed.
+- Concha crumb burst (counts, sizes, split-on-land, fade) shipped in v1.1.8. Phone playtest still useful.
+- Eating poses (natural bite, no flattened heads) shipped in v1.1.8: boy uses Gabe's `eat-boy.webp`, jefe and the girl have new 6-frame strips. Phone playtest still useful.
+- The loaf shows the full round `snack-concha.webp` (rounded golden base), sitting just above the cobbles, and shrinks uniformly. Shipped in v1.1.8.
 - WAVE CLEAR banner can overlap the papel picado. Cosmetic.
 - Strike level map on a short landscape phone can touch the footer.
 - `snack-elote.webp` is junk. Do not add it.
 - Boss and `waveSpec` numbers are playtest values. Don't retune unless Gabe says the waves are too easy or too hard.
 
 ## Next, only if Gabe asks
-- Push the eating pose, concha crumble, and 3D girl fall live (that is a `main` release, v1.1.8).
 - A real fall clip of the flower-crown girl, if he wants the knockdown to stop being a tipped card.
 - Crash as a kart racer, with a cabinet, when he asks.
