@@ -117,7 +117,7 @@ type AnimName = keyof typeof ANIM;
 // h = world height that a 320px-tall body should be; stride = world units per walk cycle
 const ART = {
   boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3),
-  girl: sheet('catrina-girl', 3360, 1770, 420, 590, 210, 587, 1.38, 1.55, 8, 3, 4, '?v=6'),
+  girl: sheet('catrina-girl', 3360, 1770, 420, 590, 210, 587, 1.38, 1.55, 8, 3, 4, '?v=7'),
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
   calaca: sheet('calaverita-small', 2952, 1323, 492, 441, 246, 435, 1.25, 1.6, 6, 1, 6, '?v=7'),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
@@ -164,8 +164,8 @@ interface Kid {
   pips?: THREE.Sprite[]; aura?: THREE.Sprite; hpFill?: THREE.Sprite; hpBar?: THREE.Sprite; variant: number; rage?: boolean;
   sheet: Sheet; map: THREE.Texture; edgeMat: THREE.Material; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
-  phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number;
-  bite?: THREE.Sprite;
+  phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number; eatAnim: number;
+  bite?: THREE.Sprite; eatBody?: THREE.Mesh;
 }
 interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean; lane?: number }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
@@ -182,6 +182,16 @@ let bombs = 0, snacks = 0, bossPending = false, boss: Kid | undefined;
 const BOMB_MAX = 3, BOMB_R = 2.4, BOMB_DMG = 4;
 const SNACK_MAX = 4;
 const snackTex = tex('/waves/snack-concha.webp?v=2');
+const CONCHA_BITS = 5;
+// Eating sheets: the boy uses Gabe's eat-boy.webp (8 cells, 168×278) as-is, no squash.
+// Jefe and the flower-crown girl have their own 6-frame strips derived from their walk art
+// (reach, lean-in, bite, chew, chew, swallow). Head leans toward the concha; the face is never flattened.
+interface EatSheet { tex: THREE.Texture; n: number; cw: number; ch: number; fps: number }
+const EAT_SHEETS: Record<string, EatSheet> = {
+  boy:  { tex: tex('/waves/eat-boy.webp?v=1'),  n: 8, cw: 168, ch: 278, fps: 8.33 },
+  jefe: { tex: tex('/waves/eat-jefe.webp?v=1'), n: 6, cw: 168, ch: 278, fps: 10 },
+  girl: { tex: tex('/waves/eat-girl.webp?v=1'), n: 6, cw: 420, ch: 590, fps: 10 },
+};
 
 // ───────────────────────── kids ─────────────────────────
 const planeGeo = new Map<string, THREE.PlaneGeometry>();
@@ -217,7 +227,7 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bodyW * 0.72, bodyW * 0.32), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.8 }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.02, 0.04); root.add(shadow);
   const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w: bodyW, golden, variant, sheet: a, map, edgeMat, anim: 'walk', animT: 0, frameKey: -1,
-    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0 };
+    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0, eatAnim: 0 };
   if (kind === 'jefe') {
     k.pips = [];
     for (let i = 0; i < k.maxHp; i++) { const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: pipTex, depthWrite: false, fog: false })); p.scale.setScalar(0.3); p.position.set((i - (k.maxHp - 1) / 2) * 0.34, h + 0.16, 0.02); body.add(p); k.pips.push(p); }
@@ -521,6 +531,37 @@ function updateSnackBtn(): void {
   snackBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
   $('snackN').textContent = String(snacks);
 }
+function ensureEater(k: Kid): void {
+  if (k.eatBody) return;
+  const sheet = EAT_SHEETS[k.kind];
+  if (!sheet) return;
+  const map = sheet.tex.clone();
+  map.repeat.set(1 / sheet.n, 1);
+  map.offset.set(0, 0);
+  const mat = new THREE.MeshBasicMaterial({ map, transparent: true, alphaTest: 0.12, depthWrite: false, side: THREE.FrontSide, fog: false });
+  // World height matches the walk body; width follows the sheet's true aspect so the face is not stretched.
+  const h = k.h, w = h * (sheet.cw / sheet.ch);
+  const g = new THREE.PlaneGeometry(w, h);
+  g.translate(0, h * 0.5, 0); // feet on the cobbles
+  const mesh = new THREE.Mesh(g, mat);
+  mesh.position.z = 0.06;
+  mesh.visible = false;
+  mesh.renderOrder = 2;
+  k.root.add(mesh);
+  k.eatBody = mesh;
+}
+function showEater(k: Kid, on: boolean): void {
+  if (on) ensureEater(k);
+  if (!k.eatBody) return;
+  k.eatBody.visible = on;
+  if (!on) return;
+  const sheet = EAT_SHEETS[k.kind];
+  const frame = Math.floor(k.eatAnim * sheet.fps) % sheet.n;
+  const map = (k.eatBody.material as THREE.MeshBasicMaterial).map!;
+  map.offset.x = frame / sheet.n;
+  // The same mild card tilt as walking. A bigger rotation.x foreshortens the head into a flat angle — that was the bug.
+  k.eatBody.rotation.set(0.2, -k.x * 0.04, 0);
+}
 function ensureBite(k: Kid): void {
   if (k.bite) return;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, depthTest: false }));
@@ -528,35 +569,206 @@ function ensureBite(k: Kid): void {
   k.root.add(sp);
   k.bite = sp;
 }
-interface Concha { lane: number; z: number; bites: number; max: number; biteT: number; sprite: THREE.Sprite }
+interface Concha { lane: number; z: number; bites: number; max: number; biteT: number; loaf: THREE.Sprite; shown: number }
+interface Crumb { sprite: THREE.Sprite; v: THREE.Vector3; life: number; maxLife: number; spin: number; gen: number; scale: number }
 const conchas: Concha[] = [];
+const crumbs: Crumb[] = [];
+// Pooled pastry bits, textured from snack-concha.webp. First-gen flakes split into smaller crumbs on landing, then fade — nothing piles on the floor.
+const CRUMB_COLS = 8, CRUMB_ROWS = 4, CRUMB_CELLS = 32, CRUMB_CELL = 64, CRUMB_GROUND = 0.08, CRUMB_CAP = 96;
+const crumbPool: THREE.Sprite[] = [];
+let crumbAtlas: THREE.CanvasTexture | undefined;
+function ensureCrumbAtlas(): THREE.CanvasTexture {
+  if (crumbAtlas) return crumbAtlas;
+  const img = snackTex.image as CanvasImageSource | undefined;
+  const sw = img && 'width' in img ? Number((img as { width: number }).width) : 0;
+  const sh = img && 'height' in img ? Number((img as { height: number }).height) : 0;
+  const src = document.createElement('canvas'); src.width = Math.max(1, sw); src.height = Math.max(1, sh);
+  const sg = src.getContext('2d', { willReadFrequently: true })!;
+  if (img && sw && sh) sg.drawImage(img, 0, 0);
+  const data = sw && sh ? sg.getImageData(0, 0, sw, sh).data : null;
+  const pink: number[] = [], bread: number[] = [];
+  if (data) {
+    for (let y = 10; y < sh - 10; y += 3) {
+      for (let x = 10; x < sw - 10; x += 3) {
+        const i = (y * sw + x) * 4; if (data[i + 3] < 200) continue;
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        ((r - b) > 60 && g > 110 && b < 130 ? bread : pink).push(x, y);
+      }
+    }
+  }
+  const cv = document.createElement('canvas'); cv.width = CRUMB_COLS * CRUMB_CELL; cv.height = CRUMB_ROWS * CRUMB_CELL;
+  const g = cv.getContext('2d')!;
+  const pick = (pts: number[], i: number): [number, number] => {
+    if (pts.length < 2) return [sw * 0.5, sh * 0.4];
+    const k = ((i * 53 + 17) % (pts.length / 2)) * 2;
+    return [pts[k], pts[k + 1]];
+  };
+  for (let i = 0; i < CRUMB_CELLS; i++) {
+    const ox = (i % CRUMB_COLS) * CRUMB_CELL, oy = Math.floor(i / CRUMB_COLS) * CRUMB_CELL;
+    g.save();
+    g.translate(ox + CRUMB_CELL * 0.5, oy + CRUMB_CELL * 0.5);
+    g.rotate((i * 0.87) % Math.PI);
+    g.beginPath();
+    const sides = 5 + (i % 4);
+    for (let k = 0; k < sides; k++) {
+      const a = (k / sides) * Math.PI * 2 + Math.sin(i * 1.3 + k * 2.1) * 0.28;
+      const r = CRUMB_CELL * (0.26 + ((i * 17 + k * 11) % 17) / 17 * 0.2);
+      const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      if (k === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.closePath(); g.clip();
+    const wantBread = i % 3 === 0;
+    const [sx, sy] = pick(wantBread && bread.length ? bread : pink, i);
+    const ss = 54 + (i % 5) * 16;
+    if (img && sw && sh) g.drawImage(img, Math.max(0, sx - ss * 0.5), Math.max(0, sy - ss * 0.5), ss, ss, -CRUMB_CELL * 0.5, -CRUMB_CELL * 0.5, CRUMB_CELL, CRUMB_CELL);
+    else { g.fillStyle = wantBread ? '#e0a056' : '#f08090'; g.fillRect(-CRUMB_CELL, -CRUMB_CELL, CRUMB_CELL * 2, CRUMB_CELL * 2); }
+    const shade = g.createRadialGradient(0, 0, CRUMB_CELL * 0.08, 0, 0, CRUMB_CELL * 0.48);
+    shade.addColorStop(0, 'rgba(0,0,0,0)'); shade.addColorStop(1, 'rgba(70,28,16,0.3)');
+    g.fillStyle = shade; g.fillRect(-CRUMB_CELL * 0.5, -CRUMB_CELL * 0.5, CRUMB_CELL, CRUMB_CELL);
+    g.restore();
+  }
+  crumbAtlas = new THREE.CanvasTexture(cv);
+  crumbAtlas.colorSpace = THREE.SRGBColorSpace;
+  crumbAtlas.anisotropy = 4;
+  return crumbAtlas;
+}
+function takeCrumb(): THREE.Sprite | undefined {
+  if (crumbs.length >= CRUMB_CAP) return undefined;
+  const sp = crumbPool.pop() ?? (() => {
+    const map = ensureCrumbAtlas().clone();
+    const mat = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, fog: false });
+    const s = new THREE.Sprite(mat); s.renderOrder = 4; return s;
+  })();
+  const map = (sp.material as THREE.SpriteMaterial).map!;
+  const i = Math.floor(Math.random() * CRUMB_CELLS);
+  map.repeat.set(1 / CRUMB_COLS, 1 / CRUMB_ROWS);
+  map.offset.set((i % CRUMB_COLS) / CRUMB_COLS, Math.floor(i / CRUMB_COLS) / CRUMB_ROWS);
+  (sp.material as THREE.SpriteMaterial).opacity = 1;
+  (sp.material as THREE.SpriteMaterial).rotation = Math.random() * Math.PI * 2;
+  scene.add(sp);
+  return sp;
+}
+function giveCrumb(sp: THREE.Sprite): void {
+  scene.remove(sp);
+  if (crumbPool.length < CRUMB_CAP) crumbPool.push(sp);
+  else {
+    const m = sp.material as THREE.SpriteMaterial;
+    m.map?.dispose();
+    m.dispose();
+  }
+}
+function spit(x: number, y: number, z: number, scale: number, gen: number, vx: number, vy: number, vz: number, life: number): void {
+  const sp = takeCrumb(); if (!sp) return;
+  sp.position.set(x, y, z);
+  sp.scale.set(scale, scale * (0.78 + Math.random() * 0.24), 1);
+  crumbs.push({ sprite: sp, v: new THREE.Vector3(vx, vy, vz), life, maxLife: life, spin: (Math.random() - 0.5) * (gen === 0 ? 14 : 18), gen, scale });
+}
+function burstCrumbs(c: Concha, last: boolean): void {
+  const x = LANES[c.lane], y = 0.5 + c.shown * 0.1, z = c.z;
+  const n = last ? 20 : 14;
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const kick = 1.15 + Math.random() * 1.7;
+    const sc = 0.22 + Math.random() * 0.22 + (i < 3 ? 0.1 : 0);
+    // spray up and toward the camera (+z) so bits aren't hidden inside the eater
+    spit(
+      x + Math.cos(ang) * 0.22, y + Math.random() * 0.14, z + 0.12 + Math.sin(ang) * 0.12,
+      sc, 0,
+      Math.cos(ang) * kick, 2.15 + Math.random() * 2.15, Math.sin(ang) * kick * 0.7 + 0.7,
+      0.62 + Math.random() * 0.2,
+    );
+  }
+  const dust = last ? 8 : 5;
+  for (let i = 0; i < dust; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const kick = 0.7 + Math.random() * 1.2;
+    spit(x, y, z + 0.08, 0.07 + Math.random() * 0.06, 1, Math.cos(ang) * kick, 1.2 + Math.random() * 1.5, Math.sin(ang) * kick * 0.7 + 0.4, 0.3 + Math.random() * 0.16);
+  }
+}
+function splitCrumb(m: Crumb): void {
+  const p = m.sprite.position;
+  const n = 2 + (Math.random() < 0.4 ? 1 : 0);
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const kick = 0.55 + Math.random() * 0.95;
+    spit(p.x, p.y + 0.04, p.z, m.scale * (0.4 + Math.random() * 0.22), 1, Math.cos(ang) * kick, 1.0 + Math.random() * 1.2, Math.sin(ang) * kick * 0.75 + 0.25, 0.32 + Math.random() * 0.18);
+  }
+}
+function tickCrumbs(dt: number): void {
+  for (let i = crumbs.length - 1; i >= 0; i--) {
+    const m = crumbs[i];
+    m.life -= dt;
+    m.v.y -= 12 * dt;
+    m.v.x *= 1 - 0.7 * dt;
+    m.v.z *= 1 - 0.7 * dt;
+    m.sprite.position.addScaledVector(m.v, dt);
+    const mat = m.sprite.material as THREE.SpriteMaterial;
+    mat.rotation += m.spin * dt;
+    if (m.sprite.position.y < CRUMB_GROUND && m.v.y < 0) {
+      m.sprite.position.y = CRUMB_GROUND;
+      if (m.gen === 0 && crumbs.length < CRUMB_CAP - 3) {
+        splitCrumb(m);
+        giveCrumb(m.sprite);
+        crumbs.splice(i, 1);
+        continue;
+      }
+      m.v.y = 0; m.v.x *= 0.35; m.v.z *= 0.35;
+      m.life = Math.min(m.life, 0.16);
+    }
+    const fade = Math.max(0, m.life / m.maxLife);
+    mat.opacity = fade;
+    const s = m.scale * (0.68 + 0.32 * fade);
+    m.sprite.scale.set(s, s * 0.85, 1);
+    if (m.life <= 0) { giveCrumb(m.sprite); crumbs.splice(i, 1); }
+  }
+}
 function frontOf(lane: number): number {
   let z = SPAWN_Z + 1.4, any = false;
   for (const k of kids) if (alive(k) && k.ko < 0 && k.lane === lane) { any = true; z = Math.max(z, k.z); }
   return any ? z : SPAWN_Z + 2.2;
 }
-function paintConcha(c: Concha): void {
-  const t = Math.max(0.22, c.bites / Math.max(1, c.max));
-  c.sprite.scale.set(1.35 * t, 1.18 * t, 1);
-  c.sprite.position.set(LANES[c.lane], 0.22 + 0.26 * t, c.z);
+// snack-concha.webp is 959×876 and already the whole round bun (pink shell + golden curved base).
+// THREE.Sprite is centered on its position, so the loaf must sit at half its height plus a small lift
+// or the bottom curve goes under the cobbles and the floor's depth buffer cuts it into a flat edge.
+const CONCHA_ASPECT = 959 / 876;
+const CONCHA_LIFT = 0.1;
+function makeLoaf(): THREE.Sprite {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, depthTest: false, fog: false }));
+  sp.renderOrder = 3;
+  scene.add(sp);
+  return sp;
+}
+function freeLoaf(sp: THREE.Sprite): void {
+  scene.remove(sp);
+  (sp.material as THREE.SpriteMaterial).dispose();
+}
+function loafGoal(bites: number): number {
+  if (bites <= 0) return 0;
+  return 0.38 + (bites / CONCHA_BITS) * 0.78; // height 1.16 when whole, ~0.54 on the last bite
+}
+function paintConcha(c: Concha, instant = false): void {
+  if (instant) c.shown = loafGoal(c.bites);
+  const h = c.shown, w = h * CONCHA_ASPECT;
+  c.loaf.scale.set(w, h, 1); // uniform shrink — same aspect as the graphic, both axes follow `shown`
+  c.loaf.position.set(LANES[c.lane], CONCHA_LIFT + h * 0.5, c.z);
+  c.loaf.visible = c.bites > 0 && h > 0.05;
 }
 /** Drop a concha on the cobbles, in front of whoever is leading that row. A second throw adds bites. */
 function placeConcha(lane: number): void {
   const z = Math.min(LINE_Z - 0.7, frontOf(lane) + 0.9);
   const have = conchas.find((c) => c.lane === lane);
   if (have) {
-    have.bites = Math.min(8, have.bites + 4);
+    have.bites = Math.min(CONCHA_BITS, have.bites + 3);
     have.max = Math.max(have.max, have.bites);
     if (z > have.z) have.z = z;
+    have.loaf.visible = true;
     paintConcha(have);
     return;
   }
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false }));
-  sprite.renderOrder = 3;
-  scene.add(sprite);
-  const c: Concha = { lane, z, bites: 5, max: 5, biteT: 0, sprite };
+  const loaf = makeLoaf();
+  const c: Concha = { lane, z, bites: CONCHA_BITS, max: CONCHA_BITS, biteT: 0, loaf, shown: loafGoal(CONCHA_BITS) };
   conchas.push(c);
-  paintConcha(c);
+  paintConcha(c, true);
 }
 /** How far this kid may walk. Nobody in the row gets past the concha, and they stack up behind whoever is eating. */
 function holdZ(k: Kid): number | undefined {
@@ -585,17 +797,23 @@ function tickConchas(dt: number): void {
       if (c.biteT >= 0.38) {
         c.biteT = 0;
         c.bites -= 1;
-        paintConcha(c);
+        c.shown *= 0.78; // squash, then lerp to the smaller loaf
+        burstCrumbs(c, c.bites <= 0);
+        if (c.bites <= 0) c.loaf.visible = false;
         eater.eat = 1.2;
         sfx.sfxSquish(0.45);
       }
     }
-    if (c.bites <= 0) {
-      scene.remove(c.sprite);
-      (c.sprite.material as THREE.Material).dispose();
+    if (c.bites > 0) {
+      const goal = loafGoal(c.bites);
+      c.shown += (goal - c.shown) * Math.min(1, dt * 12);
+      paintConcha(c);
+    } else {
+      freeLoaf(c.loaf);
       conchas.splice(i, 1);
     }
   }
+  tickCrumbs(dt);
 }
 function useSnack(): void {
   if ((state !== 'play' && state !== 'between') || snacks <= 0) return;
@@ -605,8 +823,10 @@ function useSnack(): void {
   const T = flightTime(to);
   const v = velFor(to, T, new THREE.Vector3());
   const obj = new THREE.Group();
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false }));
-  sp.scale.set(1.15, 1.05, 1);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, depthTest: false, fog: false }));
+  const thrownH = 1.12;
+  sp.scale.set(thrownH * CONCHA_ASPECT, thrownH, 1);
+  sp.renderOrder = 5;
   obj.add(sp); scene.add(obj); obj.position.copy(LAUNCH);
   shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target: k, born: clock, snack: true, lane: k.lane });
   updateSnackBtn(); sfx.sfxWhoosh();
@@ -723,11 +943,12 @@ function popText(k: Kid, text: string, cls: string): void {
   $('fx').appendChild(el); setTimeout(() => el.remove(), 1000);
 }
 function clearField(): void {
-  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); }
+  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } }
   for (const s of shots) scene.remove(s.obj);
   for (const p of petals) { fxGroup.remove(p.s); p.s.material.dispose(); }
-  for (const c of conchas) { scene.remove(c.sprite); (c.sprite.material as THREE.Material).dispose(); }
-  kids = []; shots = []; petals = []; conchas.length = 0; fx.clear(); boss = undefined;
+  for (const c of conchas) freeLoaf(c.loaf);
+  for (const m of crumbs) giveCrumb(m.sprite);
+  kids = []; shots = []; petals = []; conchas.length = 0; crumbs.length = 0; fx.clear(); boss = undefined;
 }
 function newGame(): void {
   clearField();
@@ -802,11 +1023,13 @@ function frame(now: number): void {
       if (k.aura) k.aura.visible = false;
       if (k.hpBar) { k.hpBar.visible = false; k.hpFill!.visible = false; }
       if (k.bite) k.bite.visible = false;
-      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); }
+      if (k.eatBody) k.eatBody.visible = false;
+      k.body.visible = true;
+      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } }
       continue;
     }
     if (state === 'play' || state === 'between') {
-      if (k.eat > 0) k.eat = Math.max(0, k.eat - dt);
+      if (k.eat > 0) { k.eat = Math.max(0, k.eat - dt); k.eatAnim += dt; } else k.eatAnim = 0;
       const stop = holdZ(k);
       let sp = k.stagger > 0 ? k.speed * 0.15 : k.speed;
       if (stop !== undefined) sp *= 0.32; // the whole row slows down before the concha
@@ -819,21 +1042,29 @@ function frame(now: number): void {
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
     // walk frames follow distance so the planted feet in the atlas stay on the cobbles. No extra hop (that read as a skip).
     const cyc = (k.wob / (k.sheet.stride * (k.kind === 'jefe' ? 1.3 : 1)) + k.phase) % 1;
-    const eating = k.eat > 0 && !!k.bite;
-    if (eating && k.bite) {
-      // planted feet, a chew, and the concha at the mouth getting smaller with every bite
+    const plateArt = k.eat > 0 && !!EAT_SHEETS[k.kind];
+    const eating = k.eat > 0 && (plateArt || !!k.bite);
+    showEater(k, plateArt);
+    if (plateArt) {
+      k.body.visible = false;
+      k.body.scale.set(1, 1, 1);
+      if (k.bite) k.bite.visible = false;
+    } else if (eating && k.bite) {
+      // Little skeleton and luchador have no eat sheet: a planted walk frame and a mild nod,
+      // never a Y-squash or a steeper card tilt (those flattened the head into a "chew" angle).
+      k.body.visible = true;
       setFrame(k, 'walk', 0);
-      const chew = Math.sin(s * 14 + k.phase);
-      const bit = chew > 0 ? 1 : 0;
-      k.body.scale.set(1 + bit * 0.07, 1 - bit * 0.12, 1);
-      k.body.rotation.set(0.42 + bit * 0.22, -k.x * 0.04, Math.sin(s * 16 + k.phase) * 0.05);
+      const chew = Math.sin(s * 10 + k.phase);
+      k.body.scale.set(1, 1, 1);
+      k.body.rotation.set(0.2 + chew * 0.05, -k.x * 0.04, 0);
       const left = Math.min(1, k.eat / 1.2);
-      const size = k.h * (0.08 + 0.06 * left) * (bit ? 0.7 : 1);
+      const size = k.h * (0.08 + 0.06 * left) * (chew > 0 ? 0.7 : 1);
       k.bite.visible = true;
       k.bite.scale.set(size, size * 0.9, 1);
-      k.bite.position.set(0, k.h * (0.64 - bit * 0.07), 0.35);
-      (k.bite.material as THREE.SpriteMaterial).rotation = bit ? -0.35 : 0.2;
+      k.bite.position.set(0, k.h * (0.64 - (chew > 0 ? 0.07 : 0)), 0.35);
+      (k.bite.material as THREE.SpriteMaterial).rotation = chew > 0 ? -0.35 : 0.2;
     } else {
+      k.body.visible = true;
       k.body.scale.set(1, 1, 1);
       if (k.bite) k.bite.visible = false;
       if (k.anim === 'hit') { k.animT += dt; const i = Math.floor(k.animT * ANIM.hit.fps); if (i >= k.sheet.hitN) playAnim(k, 'walk'); else setFrame(k, 'hit', i); }
@@ -939,6 +1170,10 @@ Promise.all(texLoads).then(() => {
   state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil, bombs, booms, boss: boss && alive(boss) ? { hp: boss.hp, maxHp: boss.maxHp, z: +boss.root.position.z.toFixed(2) } : null }),
   kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden, lane: k.lane })),
   conchas: () => conchas.map((c) => ({ lane: c.lane, z: +c.z.toFixed(2), bites: c.bites })),
+  crumbs: () => crumbs.length,
+  giveSnack: (n = 1) => giveSnack(n),
+  snack: useSnack,
+  placeConcha: (lane = 1) => placeConcha(lane),
   screenOf: (i = 0) => { const k = kids.filter(alive).sort((a, b) => b.z - a.z)[i]; if (!k) return null; const v = kidCenter(k).project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; },
   auto: autoThrow,
   wave: (n: number) => { clearField(); startWave(n); },
