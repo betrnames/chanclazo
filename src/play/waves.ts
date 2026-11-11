@@ -115,9 +115,9 @@ type AnimName = keyof typeof ANIM;
 // h = world height that a 320px-tall body should be; stride = world units per walk cycle
 const ART = {
   boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3),
-  girl: sheet('catrina-girl', 2576, 1086, 368, 362, 184, 354, 2.02, 1.55, 7, 1, 2, '?v=3'),
+  girl: sheet('catrina-girl', 2576, 1086, 368, 362, 184, 354, 2.02, 1.55, 7, 1, 2, '?v=4'),
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
-  calaca: sheet('calaverita-small', 2432, 1014, 304, 338, 155, 331, 1.2, 1.6),
+  calaca: sheet('calaverita-small', 1968, 1086, 328, 362, 164, 354, 1.25, 1.6, 6, 1, 3, '?v=5'),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
   lucha: sheet('luchador-boss', 2744, 1038, 343, 346, 170, 339, 4.1, 3.0), // 1.5x bigger boss (Gabe, 2026-11-10); hp bar follows via BOSS_HEAD
 };
@@ -162,9 +162,9 @@ interface Kid {
   pips?: THREE.Sprite[]; aura?: THREE.Sprite; hpFill?: THREE.Sprite; hpBar?: THREE.Sprite; variant: number; rage?: boolean;
   sheet: Sheet; map: THREE.Texture; edgeMat: THREE.Material; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
-  phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number;
+  phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number;
 }
-interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean }
+interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
 type State = 'title' | 'play' | 'between' | 'paused' | 'over';
 let state: State = 'title', prevState: State = 'play';
@@ -175,8 +175,13 @@ let best = (() => { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } 
 const kidGroup = new THREE.Group(); scene.add(kidGroup);
 const fxGroup = new THREE.Group(); scene.add(fxGroup);
 const fx = new FX(scene, 0), hitStop = new HitStop();
-let bombs = 0, bossPending = false, boss: Kid | undefined;
+let bombs = 0, snacks = 0, snackNext = 0, bossPending = false, boss: Kid | undefined;
 const BOMB_MAX = 3, BOMB_R = 2.4, BOMB_DMG = 4;
+const SNACK_MAX = 4;
+const SNACKS = [
+  { id: 'concha', sx: 1.05, sy: 0.92 },
+] as const;
+const snackTex = SNACKS.map((s) => tex(`/waves/snack-${s.id}.webp`));
 
 // ───────────────────────── kids ─────────────────────────
 const planeGeo = new Map<string, THREE.PlaneGeometry>();
@@ -198,26 +203,28 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const scale = kind === 'jefe' ? 1.3 : 1;
   const h = a.h * scale * (a.ch / 320), w = h * (a.cw / a.ch); // plane = one atlas cell
   const map = a.tex.clone(); map.repeat.set(a.cw / a.W, a.ch / a.H); // the clone shares the image (no extra memory)
-  const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.45, side: THREE.FrontSide, fog: true });
+  const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.45, side: THREE.FrontSide, fog: kind !== 'girl' && kind !== 'calaca' });
   const flashMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   const root = new THREE.Group();
   const gk = `${kind}${variant}`;
   const body = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), mat); body.castShadow = true;
   const flash = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), flashMat); flash.position.z = 0.01; body.add(flash);
-  // same drawing, stacked into a thick card so the cutout has an edge instead of looking like a sticker
+  // a dark card behind the cutout reads as a black stain on the white faces, so the girl and the little skeleton stay a single clean layer
   const edgeMat = new THREE.MeshBasicMaterial({ map, color: 0x241028, alphaTest: 0.45, side: THREE.FrontSide, fog: true });
-  for (let i = 1; i <= 4; i++) {
-    const edge = new THREE.Mesh(body.geometry, edgeMat);
-    edge.position.set(0, -0.012 * i, -0.028 * i);
-    edge.castShadow = false; body.add(edge);
+  if (kind !== 'girl' && kind !== 'calaca') {
+    for (let i = 1; i <= 4; i++) {
+      const edge = new THREE.Mesh(body.geometry, edgeMat);
+      edge.position.set(0, -0.012 * i, -0.028 * i);
+      edge.castShadow = false; body.add(edge);
+    }
   }
   if (kind === 'jefe') mat.color.setHex(0xd8c8ff); // big brother: a touch of purple
   root.add(body);
-  const bodyW = kind === 'girl' ? w * (220 / a.cw) : w;
+  const bodyW = kind === 'girl' ? w * (210 / a.cw) : kind === 'calaca' ? w * (165 / a.cw) : w;
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bodyW * 0.72, bodyW * 0.32), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.8 }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.02, 0.04); root.add(shadow);
   const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w: bodyW, golden, variant, sheet: a, map, edgeMat, anim: 'walk', animT: 0, frameKey: -1,
-    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 4 && Math.random() < 0.35 ? 0.35 + Math.random() * 0.25 : 0 };
+    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 4 && Math.random() < 0.35 ? 0.35 + Math.random() * 0.25 : 0, eat: 0 };
   if (kind === 'jefe') {
     k.pips = [];
     for (let i = 0; i < k.maxHp; i++) { const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: pipTex, depthWrite: false, fog: false })); p.scale.setScalar(0.3); p.position.set((i - (k.maxHp - 1) / 2) * 0.34, h + 0.16, 0.02); body.add(p); k.pips.push(p); }
@@ -294,7 +301,8 @@ function checkWaveDone(): void {
   abuelaAt = clock + 0.7; abuelaOutAt = abuelaAt + 0.45 + ABUELA_HOLD; nextWaveAt = abuelaOutAt + 0.55; // banner first, then Abuela's line, then the next wave
   abuelaSay();
   const gotBomb = wave >= 2 && bombs < BOMB_MAX; if (gotBomb) giveBomb(1);
-  banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 chancla BOMB 💣` : `+${bonus} bonus`);
+  const gotSnack = snacks < SNACK_MAX; if (gotSnack) giveSnack(1);
+  banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 bomb · +1 snack` : `+${bonus} bonus · +1 snack`);
   sfx.sfxWin();
   track('wave_clear', { game: 'waves', wave, hearts });
 }
@@ -440,6 +448,7 @@ for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) fireBt
 addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'Enter') { if (state === 'play' || state === 'between') { e.preventDefault(); autoThrow(); } }
   if (e.code === 'KeyB') useBomb();
+  if (e.code === 'KeyF') useSnack();
   if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
 });
 
@@ -498,6 +507,43 @@ function updateBombBtn(): void {
   bombBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
   $('bombN').textContent = String(bombs);
 }
+// ───────────────────────── snacks: pan dulce, they stop to eat ─────────────────────────
+const snackBtn = $('snack') as HTMLButtonElement;
+function giveSnack(n: number): void {
+  snacks = Math.min(SNACK_MAX, snacks + n); updateSnackBtn();
+}
+function updateSnackBtn(): void {
+  const on = snacks > 0;
+  const spec = SNACKS[snackNext % SNACKS.length];
+  snackBtn.classList.toggle('ghost', !on);
+  snackBtn.classList.toggle('ready', on);
+  snackBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
+  (snackBtn.querySelector('img') as HTMLImageElement).src = `/waves/snack-${spec.id}.webp`;
+  $('snackN').textContent = String(snacks);
+}
+function feedKid(k: Kid): void {
+  const fresh = k.eat <= 0;
+  k.eat = Math.min(4.2, k.eat + (k.kind === 'lucha' ? 1.25 : 2.6));
+  if (fresh) { playAnim(k, 'hit'); popText(k, '¡ÑAM!', ''); sfx.sfxPoint(1); }
+}
+function useSnack(): void {
+  if ((state !== 'play' && state !== 'between') || snacks <= 0) return;
+  const k = threat(); if (!k) return;
+  const i = snackNext % SNACKS.length;
+  snacks--; snackNext++;
+  const to = leadPoint(k, new THREE.Vector3());
+  const T = flightTime(to);
+  const v = velFor(to, T, new THREE.Vector3());
+  const spec = SNACKS[i];
+  const obj = new THREE.Group();
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex[i], transparent: true, depthWrite: false }));
+  sp.scale.set(spec.sx, spec.sy, 1);
+  obj.add(sp); scene.add(obj); obj.position.copy(LAUNCH);
+  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target: k, born: clock, snack: true });
+  updateSnackBtn(); sfx.sfxWhoosh();
+}
+snackBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); if (snacks > 0) snackBtn.classList.add('press'); useSnack(); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) snackBtn.addEventListener(ev, () => snackBtn.classList.remove('press'));
 /** Best spot for the bomb: the boss if he's out, else the densest, closest cluster of kids. */
 function bombTarget(): THREE.Vector3 | undefined {
   const live = kids.filter((k) => alive(k) && k.z > SPAWN_Z + 0.5); if (!live.length) return undefined;
@@ -615,7 +661,7 @@ function clearField(): void {
 }
 function newGame(): void {
   clearField();
-  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; updateBombBtn();
+  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; snacks = 2; snackNext = 0; updateBombBtn(); updateSnackBtn();
   ['title', 'over', 'pause'].forEach((id) => $(id).classList.add('hidden'));
   stage.classList.remove('on-title'); // HUD, hearts, fire and bomb buttons only show once play starts
   $('hint').classList.remove('gone');
@@ -688,7 +734,9 @@ function frame(now: number): void {
       continue;
     }
     if (state === 'play' || state === 'between') {
-      const sp = k.stagger > 0 ? k.speed * 0.15 : k.speed;
+      if (k.eat > 0) k.eat = Math.max(0, k.eat - dt);
+      const eating = k.eat > 0;
+      const sp = k.stagger > 0 ? k.speed * 0.15 : eating ? k.speed * 0.07 : k.speed;
       k.stagger = Math.max(0, k.stagger - dt);
       k.z += sp * dt; k.wob += sp * dt;
     }
@@ -699,7 +747,7 @@ function frame(now: number): void {
     if (k.anim === 'walk') setFrame(k, 'walk', Math.floor(cyc * k.sheet.walkN));
     if (k.hpBar) { const pulse = k.hp / k.maxHp < 0.34 ? 1 + Math.sin(s * 12) * 0.06 : 1; k.hpBar.scale.set(1.7 * pulse, 0.32 * pulse, 1); }
     k.root.position.set(k.x, 0, k.z);
-    k.body.rotation.set(0.2, -k.x * 0.04, k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
+    k.body.rotation.set(0.2, -k.x * 0.04, k.eat > 0 ? Math.sin(s * 14) * 0.1 : k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
     if (k.aura) { k.aura.material.opacity = 0.55 + Math.sin(s * 6) * 0.25; }
     if (k.z >= LINE_Z && state === 'play') kidReachedLine(k);
   }
@@ -716,6 +764,16 @@ function frame(now: number): void {
         if (sh.bomb) { // the bomb goes off on the first kid it touches, or where it lands
           const touch = kids.some((k) => alive(k) && Math.abs(sh.p.x - k.root.position.x) < k.w * 0.5 && Math.abs(sh.p.z - k.root.position.z) < 0.6 && sh.p.y < k.h);
           if (touch || sh.p.y <= 0.3) { explode(sh.p); sh.spent = 0.61; sh.obj.visible = false; break; }
+          continue;
+        }
+        if (sh.snack) {
+          let ate = false;
+          for (const k of kids) {
+            if (!alive(k)) continue;
+            const dx = sh.p.x - k.root.position.x, dz = sh.p.z - k.root.position.z;
+            if (Math.abs(dx) < k.w * 0.55 + 0.2 && Math.abs(dz) < 0.6 && sh.p.y > 0.02 && sh.p.y < k.h + 0.2) { feedKid(k); ate = true; break; }
+          }
+          if (ate || sh.p.y <= 0.06) { sh.spent = 0; sh.v.set((Math.random() - 0.5) * 0.4, 1.4, 0.4); break; }
           continue;
         }
         for (const k of kids) {

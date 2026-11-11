@@ -10,7 +10,7 @@ Owner and approver: **Gabe (GitHub: betrnames)**. Repo: https://github.com/betrn
   - Picker: https://feat-chancla-waves.chanclazo.pages.dev/choose
   - Día de los Muertos (the Waves game): https://feat-chancla-waves.chanclazo.pages.dev/waves
   - Strike: https://feat-chancla-waves.chanclazo.pages.dev/chancla-strike · Slots: /slots · Crash (parked, still reachable): /crash
-- **Production = `main` = https://chanclazo.com, currently on `49eed2c`. Untouched. Gabe has NOT approved a release.**
+- **Production = `main` = https://chanclazo.com.** Gabe approved shipping this branch live as **v1.1.0** on 2026-11-11. Homepage footer shows `v1.1.0 · <commit>`.
 
 ## Gabe's rules (non-negotiable)
 1. **Preview only.** Work on feature branches (now `feat/chancla-waves`). **Never push, merge or deploy to `main`/production without Gabe's explicit "yes".** No force pushes; merge, don't rebase pushed branches.
@@ -22,7 +22,7 @@ Owner and approver: **Gabe (GitHub: betrnames)**. Repo: https://github.com/betrn
 7. Day of the Dead look (marigold orange, magenta, teal, purple night, papel picado, sugar skulls). **No floor confetti**; marigold petals OK if they fade before the floor.
 8. Rapid fire = hold the gold chancla button (Waves/Crash), with banner, timer ring, flames and sound.
 9. Free/permissive code and assets only (MIT/BSD/Apache/CC0). **No paid APIs or services**, no new paid domains/renewals. Sounds are generated in code (Web Audio), no audio files.
-10. Waves popups (title / pause / game over) are **button-only**: no panel, box, border or dim; buttons and stroked text float over the live game.
+10. Waves pause and game-over are **button-only**: no panel, box, border or dim. The **title screen** is a popup modal: sugar-skull boy, flower-crown girl, the small skeleton, and the luchador, then the game name and TAP TO PLAY.
 
 ## Game name constant
 `src/gameNames.ts` → `export const WAVES_NAME = 'Día de los Muertos'`. Changing that one line renames the game everywhere it displays:
@@ -45,7 +45,8 @@ Internal ids/paths/hooks still say "waves" (`/waves`, `waves.ts`, `window.__wave
 
 ### Día de los Muertos details (src/play/waves.ts)
 - **Abuela cameo**: after each cleared wave, `checkWaveDone()` shows WAVE CLEAR; 0.7 s later `#abuela` slides in from the LEFT with a speech bubble, holds `ABUELA_HOLD` = 2.5 s, slides out; next wave ~0.55 s later. 16 lines in `ABUELA_LINES` (shuffle bag, no repeats until the pool is used; angry face `/crash/abuela-chibi-angry.webp` on scolding lines, `/crash/abuela-chibi.webp` otherwise). Game-clock driven (pause freezes her timer; she slides out while the pause menu is up and returns on resume). Tap her to skip; taps elsewhere still throw.
-- Title screen: game name + breathing TAP TO PLAY over the live scene. `#stage.on-title` hides HUD/hearts/hint/fire/bomb until `newGame()`.
+- Title screen is a popup modal (gold border, dim behind it): sugar-skull boy, flower-crown girl, the new small skeleton, and the luchador, then the game name and TAP TO PLAY. Pause and game-over stay button-only. `#stage.on-title` hides HUD/hearts/hint/fire/bomb until `newGame()`.
+- Small skeleton (`calaca`) uses Gabe's new sheet: `calaverita-small-atlas.webp` 2268×1020, cell 378×340, anchor 189,332, walk 6 / hit 1 / ko 3, `?v=4`. Hit box uses standing width `170 / cw`. World height `h` 1.25 so he stays the little one.
 - Test hooks: `window.__waves` → `ready()`, `start()`, `state()`, `kids()`, `wave(n)`, `spawn()`, `hurt(n)`, `bomb()`, `giveBomb()`, `rapid()`, `pause(bool)`, `abuela()`, `abuelaLines()`, `clearWave()`. URL params: `?start=1`, `?wave=N`, `?bombs=N`.
 
 ## Build, run, test

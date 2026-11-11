@@ -72,7 +72,7 @@ export function arcadeHtml(): string {
   <div class="row" id="czrow">${CABS.map(cabHtml).join('')}</div>
   <div class="dots" id="czdots" aria-hidden="true">${CABS.map((c, i) => `<i style="--c:${c.c}" data-i="${i}"></i>`).join('')}</div>
   <div class="floor" aria-hidden="true"></div>
-  <a class="czhome" href="/" aria-label="Home"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M3 11.2 12 3.5l9 7.7" fill="none" stroke="#3b1a5c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9.5h4.6v-5.6h3.8v5.6h4.6V10" fill="none" stroke="#3b1a5c" stroke-width="2.6" stroke-linejoin="round"/></svg></a>
+  <a class="czhome" href="/" aria-label="Back"><svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path d="M15.5 4.5 7 12l8.5 7.5" fill="none" stroke="#ffd23f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 </main>`;
 }
 

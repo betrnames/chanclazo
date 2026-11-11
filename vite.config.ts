@@ -1,7 +1,10 @@
 import path from "path"
+import { readFileSync } from "fs"
 import react from "@vitejs/plugin-react"
 import { defineConfig, type Plugin } from "vite"
 import { WAVES_NAME } from "./src/gameNames"
+
+const APP_VERSION = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version as string;
 
 function htmlEnv(): Plugin {
   const site = process.env.VITE_SITE_URL || 'https://chanclazo.com';
@@ -13,7 +16,7 @@ function htmlEnv(): Plugin {
     // (same as the Astro pages). The dev server shows "dev".
     transformIndexHtml(html: string) {
       const out = html.replaceAll('%VITE_SITE_URL%', site).replaceAll('%%WAVES_NAME%%', WAVES_NAME); // game display name lives in src/gameNames.ts
-      return serve ? out.replaceAll('%%CZ_BUILD%%', 'dev') : out;
+      return serve ? out.replaceAll('%%CZ_BUILD%%', `v${APP_VERSION} · dev`) : out;
     },
   };
 }

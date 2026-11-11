@@ -46,6 +46,8 @@ html,body{margin:0;background:#04020c;overflow:hidden}
 @keyframes shine{0%,60%{background-position:120% 0}100%{background-position:-120% 0}}
 .fine{margin:0;font-family:system-ui,sans-serif;font-size:12px;color:#d9c8f0;text-shadow:0 1px 3px #000}
 .fine a{color:#ffd23f}
+.cz-copy{position:fixed;left:50%;transform:translateX(-50%);bottom:max(8px,env(safe-area-inset-bottom));z-index:30;pointer-events:none;font:11px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.9);text-shadow:0 1px 3px rgba(0,0,0,.9);white-space:nowrap}
+.cz-build{color:#ffd23f;letter-spacing:.04em;text-transform:none}
 #relic{position:absolute;z-index:5;pointer-events:none;visibility:hidden;height:auto;transform-origin:50% 60%;filter:drop-shadow(0 0 18px rgba(255,200,70,.9)) drop-shadow(0 12px 8px rgba(0,0,0,.45))}
 #relic.on{animation:relicIn 1.15s cubic-bezier(.15,1.15,.3,1) both,relicFloat 2.8s ease-in-out 1.15s infinite}
 @keyframes relicIn{0%{opacity:0;transform:translateY(-70px) rotate(-540deg) scale(.12)}62%{opacity:1;transform:translateY(8px) rotate(18deg) scale(1.08)}100%{opacity:1;transform:translateY(0) rotate(-8deg) scale(1)}}
@@ -70,6 +72,7 @@ html,body{margin:0;background:#04020c;overflow:hidden}
   </div>
   <button id="lmusic" class="lmusic" type="button" aria-label="Music on or off">♪ Music</button>
 </main>
+<footer class="cz-copy">© 2026 Chanclazo · <span class="cz-build">%%CZ_BUILD%%</span></footer>
 <script type="module">
 import { initLanderMusic } from '/src/play/music.ts';
 const DESK = { W: 1792, H: 1008, safe: [0.06, 0.935], ay: 0.5, logoW: 0.33, logoTop: 0.03, gap: [0.235, 0.725], feet: 0.8, candles: [[.152,.875,1],[.291,.865,1],[.38,.865,1],[.407,.825,1],[.553,.76,.9],[.6,.865,.9],[.627,.835,1],[.627,.93,1],[.748,.835,1],[.845,.875,1]] };

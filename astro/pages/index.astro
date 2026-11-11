@@ -67,6 +67,8 @@ import Base from '../layouts/Base.astro';
   @keyframes shine{0%,60%{background-position:120% 0}100%{background-position:-120% 0}}
   .fine{margin:0;font-family:system-ui,sans-serif;font-size:12px;color:#d9c8f0;text-shadow:0 1px 3px #000}
   .fine a{color:#ffd23f}
+  .cz-copy{bottom:max(8px,env(safe-area-inset-bottom))!important}
+  .cz-build{font-size:12px!important;letter-spacing:.04em!important;opacity:1!important;color:#ffd23f!important}
   #relic{position:absolute;z-index:5;pointer-events:none;visibility:hidden;height:auto;transform-origin:50% 60%;filter:drop-shadow(0 0 18px rgba(255,200,70,.9)) drop-shadow(0 12px 8px rgba(0,0,0,.45))}
   #relic.on{animation:relicIn 1.15s cubic-bezier(.15,1.15,.3,1) both,relicFloat 2.8s ease-in-out 1.15s infinite}
   @keyframes relicIn{0%{opacity:0;transform:translateY(-70px) rotate(-540deg) scale(.12)}62%{opacity:1;transform:translateY(8px) rotate(18deg) scale(1.08)}100%{opacity:1;transform:translateY(0) rotate(-8deg) scale(1)}}

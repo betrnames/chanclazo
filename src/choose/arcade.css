@@ -99,8 +99,8 @@ html,body{margin:0;height:100%;background:#0a0418;overflow:hidden}
 .dots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.28);transition:all .2s;cursor:pointer}
 .dots i.on{background:var(--c);box-shadow:0 0 10px var(--c);width:26px;border-radius:6px}
 /* home button */
-.czhome{position:fixed;z-index:8;left:12px;top:max(74px,calc(env(safe-area-inset-top) + 70px));width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff2a8,#ffd23f 50%,#f4a000);border:3px solid #3b1a5c;border-radius:14px;box-shadow:0 4px 0 #3b1a5c;text-decoration:none}
-.czhome:active{transform:translateY(2px);box-shadow:0 2px 0 #3b1a5c}
+.czhome{position:fixed;z-index:8;left:10px;top:max(74px,calc(env(safe-area-inset-top) + 70px));width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:none;border:0;box-shadow:none;text-decoration:none;filter:drop-shadow(0 2px 0 #3b1a5c)}
+.czhome:active{transform:translateX(-3px)}
 /* short landscape screens (phones sideways, small laptops) */
 @media (max-height:520px){.czarcade{--h:min(72vh,560px)}.czsign{margin-top:30px}.czsign h1{font-size:26px}.papel{height:40px}.czhome{top:8px}.moon{display:none}.row{padding-top:10px;padding-bottom:24px}}
 /* phones / narrow: horizontal scroll-snap carousel, centred cabinet lit, neighbours peek */
