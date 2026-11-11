@@ -727,8 +727,13 @@ function frontOf(lane: number): number {
   for (const k of kids) if (alive(k) && k.ko < 0 && k.lane === lane) { any = true; z = Math.max(z, k.z); }
   return any ? z : SPAWN_Z + 2.2;
 }
+// snack-concha.webp is 959×876 and already the whole round bun (pink shell + golden curved base).
+// THREE.Sprite is centered on its position, so the loaf must sit at half its height plus a small lift
+// or the bottom curve goes under the cobbles and the floor's depth buffer cuts it into a flat edge.
+const CONCHA_ASPECT = 959 / 876;
+const CONCHA_LIFT = 0.1;
 function makeLoaf(): THREE.Sprite {
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, fog: false }));
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, depthTest: false, fog: false }));
   sp.renderOrder = 3;
   scene.add(sp);
   return sp;
@@ -743,9 +748,9 @@ function loafGoal(bites: number): number {
 }
 function paintConcha(c: Concha, instant = false): void {
   if (instant) c.shown = loafGoal(c.bites);
-  const h = c.shown, w = h * 1.138;
-  c.loaf.scale.set(w, h, 1);
-  c.loaf.position.set(LANES[c.lane], 0.18 + h * 0.16, c.z);
+  const h = c.shown, w = h * CONCHA_ASPECT;
+  c.loaf.scale.set(w, h, 1); // uniform shrink — same aspect as the graphic, both axes follow `shown`
+  c.loaf.position.set(LANES[c.lane], CONCHA_LIFT + h * 0.5, c.z);
   c.loaf.visible = c.bites > 0 && h > 0.05;
 }
 /** Drop a concha on the cobbles, in front of whoever is leading that row. A second throw adds bites. */
@@ -818,8 +823,10 @@ function useSnack(): void {
   const T = flightTime(to);
   const v = velFor(to, T, new THREE.Vector3());
   const obj = new THREE.Group();
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false }));
-  sp.scale.set(1.15, 1.05, 1);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: snackTex, transparent: true, depthWrite: false, depthTest: false, fog: false }));
+  const thrownH = 1.12;
+  sp.scale.set(thrownH * CONCHA_ASPECT, thrownH, 1);
+  sp.renderOrder = 5;
   obj.add(sp); scene.add(obj); obj.position.copy(LAUNCH);
   shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target: k, born: clock, snack: true, lane: k.lane });
   updateSnackBtn(); sfx.sfxWhoosh();
