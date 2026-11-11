@@ -35,7 +35,7 @@ const WEIGHTS = [12, 14, 18, 24, 30, 3]; // pinata rarer on 5×4
 type Mode = 'idle' | 'spinning' | 'resolve' | 'expand' | 'abuela' | 'pick' | 'bonus' | 'blast';
 
 const imgs: Record<string, HTMLImageElement> = {};
-const pinataVars = ['pinata_llama', 'pinata_rosa', 'pinata_azul', 'pinata_lima'];
+const HD_LLAMA = 'pinata_llama';
 
 let credits = START_CREDITS, peak = START_CREDITS;
 /** Session end (out of free credits): the only place Share on X appears in Slots. */
@@ -319,7 +319,7 @@ function enterPick() {
     const p = prizes[i];
     pickItems.push({
       x: W * (0.12 + cx * 0.76), y: H * (0.28 + cy * 0.42),
-      kind: pinataVars[i % pinataVars.length],
+      kind: HD_LLAMA,
       revealed: false,
       value: p.value,
       label: p.label,
@@ -377,11 +377,11 @@ function enterBonus() {
   for (let i = 0; i < n; i++) {
     bonusPins.push({
       x: W * (0.15 + Math.random() * 0.7), y: H * (0.25 + Math.random() * 0.45),
-      s: 70 + Math.random() * 50, vx: (Math.random() - .5) * 1.2, vy: (Math.random() - .5) * .8,
-      kind: pinataVars[i % pinataVars.length], hp: 1, shake: 0, gone: false,
+      s: 150 + Math.random() * 40, vx: (Math.random() - .5) * 1.2, vy: (Math.random() - .5) * .8,
+      kind: HD_LLAMA, hp: 1, shake: 0, gone: false,
     });
   }
-  bonusPins.push({ x: W / 2, y: H * 0.42, s: 140, vx: 0, vy: 0, kind: 'pinata_llama', hp: 3, shake: 0, gone: false });
+  bonusPins.push({ x: W / 2, y: H * 0.42, s: 250, vx: 0, vy: 0, kind: HD_LLAMA, hp: 3, shake: 0, gone: false });
   toast = 'SMASH THE PIÑATAS!'; toastT = 2; setHud();
 }
 
@@ -400,13 +400,13 @@ function smashAt(x: number, y: number) {
   A.pinataPop();
   spawnConfetti(18, best.x, best.y); spawnPetals(10, best.x, best.y);
   bonusHits++;
-  bonusMult = Math.min(20, Math.round((bonusMult + (best.kind === 'pinata_llama' ? 1 : 0.5)) * 2) / 2);
+  bonusMult = Math.min(20, Math.round((bonusMult + (best.kind === HD_LLAMA ? 1 : 0.5)) * 2) / 2);
   const add = Math.round(bet() * (best.hp <= 0 ? 2 : 1) * bonusMult);
   bonusTotal += add;
   smashFx.push({ x: best.x, y: best.y - best.s * 0.4, t: 1, mult: bonusMult });
   if (best.hp <= 0) {
     best.gone = true;
-    if (best.s >= 130) { startBlast(best.x, best.y); return; }
+    if (best.s >= 220) { startBlast(best.x, best.y); return; }
   }
   setHud();
 }
@@ -704,6 +704,10 @@ function hitControls(x: number, y: number) {
   if (Math.hypot(x - sx, y - sy) <= r * 1.1 && mode === 'idle') startSpin();
 }
 
+function drawLlama(im: HTMLImageElement, x: number, y: number, max: number) {
+  const sc = max / Math.max(im.width, im.height);
+  ctx.drawImage(im, x - im.width * sc / 2, y - im.height * sc / 2, im.width * sc, im.height * sc);
+}
 function drawBonus(dt: number) {
   ctx.fillStyle = 'rgba(122,31,79,.6)'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#ffd23f';
@@ -719,13 +723,11 @@ function drawBonus(dt: number) {
     if (p.x < p.s * .4 || p.x > W - p.s * .4) p.vx *= -1;
     if (p.y < 120 || p.y > H - 80) p.vy *= -1;
     if (p.shake > 0) p.shake -= dt * 4;
-    const im = imgs[p.kind] || imgs.pinata;
+    const im = imgs[HD_LLAMA] || imgs.pinata;
     const shakeX = p.shake > 0 ? Math.sin(p.shake * 40) * 8 : 0;
     if (im && im.complete) {
-      const sc = p.s / Math.max(im.width, im.height);
-      const iw = im.width * sc, ih = im.height * sc;
-      ctx.save(); ctx.translate(p.x + shakeX, p.y); ctx.rotate(Math.sin(performance.now() / 400 + p.x) * 0.08);
-      ctx.drawImage(im, -iw / 2, -ih / 2, iw, ih); ctx.restore();
+      ctx.save(); ctx.translate(p.x + shakeX, p.y); ctx.rotate(Math.sin(performance.now() / 400 + p.x) * 0.06);
+      drawLlama(im, 0, 0, p.s); ctx.restore();
     }
   }
   for (const f of smashFx) {
@@ -744,7 +746,7 @@ function drawBonus(dt: number) {
   if (chanclaAngle < 0) chanclaAngle = Math.min(0, chanclaAngle + dt * 4);
   bonusTimer -= dt;
   if (bonusTimer <= 0 && mode === 'bonus') {
-    const big = bonusPins.find(p => p.s >= 130 && !p.gone);
+    const big = bonusPins.find(p => p.s >= 220 && !p.gone);
     if (big) startBlast(big.x, big.y);
     else { for (const p of bonusPins) if (!p.gone) { p.gone = true; spawnConfetti(10, p.x, p.y); } endBonus(); }
   }
@@ -753,10 +755,10 @@ function drawBonus(dt: number) {
 function drawBlast(dt: number) {
   if (!bigLlama) return;
   bigLlama.life -= dt; bigLlama.s += dt * 2.5;
-  const im = imgs.pinata_llama || imgs.pinata;
+  const im = imgs[HD_LLAMA] || imgs.pinata;
   ctx.save(); ctx.translate(bigLlama.x, bigLlama.y); ctx.rotate(bigLlama.life * 8);
   ctx.globalAlpha = Math.max(0, bigLlama.life / 1.8);
-  if (im && im.complete) { const s = 160 * bigLlama.s; ctx.drawImage(im, -s / 2, -s / 2, s, s); }
+  if (im && im.complete) drawLlama(im, 0, 0, 280 * bigLlama.s);
   ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0, 0, 80 * bigLlama.s, 0, 7); ctx.stroke();
   ctx.strokeStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(0, 0, 120 * bigLlama.s, 0, 7); ctx.stroke();
   ctx.restore();
@@ -772,11 +774,9 @@ function drawPick() {
   ctx.font = `${Math.max(13, W * 0.032)}px system-ui`;
   ctx.fillText(`${pickPicksLeft} picks left · total ${pickTotal}`, W / 2, 94);
   for (const it of pickItems) {
-    const im = imgs[it.kind] || imgs.pinata;
-    if (im && im.complete && !it.revealed) {
-      const s = Math.min(100, W * 0.22);
-      ctx.drawImage(im, it.x - s / 2, it.y - s / 2, s, s);
-    } else if (it.revealed) {
+    const im = imgs[HD_LLAMA] || imgs.pinata;
+    if (im && im.complete && !it.revealed) drawLlama(im, it.x, it.y, Math.min(190, W * 0.34));
+    else if (it.revealed) {
       ctx.fillStyle = '#7a1f4f';
       roundRect(it.x - 48, it.y - 28, 96, 56, 12); ctx.fill();
       ctx.fillStyle = '#ffd23f';
@@ -975,10 +975,8 @@ async function boot() {
     loadImg('/play/v2/sidro_head.webp').then(i => imgs.lucha = i),
     loadImg('/play/t_chancla.webp').then(i => imgs.chancla = i),
     loadImg('/play/t_bottle.webp').then(i => imgs.bottle = i),
-    loadImg('/play/t_pinata.webp').then(i => { imgs.pinata = i; imgs.pinata_llama = i; }),
-    loadImg('/play/slots/pinata_rosa.webp').then(i => imgs.pinata_rosa = i),
-    loadImg('/play/slots/pinata_azul.webp').then(i => imgs.pinata_azul = i),
-    loadImg('/play/slots/pinata_lima.webp').then(i => imgs.pinata_lima = i),
+    loadImg('/play/t_pinata.webp').then(i => { imgs.pinata = i; }),
+    loadImg('/play/llama_choose.webp').then(i => { imgs.pinata_llama = i; }),
   ];
   await Promise.all(loads);
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
