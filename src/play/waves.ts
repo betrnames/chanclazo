@@ -12,6 +12,7 @@ import { markGameStart, markFirstAction, track } from '../analytics';
 import { makeChancla, makeCandle, buildBackdrop, glowTex, dotTex } from './crashArt';
 import * as sfx from './crashAudio';
 import { FX, HitStop } from './fx3d';
+import { playPlayer1Intro } from './player1Intro';
 
 const G = 16;
 const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -1203,12 +1204,13 @@ autoUnlockAudio(); wireMute(); initAudioControls('waves', setMuted);
 for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener(ev, () => sfx.unlockCrashAudio(), { capture: true, passive: true });
 $('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · or tap the gold chancla' : 'Click or drag at a kid to throw · Space = gold chancla';
 updateHud();
-Promise.all(texLoads).then(() => {
-  artReady = true;
-  newGame();
-  prev = performance.now();
-  requestAnimationFrame(frame);
-});
+const begin = (): void => { newGame(); prev = performance.now(); requestAnimationFrame(frame); };
+// Intro starts immediately (its art is procedural) while wave sprites finish loading.
+// newGame waits for both, so ?start=1 still only begins once textures are ready.
+Promise.all([
+  Promise.all(texLoads).then(() => { artReady = true; }),
+  new Promise<void>((resolve) => { playPlayer1Intro('waves', resolve); }),
+]).then(begin);
 
 // test / screenshot hooks
 (window as unknown as Record<string, unknown>).__waves = {

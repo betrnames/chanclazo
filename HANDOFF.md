@@ -6,6 +6,7 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
 - **Live right now is v1.1.9.** Gabe said "Looks better push live" at 5:36 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.9 ·` plus the short SHA of the Release v1.1.9 commit on `main`. The matching feature commit is the Release v1.1.9 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.8 · 9b07298`.
 - Preview of the feature branch: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
+- **On preview only, not live (11 Nov 2026, evening PT):** WAVE CLEAR sits in the mid-plaza below the papel picado; the Strike level map clears the footer on short landscape phones; a "Player 1 Ready" intro plays when Waves, Strike, or Slots starts. Live is still v1.1.9 until Gabe says to push it live.
 - **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, and v1.1.9.
 
 ## What v1.1.9 shipped (2026-11-11)
@@ -68,8 +69,8 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 ### Día de los Muertos, short
 - Abuela after each cleared wave, slides in from the left, `ABUELA_LINES` shuffle bag, hold 2.5s, tap her to skip. Pause freezes her clock.
 - Boss luchador every 3rd wave. `bossHp`, `BOSS_DMG` 4, `BOSS_RAGE` 1.4.
-- Hooks: `window.__waves` → `ready`, `start`, `state`, `kids`, `conchas`, `crumbs`, `placeConcha(lane)`, `giveSnack`, `snack`, `wave(n)`, `spawn(kind, lane, z, speed)`, `clearWave`, `hurt`, `bomb`, `giveBomb`, `rapid`, `pause`, `abuela`, `abuelaLines`. Params: `?start=1`, `?wave=N`, `?bombs=N`.
-- Atlases load before the first frame (`texLoads`).
+- Hooks: `window.__waves` → `ready`, `start`, `state`, `kids`, `conchas`, `crumbs`, `placeConcha(lane)`, `giveSnack`, `snack`, `wave(n)`, `spawn(kind, lane, z, speed)`, `clearWave`, `hurt`, `bomb`, `giveBomb`, `rapid`, `pause`, `abuela`, `abuelaLines`. Params: `?start=1` (skips the intro), `?wave=N`, `?bombs=N`, `?intro=1` (force the full intro), `?nointro=1`.
+- Wave atlases load in parallel with the Player 1 Ready intro; `newGame` waits for both. `?start=1` still begins only once textures are ready.
 
 ## Build and deploy
 ```bash
@@ -82,15 +83,22 @@ npm run build
 - Footer stamp is `v<package.json version> · <short sha>` from `scripts/merge-dist.mjs`. Bump `package.json` when Gabe says to ship.
 - `arcade.ts` must keep the dynamic import of `initLanderMusic`.
 
+## Player 1 Ready intro (preview only, 2026-11-11)
+A ~4s three.js cinematic plays the first time a game starts in a session; later starts in the same session get a ~1s cut. Tap (or Space / Enter / Escape) skips. `prefers-reduced-motion` skips entirely. `?start=1` and `?nointro=1` skip so playtests and hooks still work; `?intro=1` forces the full cut.
+
+Sequence: wide pan over the cempasúchil-lit plaza at dusk (papel swaying, candles flickering) → tilt and zoom onto the chosen arcade cabinet, whose CRT flickers on → the gold chancla relic twirls in, hovers and glows → big marigold "PLAYER 1 READY", a synthesized coin-drop, then 3-2-1 straight into the game. Per-game final beat: a luchador for Waves (`chibi_luchador_crossed.webp`), a swinging piñata for Slots, a concentric target for Strike. Existing art and three.js only; SFX in `crashAudio.ts` (`sfxCoin`, `sfxCount`). No new paid assets.
+
+Module: `src/play/player1Intro.ts`. Wired from `waves.ts`, `fling.ts`, and `slots.ts`. Crash is still parked, no intro. Test hook: `window.__p1intro.play(game, onDone)` always runs the full cut (clears the session flag); `.seek(u)` scrubs for stills. Session flag: `sessionStorage['cz-p1-intro']`. Demo clip of the full intro: `/workspace/chz-demo/player1-intro.mp4`.
+
 ## Open
-- Girl knock-out is a billboard tumble of her complete hit frames (the atlas KO row is cropped and is not drawn). Shipped in v1.1.9. A real fall clip of this girl is still welcome if Gabe wants one. Ask before replacing the art again.
-- Concha crumb burst (counts, sizes, split-on-land, fade) shipped in v1.1.8. Phone playtest still useful.
-- Eating poses (natural bite, no flattened heads) shipped in v1.1.8: boy uses Gabe's `eat-boy.webp`, jefe and the girl have new 6-frame strips. Phone playtest still useful.
-- The loaf shows the full round `snack-concha.webp` (rounded golden base), sitting just above the cobbles, and shrinks uniformly. Shipped in v1.1.8.
-- WAVE CLEAR banner can overlap the papel picado. Cosmetic.
-- Strike level map on a short landscape phone can touch the footer.
+- Girl knock-out is a billboard tumble of her complete hit frames (the atlas KO row is cropped and is not drawn). Shipped in v1.1.9. Phone playtest on 11 Nov (390×844 and 375×667): the fall is a complete character, not a cropped card. A real fall clip of this girl is still welcome if Gabe wants one. Ask before replacing the art again.
+- Concha crumb burst, natural bite poses, and the whole round loaf — shipped in v1.1.8. Phone playtest on 11 Nov (390×844 and 375×667): the concha is the full round bun with a golden curved base on the cobbles; the girl leans in with a natural bite (no flattened head); crumbs burst as small pink and gold bits and do not pile. No new bugs worth a code change.
+- WAVE CLEAR banner overlapping the papel picado — **fixed on preview, not live.** Anchored from mid-screen (`bottom: 46%`, 44% / 48% breakpoints); the settle animation rises from below, never up into the bunting. Clean at 390×844, 375×667, and desktop. Before/after: `/workspace/chz-shots/polish-before-waves-clear-*.png` and `polish-after-waves-clear-*.png`.
+- Strike level map touching the footer on short landscape phones — **fixed on preview, not live.** Short landscape (`max-height: 500px`) map card can scroll, and padding keeps "All games" and the content above the fixed copyright stamp. Gaps: ~14px at 667×375, ~22px at 844×390. Portrait and desktop unchanged. After stills: `/workspace/chz-shots/polish-after-strike-map-*.png`.
+- On 375×667 the hearts still sit on the papel picado (pre-existing, not this work). Cosmetic.
 - `snack-elote.webp` is junk. Do not add it.
 - Boss and `waveSpec` numbers are playtest values. Don't retune unless Gabe says the waves are too easy or too hard.
+- The Player 1 Ready intro is preview-only. Do not ship it to `main` until Gabe says to.
 
 ## Next, only if Gabe asks
 - A real fall clip of the flower-crown girl, if he wants the knockdown to stop being a tipped card.

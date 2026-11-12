@@ -6,6 +6,7 @@ import Matter from 'matter-js';
 import { playLevelUp, playGameOver } from '../game/sound';
 import { $, loadImg, wakeAudio, report } from './common';
 import * as A from './flingAudio';
+import { playPlayer1Intro } from './player1Intro';
 
 const { Engine, Bodies, Composite, Body, Events, Vector, Sleeping } = Matter;
 const W = 1100, H = 1000, GROUND = 920;            // world units; fits portrait & landscape
@@ -512,8 +513,11 @@ if (/[?&]debug=1/.test(location.search)) setInterval(() => { const a = (window a
 safe('wireMute', () => { A.wireMute($('mute') as HTMLButtonElement); initAudioControls('fling', (m) => A.setMuted(m)); });
 safe('level0', () => build(0));
 onLayout(); scheduleLayout();
-startGame();
+// Hide the start card so the intro is the first thing you see; startGame()
+// then kicks off play when the cinematic (or its skip) finishes.
+startScreen.classList.add('hidden');
 requestAnimationFrame(frame);
+playPlayer1Intro('strike', () => startGame());
 (window as any).__fling = {
   engine, world, meta, LEVELS, build, openMap, boom: (b: Matter.Body) => { armed = true; damage(b, 99); },
   snapshot: () => Composite.allBodies(world).filter((b) => meta.has(b.id) && !meta.get(b.id)!.dead && meta.get(b.id)!.kind !== 'ghost').map((b) => ({ id: b.id, x: b.position.x, y: b.position.y, a: b.angle })),

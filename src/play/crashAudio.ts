@@ -188,6 +188,26 @@ export function sfxClick(): void {
   const a = c(); if (!a) return; const t = now();
   tone(1200, 900, 'square', t, 0.04, 0.06);
 }
+
+/** Arcade coin drop: two metallic clinks falling into a slot. */
+export function sfxCoin(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(1860, 1240, 'square', t, 0.07, 0.22);
+  tone(2480, 1640, 'triangle', t, 0.09, 0.14);
+  burst(t, 0.045, 0.16, 'highpass', 2800, 5200, 0.7);
+  tone(1560, 880, 'square', t + 0.09, 0.11, 0.2);
+  tone(2100, 1100, 'triangle', t + 0.1, 0.13, 0.1);
+  burst(t + 0.09, 0.05, 0.12, 'bandpass', 2000, 1400, 2);
+}
+
+/** Countdown beep: 3, 2, 1 — pitch rises as the number drops. */
+export function sfxCount(n: number): void {
+  const a = c(); if (!a) return; const t = now();
+  const f = n <= 1 ? 880 : n === 2 ? 659 : 523;
+  tone(f, f * 1.12, 'square', t, n <= 1 ? 0.22 : 0.12, 0.2);
+  tone(f * 2, f * 2, 'sine', t + 0.01, n <= 1 ? 0.28 : 0.14, 0.08);
+  if (n <= 1) burst(t, 0.12, 0.14, 'highpass', 4000, 8000, 0.5);
+}
 /** Reload: chancla back in hand. */
 export function sfxReload(): void {
   const a = c(); if (!a) return; const t = now();
