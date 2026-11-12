@@ -5,7 +5,7 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 ## Current state (2026-11-12, afternoon PT)
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
 - **Live right now is still v1.1.10** on `main` (SHA `70ee30f`, same tree as `9d52191` on this branch before the load-time work). Do **not** push this load-time work to production until Gabe says "push it live". Version stays **1.1.10** (no bump).
-- Preview of the feature branch, including the load-time work: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
+- Preview of the feature branch, including the load-time work: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Tip SHA **`29f437d`** (main load-time commit is `89bec92`). Footer: `v1.1.10 · 29f437d`. Crash is parked but still at `/crash`.
 - **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, and v1.1.10.
 
 ## Load time (2026-11-12) — on this branch, not on production
@@ -34,18 +34,18 @@ No videos on the site. three.js was already minified and code-split (589 KB raw 
 - **`scripts/merge-dist.mjs`** now cache-busts image and font URLs in JS and CSS as well as HTML (`/lp`, `/play`, `/waves`, `/crash`, `/fonts`).
 - **`public/_headers`**: long-cache `immutable` (1 year) for `/assets`, `/_astro`, `/fonts`, `/lp`, `/play`, `/waves`, `/crash`. HTML remains no-cache.
 
-### Local check (http://127.0.0.1, no brotli, no gtag) after the change
-All five routes playable, no console errors, no failed requests. Kids spawn on wave 1. Screenshots match the live look. Title is visible. Abuela, eat sheets, and the luchador are **not** in the waves request list at the moment the game is playable. Mercado/Catacombs are **not** in Strike's at that moment.
+### Preview numbers (https://feat-chancla-waves.chanclazo.pages.dev, SHA `29f437d`)
+Lighthouse 13.6.0, mobile, simulated Slow 4G. Same method as the live baseline. All five routes play, no console errors, no failed requests. Kids spawn on wave 1. Screenshots match the live look. Title is visible. Abuela, eat sheets, and the luchador are **not** requested until after the game is playable (they show up later in a full Lighthouse session, which is why the waves *total* transfer is still ~2.8 MB). Mercado/Catacombs wait the same way on Strike.
 
-| Route | Transfer at playable | Time until playable | Biggest remaining |
-|---|---:|---:|---|
-| `/` | 251 KB | 134 ms | lander-mobile-1008 140 KB, title-1260 62 KB |
-| `/choose` | 211 KB | 86 ms | llama_choose 94 KB |
-| `/waves?start=1` | 2140 KB (576 of that is uncompressed three.js; on CF brotli that chunk is ~147 KB, so ~1.7 MB) | ~2.5 s, gated by the girl atlas 614 KB | girl 614, three.js, boy 269, calaverita 226, concha 118 |
-| `/chancla-strike?start=1` | 366 KB | 141 ms | fling.js 118, night_bg 92 |
-| `/slots?start=1` | 486 KB | 198 ms | night_bg 92, head_llama 91, llama_hd 58 |
+| Route | Perf | FCP | LCP | TBT | Transfer (LH full session) | At playable (Playwright, CF brotli) |
+|---|---:|---:|---:|---:|---:|---|
+| `/` | **99** (was 74) | 793 (was 951) | **1.8 s** (was **6.0 s**) | 124 (was 214) | **403 KB** (was 883) | 239 KB, title is the 38–62 KB srcset |
+| `/choose` | 98 (was 97) | 923 | 923 (was 961) | 174 | **370 KB** (was 658) | 180 KB, llama 94 KB (was 368) |
+| `/waves?start=1` | 45 (was 43) | 2.2 s simulated / **238 ms observed** (live was 1.0 s simulated / 245 ms observed) | **4.0 s** (was 4.8 s) | 51 s (was 53 s; 60fps game loop — expected, do not "fix") | 2841 KB full session (was 2903) | **1.56 MB** (three.js 147 KB br, no eat/lucha/Abuela yet), playable in ~2.4 s unthrottled, gated by the girl atlas 614 KB |
+| `/chancla-strike?start=1` | **100** (was 94) | 1.3 s | 1.3 s (was 1.4 s) | 28 | 595 KB (was 525; gold+burst preloads over the full session) | **257 KB**, Mercado/Catacombs not yet loaded |
+| `/slots?start=1` | **99** (was 72) | 1.2 s | 1.2 s (was 0.9 s) | **106** (was 2386) | 636 KB (was 593) | 197–454 KB, llama_hd 58 KB |
 
-Lighthouse TBT on `/waves` will stay high because the game loop is running. That is expected. Preview Lighthouse numbers (with Cloudflare brotli and cache headers) should be recorded against the preview URL after this is pushed.
+The homepage LCP is now **good** (<2.5 s) and is the 840w title (38 KB) instead of the old 515 KB file. Waves Lighthouse TBT/TTI will stay high because the game loop is running; observed FCP on waves is the same as live (~240 ms). Cache headers on the preview: HTML `public, max-age=0, must-revalidate`; art, fonts, and hashed JS `public, max-age=31536000, immutable`.
 
 ### Do not
 - Do not push this to `main` / chanclazo.com until Gabe says "push it live".
