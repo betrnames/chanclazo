@@ -2,11 +2,58 @@
 
 Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitHub: betrnames)**. Repo: https://github.com/betrnames/chanclazo
 
-## Current state (2026-11-11, late evening PT)
+## Current state (2026-11-12, afternoon PT)
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
-- **Live right now is v1.1.10.** Gabe said "Looks good push live" at 11:56 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.10 ·` plus the short SHA of the Release v1.1.10 commit on `main`. The matching feature commit is the Release v1.1.10 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.9 · c7efe95`.
-- Preview of the feature branch: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
+- **Live right now is still v1.1.10** on `main` (SHA `70ee30f`, same tree as `9d52191` on this branch before the load-time work). Do **not** push this load-time work to production until Gabe says "push it live". Version stays **1.1.10** (no bump).
+- Preview of the feature branch, including the load-time work: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
 - **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, and v1.1.10.
+
+## Load time (2026-11-12) — on this branch, not on production
+Gabe asked to fix Chanclazo load time. Gameplay, visuals, and start rules are unchanged: the game starts instantly with no loading screen, the intro is only the gold chancla flying in and bursting, no camera intro, no "CHANCLAZO!" stinger audio, Abuela only as a between-waves cameo, hand-drawn art.
+
+### What was slow (Lighthouse mobile, Slow 4G, live v1.1.10)
+| Route | Perf | FCP | LCP | TBT | Transfer | Notes |
+|---|---:|---:|---:|---:|---:|---|
+| `/` | 74 | 951 | **6012** | 214 | 883 KB | LCP is `#ttl` (`lander-title.webp` 515 KB, displayed ~306×66). `fetchpriority` was on the background, not the title. Title stayed `visibility:hidden` until JS `place()`. |
+| `/choose` | 97 | — | 961 | — | 658 KB | `llama_choose.webp` 368 KB. |
+| `/waves?start=1` | 43 | 911 | 4716 | 45335 | 2903 KB | TBT/TTI are inflated by the 60fps game loop — do **not** "fix" this by delaying start. `newGame` waited on every texture, including eat sheets, the luchador atlas, and Abuela (first needed on wave 3 / first snack / between waves). HUD used the full 188 KB concha for a 52×52 button. |
+| `/chancla-strike?start=1` | 94 | — | 1362 | — | 525 KB | Cemetery is level 0, but Mercado and Catacombs backgrounds also loaded immediately. |
+| `/slots?start=1` | 72 | — | 872 | 2386 | 593 KB | `llama_hd.webp` was heavier than it needed to be. |
+
+No videos on the site. three.js was already minified and code-split (589 KB raw / 147 KB brotli, only on `/waves`). Sounds are Web Audio (no audio files). GA `gtag` (~180 KB) was left in place.
+
+### What changed
+- **Smaller art, same look** (WebP q90, visual QA against the originals; skipped anything that softened: atlases, eat sheets, `head_llama`, gold chancla, burst, Sidro, lander backgrounds).
+  - `public/lp/lander-title.webp` 516 KB → 71 KB, plus 840w (39 KB) and 1260w (64 KB) srcset. Homepage preloads the title with `fetchpriority="high"` (taken off the background).
+  - `public/play/llama_choose.webp` 376 KB → 96 KB.
+  - `public/play/slots/llama_hd.webp` 86 KB → 59 KB (`?v=3`).
+  - `public/waves/snack-concha.webp` 188 KB → 121 KB (`?v=3`). New 256px `snack-concha-icon.webp` (17 KB) for the HUD button; the loaf in the lane still uses the full concha.
+- **WOFF2 fonts** (`LilitaOne-Regular.woff2` 12 KB) preferred over TTF, with a TTF fallback. Lilita is preloaded on the landing and each game.
+- **Deferred non-critical textures.** Waves `newGame` waits only on walk atlases + the concha loaf. Eat sheets, the luchador atlas, and Abuela warm after the first frame (`requestIdleCallback`, 2.5s timeout). The leftover `new Image().src = ABUELA_IMG.mad` at module load is gone. Eat/boss fallbacks still require the sheet image so kids never go invisible. Strike loads Cemetery + sprites first; Mercado and Catacombs wait the same way. Abuela's `<img>` has no `src` until she actually speaks.
+- **Preloads** for each game's critical art (walk atlases, night bg, gold chancla + burst), using the **same** `?v=` as the JS so the browser does not download twice. Boy atlas is `?v=8` to match.
+- **`scripts/merge-dist.mjs`** now cache-busts image and font URLs in JS and CSS as well as HTML (`/lp`, `/play`, `/waves`, `/crash`, `/fonts`).
+- **`public/_headers`**: long-cache `immutable` (1 year) for `/assets`, `/_astro`, `/fonts`, `/lp`, `/play`, `/waves`, `/crash`. HTML remains no-cache.
+
+### Local check (http://127.0.0.1, no brotli, no gtag) after the change
+All five routes playable, no console errors, no failed requests. Kids spawn on wave 1. Screenshots match the live look. Title is visible. Abuela, eat sheets, and the luchador are **not** in the waves request list at the moment the game is playable. Mercado/Catacombs are **not** in Strike's at that moment.
+
+| Route | Transfer at playable | Time until playable | Biggest remaining |
+|---|---:|---:|---|
+| `/` | 251 KB | 134 ms | lander-mobile-1008 140 KB, title-1260 62 KB |
+| `/choose` | 211 KB | 86 ms | llama_choose 94 KB |
+| `/waves?start=1` | 2140 KB (576 of that is uncompressed three.js; on CF brotli that chunk is ~147 KB, so ~1.7 MB) | ~2.5 s, gated by the girl atlas 614 KB | girl 614, three.js, boy 269, calaverita 226, concha 118 |
+| `/chancla-strike?start=1` | 366 KB | 141 ms | fling.js 118, night_bg 92 |
+| `/slots?start=1` | 486 KB | 198 ms | night_bg 92, head_llama 91, llama_hd 58 |
+
+Lighthouse TBT on `/waves` will stay high because the game loop is running. That is expected. Preview Lighthouse numbers (with Cloudflare brotli and cache headers) should be recorded against the preview URL after this is pushed.
+
+### Do not
+- Do not push this to `main` / chanclazo.com until Gabe says "push it live".
+- Do not bump the version. Footer stays `v1.1.10 · <sha>`.
+- Do not add a loading screen or delay start.
+- Do not "fix" waves TBT by pausing the loop or delaying `newGame`.
+- Do not recompress the character atlases, eat sheets, `head_llama`, gold chancla, or burst — those failed visual QA or were already tight.
+- Do not delete unused leftovers in `public/` (e.g. large lander-mobile-1500, `snack-elote.webp`); they are not requested.
 
 ## What v1.1.10 shipped (2026-11-11)
 Playtested on `feat/chancla-waves` (`126499c` and the work leading to it) and now on production.

@@ -36,6 +36,8 @@ const ogAlt = 'Chanclazo: new chibi Abuela (smiling and angry) and Sidro under t
   <meta name="twitter:image:alt" content={ogAlt} />
   <link rel="icon" href="/cruise/logo_chancla.webp" />
   <link rel="apple-touch-icon" href="/play/icon-180.png" />
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/LilitaOne-Regular.woff2" crossorigin />
+  <slot name="head" />
 </head>
 <body>
   <slot />

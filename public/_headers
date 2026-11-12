@@ -2,6 +2,31 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
+# Hashed bundles and static art: browsers cache by full URL (merge-dist adds ?v=<md5>
+# on HTML references). HTML stays must-revalidate via Cloudflare's default and the
+# page rules below.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/lp/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/play/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/waves/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/crash/*
+  Cache-Control: public, max-age=31536000, immutable
+
+
 /chancla-strike.html
   Cache-Control: no-cache, no-store, must-revalidate
 /match.html

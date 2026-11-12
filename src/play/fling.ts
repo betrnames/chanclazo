@@ -507,7 +507,15 @@ for (const ev of ['touchend', 'click', 'pointerup']) startScreen.querySelector('
 onTap($('restart'), () => { if (playing && started) build(level); });
 onTap($('mapBtn'), () => { if (playing && started) openMap(); });
 if (/[?&]debug=1/.test(location.search)) { let taps = 0; for (const ev of ['touchstart', 'touchend']) document.body.addEventListener(ev, (e) => { taps++; report(`taps ${taps}: ${ev} on ${(e.target as HTMLElement).id || (e.target as HTMLElement).tagName}`); }, { capture: true, passive: true }); }
-Promise.all(Object.entries(names).map(([k, v]) => loadImg(v).then((im) => { IMG[k] = im; if (k === 'chancla') { TINT.boot = tintImg(im, '#3b2210', 0.62); TINT.triple = tintImg(im, '#29c4e0', 0.5); } }).catch(() => report(`image failed: ${v}`))));
+const flingCritical: (keyof typeof names)[] = ['bg', 'lucha', 'calaca', 'chancla', 'pinata'];
+const takeImg = (k: string, v: string) => loadImg(v).then((im) => { IMG[k] = im; if (k === 'chancla') { TINT.boot = tintImg(im, '#3b2210', 0.62); TINT.triple = tintImg(im, '#29c4e0', 0.5); } }).catch(() => report(`image failed: ${v}`));
+Promise.all(flingCritical.map((k) => takeImg(k, names[k]))).then(() => {
+  const later = () => {
+    for (const k of Object.keys(names) as (keyof typeof names)[]) if (!flingCritical.includes(k)) takeImg(k, names[k]);
+  };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(later, { timeout: 2500 });
+  else setTimeout(later, 1200);
+});
 document.getElementById('a2hsX')?.addEventListener('click', () => { a2hsOff = true; try { localStorage.setItem('chanclazo_a2hs_off', '1'); } catch { /* ignore */ } updateA2hs(); });
 if (/[?&]debug=1/.test(location.search)) setInterval(() => { const a = (window as any).__flingAudio; report(`audio ${a.state} · session ${a.session} · gain ${a.gain === null ? '-' : a.gain.toFixed(2)} · muted ${a.muted} · sounds ${a.played}`); }, 2000);
 safe('wireMute', () => { A.wireMute($('mute') as HTMLButtonElement); initAudioControls('fling', (m) => A.setMuted(m)); });
