@@ -268,3 +268,36 @@ export function sfxBombReady(): void {
   const a = c(); if (!a) return; const t = now();
   tone(784, 784, 'triangle', t, 0.16, 0.12); tone(1175, 1175, 'triangle', t + 0.09, 0.28, 0.12); tone(1568, 1568, 'sine', t + 0.12, 0.35, 0.05);
 }
+
+/** A spirit leaving a kid: airy whoosh with a high cyan shimmer. */
+export function sfxSoulCast(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(520, 880, 'sine', t, 0.28, 0.1); tone(880, 1400, 'triangle', t + 0.04, 0.22, 0.07);
+  burst(t, 0.18, 0.08, 'highpass', 2800, 1800, 0.6);
+}
+/** Chancla smashes a soul: crystal shatter and a gold ring. */
+export function sfxSoulSmash(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(1568, 2093, 'sine', t, 0.22, 0.12); tone(2093, 2637, 'triangle', t + 0.04, 0.18, 0.08);
+  burst(t, 0.12, 0.16, 'highpass', 5000, 3500, 0.7);
+  for (let i = 0; i < 4; i++) burst(t + 0.03 * i, 0.05, 0.06, 'highpass', 6000, 4000, 0.5);
+  tone(1175, 1175, 'triangle', t + 0.08, 0.2, 0.06);
+}
+/** Soul reaches the marigold line: a low ghostly thud. */
+export function sfxSoulLand(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(110, 55, 'sine', t, 0.45, 0.28); tone(220, 90, 'triangle', t, 0.3, 0.12);
+  burst(t, 0.28, 0.18, 'lowpass', 900, 200, 0.7);
+}
+/** Plant the sticky chancla in the marigold. */
+export function sfxStickyPlant(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(196, 294, 'sine', t, 0.16, 0.12); burst(t, 0.12, 0.1, 'lowpass', 1400, 400, 0.5);
+  tone(784, 784, 'triangle', t + 0.08, 0.2, 0.1); tone(1175, 1175, 'sine', t + 0.14, 0.28, 0.05);
+}
+/** Resin catches a kid: stretchy little boing. */
+export function sfxStickyCatch(): void {
+  if (!gate('stickyCatch', 80)) return;
+  const a = c(); if (!a) return; const t = now();
+  tone(320, 480, 'sine', t, 0.14, 0.1); tone(480, 280, 'triangle', t + 0.06, 0.16, 0.08);
+}

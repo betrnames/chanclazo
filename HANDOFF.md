@@ -6,7 +6,7 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
 - **Live right now is v1.1.9.** Gabe said "Looks better push live" at 5:36 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.9 ·` plus the short SHA of the Release v1.1.9 commit on `main`. The matching feature commit is the Release v1.1.9 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.8 · 9b07298`.
 - Preview of the feature branch: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
-- **On preview only, not live (11 Nov 2026, evening PT):** WAVE CLEAR sits in the mid-plaza below the papel picado; the Strike level map clears the footer on short landscape phones; a "Player 1 Ready" intro plays when Waves, Strike, or Slots starts. Live is still v1.1.9 until Gabe says to push it live.
+- **On preview only, not live (11 Nov 2026, evening PT):** WAVE CLEAR sits in the mid-plaza below the papel picado; the Strike level map clears the footer on short landscape phones; a "Player 1 Ready" intro plays when Waves, Strike, or Slots starts; from wave 2, kids throw smashable soul bursts, and a sticky chancla can be planted on the marigold line. Live is still v1.1.9 until Gabe says to push it live.
 - **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, and v1.1.9.
 
 ## What v1.1.9 shipped (2026-11-11)
@@ -60,7 +60,7 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 | Game | URL | Files | Notes |
 |---|---|---|---|
 | Chancla Crash (PARKED) | `/crash` | `crash.html`, `src/play/crash.ts` | Not on the picker. Hooks: `window.__crash`. |
-| Día de los Muertos | `/waves` | `waves.html`, `src/play/waves.ts`, `public/waves/` | Lane defence. Concha + bomb on the left, ghosted until ready, must not jump. Gold chancla throws. See the concha and eating notes above. |
+| Día de los Muertos | `/waves` | `waves.html`, `src/play/waves.ts`, `public/waves/` | Lane defence. Concha + bomb + sticky chancla on the left, ghosted until ready, must not jump. Gold chancla throws. Soul bursts from wave 2. See the concha, eating, and soul/sticky notes. |
 | Chancla Strike | `/chancla-strike` (`/fling` redirects) | `chancla-strike.html`, `src/play/fling.ts` | Matter.js fort topple. Vertical. No rotate control. Hooks: `window.__fling`. |
 | Piñata Slots | `/slots` | `slots.html`, `src/play/slots.ts` | HD llama in the bonus. Gold chevron back, no Games button. |
 | Landing | `/` | `astro/pages/index.astro` (production), `home.html` (vite) | Gold chancla, PLAY NOW → `/choose`. |
@@ -69,7 +69,7 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 ### Día de los Muertos, short
 - Abuela after each cleared wave, slides in from the left, `ABUELA_LINES` shuffle bag, hold 2.5s, tap her to skip. Pause freezes her clock.
 - Boss luchador every 3rd wave. `bossHp`, `BOSS_DMG` 4, `BOSS_RAGE` 1.4.
-- Hooks: `window.__waves` → `ready`, `start`, `state`, `kids`, `conchas`, `crumbs`, `placeConcha(lane)`, `giveSnack`, `snack`, `wave(n)`, `spawn(kind, lane, z, speed)`, `clearWave`, `hurt`, `bomb`, `giveBomb`, `rapid`, `pause`, `abuela`, `abuelaLines`. Params: `?start=1` (skips the intro), `?wave=N`, `?bombs=N`, `?intro=1` (force the full intro), `?nointro=1`.
+- Hooks: `window.__waves` → `ready`, `start`, `state`, `kids`, `conchas`, `crumbs`, `placeConcha(lane)`, `giveSnack`, `snack`, `wave(n)`, `spawn(kind, lane, z, speed)`, `clearWave`, `hurt`, `bomb`, `giveBomb`, `rapid`, `pause`, `abuela`, `abuelaLines`, `souls`, `spawnSoul(lane, fromZ, travel)`, `windSoul`, `throwAtSoul`, `giveSticky`, `placeSticky(lane)`, `stickies`, `stopSpawn`. Params: `?start=1` (skips the intro), `?wave=N`, `?bombs=N`, `?sticky=N`, `?intro=1` (force the full intro), `?nointro=1`.
 - Wave atlases load in parallel with the Player 1 Ready intro; `newGame` waits for both. `?start=1` still begins only once textures are ready.
 
 ## Build and deploy
@@ -90,6 +90,15 @@ Sequence: wide pan over the cempasúchil-lit plaza at dusk (papel swaying, candl
 
 Module: `src/play/player1Intro.ts`. Wired from `waves.ts`, `fling.ts`, and `slots.ts`. Crash is still parked, no intro. Test hook: `window.__p1intro.play(game, onDone)` always runs the full cut (clears the session flag); `.seek(u)` scrubs for stills. Session flag: `sessionStorage['cz-p1-intro']`. Demo clip of the full intro: `/workspace/chz-demo/player1-intro.mp4`.
 
+
+## Soul burst and sticky chancla (preview only, 2026-11-11)
+Inspired by Gabe's newest X bookmark (11 Nov 2026): [Outpost — "How long can you hold the bridge?"](https://x.com/makeplayai/status/2120571405884600486) by @makeplayai, playable as [Outpost: Deadline Bridge](https://www.makeplay.ai/p/jnet66j6wp). What was cool, used as inspiration only (no art or code copied): hold-the-line pressure, enemies attacking *your* defensive line, and a planted defense when the waves get heavy.
+
+- **Soul burst (wave 2+).** Mid-field kids (jefe and the luchador more often) wind up for ~0.55s with a glowing marigold-and-cyan charge, then throw a hand-drawn wisp (gold petals, cyan spirit core, particle trail) down their lane at the marigold line. Travel starts at ~1.25s and ramps to a floor of 0.9s. Caps stay fair: at most 2 in flight (including wind-ups), cooldown 5.5s down to 2.6s, max per wave `2 + floor((wave-2)/2)` capped at 5. One throw per kid. Smash it with a regular chancla (generous radius, aim assist) for 100 pts, "SOUL SMASH!", and a combo tick. A bomb blast also smashes nearby souls. If it lands: 1 heart, "SOUL HIT!", a cyan-gold flare on that lane. Wave clear waits for in-flight souls. Wave 2 banner: "Souls incoming · smash them with a chancla".
+- **Sticky chancla.** Earned on every wave clear (from wave 1, so you have it for wave 2) and once per wave on a CHANCLAZO (combo ≥ 4), max 2 held, one on the field. Tap the cyan-gold button above the concha (or S) to enter placing — four lane pads light up on the line, tap a lane (tap again or Escape cancels). A gold chancla plants at the marigold in that lane, sits for 8s or 4 auto-throws (whichever first), then fades. Kids in that lane get stuck for ~1.35s the first time they reach it (easier to chain into a chanclazo). It auto-throws from the plant at threats in that lane (souls first), without consuming the player's throw cooldown. `?sticky=N` for tests.
+- No Abuela except the between-waves cameo. No slingshot. Procedural art + existing `makeChancla` / `glowTex`. New SFX in `crashAudio.ts`: `sfxSoulCast`, `sfxSoulSmash`, `sfxSoulLand`, `sfxStickyPlant`, `sfxStickyCatch`.
+- Demo clip: `/workspace/chz-demo/soulburst-sticky.mp4` (390×844).
+
 ## Open
 - Girl knock-out is a billboard tumble of her complete hit frames (the atlas KO row is cropped and is not drawn). Shipped in v1.1.9. Phone playtest on 11 Nov (390×844 and 375×667): the fall is a complete character, not a cropped card. A real fall clip of this girl is still welcome if Gabe wants one. Ask before replacing the art again.
 - Concha crumb burst, natural bite poses, and the whole round loaf — shipped in v1.1.8. Phone playtest on 11 Nov (390×844 and 375×667): the concha is the full round bun with a golden curved base on the cobbles; the girl leans in with a natural bite (no flattened head); crumbs burst as small pink and gold bits and do not pile. No new bugs worth a code change.
@@ -99,6 +108,8 @@ Module: `src/play/player1Intro.ts`. Wired from `waves.ts`, `fling.ts`, and `slot
 - `snack-elote.webp` is junk. Do not add it.
 - Boss and `waveSpec` numbers are playtest values. Don't retune unless Gabe says the waves are too easy or too hard.
 - The Player 1 Ready intro is preview-only. Do not ship it to `main` until Gabe says to.
+- Soul bursts and the sticky chancla are preview-only. Do not ship them to `main` until Gabe says to.
+
 
 ## Next, only if Gabe asks
 - A real fall clip of the flower-crown girl, if he wants the knockdown to stop being a tipped card.
