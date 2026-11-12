@@ -2,15 +2,22 @@
 
 Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitHub: betrnames)**. Repo: https://github.com/betrnames/chanclazo
 
-## Current state (2026-11-11, evening PT)
+## Current state (2026-11-11, late evening PT)
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
-- **Live right now is v1.1.9.** Gabe said "Looks better push live" at 5:36 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.9 ·` plus the short SHA of the Release v1.1.9 commit on `main`. The matching feature commit is the Release v1.1.9 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.8 · 9b07298`.
+- **Live right now is v1.1.10.** Gabe said "Looks good push live" at 11:56 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.10 ·` plus the short SHA of the Release v1.1.10 commit on `main`. The matching feature commit is the Release v1.1.10 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.9 · c7efe95`.
 - Preview of the feature branch: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
-- **On preview only, not live (11 Nov 2026, evening PT):** WAVE CLEAR sits in the mid-plaza below the papel picado; the Strike level map clears the footer on short landscape phones; a gold-chancla logo burst (spin in, burst, "CHANCLAZO!" slam — visual only, no announcer audio) plays when Waves, Strike, or Slots starts (the game is live underneath, no camera intro and no delay); from wave 2, kids throw smashable soul bursts, and a sticky chancla can be planted on the marigold line. Live is still v1.1.9 until Gabe says to push it live.
-- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, and v1.1.9.
+- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, and v1.1.10.
+
+## What v1.1.10 shipped (2026-11-11)
+Playtested on `feat/chancla-waves` (`126499c` and the work leading to it) and now on production.
+
+1. **WAVE CLEAR sits in the mid-plaza, below the papel picado.** The banner is anchored from mid-screen (`bottom: 46%`, 44% / 48% breakpoints). The settle animation rises from below and never up into the bunting. Clean at 390×844, 375×667, and desktop.
+2. **Strike's level map clears the footer on short landscape phones.** Short landscape (`max-height: 500px`) map card can scroll, and padding keeps "All games" and the content above the fixed copyright stamp. Gaps: ~14px at 667×375, ~22px at 844×390. Portrait and desktop unchanged.
+3. **Soul bursts and a sticky chancla.** From wave 2, mid-field kids throw smashable marigold-and-cyan soul wisps at the marigold line. Smash them with a chancla for bonus points, or lose a heart if they land. A sticky chancla, earned on a wave clear or a CHANCLAZO, plants on the line, holds kids, and auto-throws. Inspiration only from Gabe's Outpost bookmark — no art or code copied. No Abuela except the between-waves cameo. No slingshot.
+4. **Games start immediately with a gold-chancla logo burst.** There is no camera intro, no loading screen, and no start delay. The gold chancla (`/lp/chancla_gold.webp`) spins in, then bursts with the hand-drawn starburst, sparks, a flash, and a Lilita One "CHANCLAZO!" slam. The game is already live and playable underneath (`pointer-events: none`). There is **no announcer audio** and no audio file in the build. `?start=1` still skips the burst. Same burst on Waves, Strike, and Slots.
 
 ## What v1.1.9 shipped (2026-11-11)
-Playtested on `feat/chancla-waves` (`5e6672a`) and now on production.
+Playtested on `feat/chancla-waves` (`5e6672a`) and on production as of v1.1.9.
 
 - **Girl fall is a full character, not a cropped card.** The atlas KO cells (`catrina-girl-atlas.webp`, still 3360×1770, cell 420×590, `?v=7`) were made by tipping her walk frame inside that box; the rotation ran off the right edge, so a hard flat crop showed as she fell. She still walks on the same card as everyone else. When she is knocked out, that card is hidden and a camera-facing sprite plays her complete, uncropped hit frames, tumbling with a 2D screen-space rotation (about 80°, feet-anchored) and a small slide. Timing (1.15s, fade, hop, marigold petals) is unchanged. Do not paste the old sticker frames back. Do not tip the 3D plane edge-on. Other characters still use their atlas KO rows.
 
@@ -32,7 +39,7 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 - Other lanes are not blocked.
 - It is eaten in bites (~0.38s each, `sfxSquish`). When the pieces are gone the row walks again.
 
-## What v1.1.7 already had (still true in v1.1.9; do not redo)
+## What v1.1.7 already had (still true in v1.1.10; do not redo)
 - Homepage: lowered logo, tagline centered under the logo, gold chancla floating in the middle, PLAY NOW under it going to `/choose`. No trio. No loading screen. PLAY NOW must not flash in the header. **Do not put a promo video on `/`.** Gabe is cutting the X video in another app. `vite.config.ts` `/` must stay `home.html`.
 - Día de los Muertos title is a card: game name, one rotating chanclazo quote (`#titleQuote`), TAP TO PLAY. No character lineup on that card.
 - Waves are hard from wave 1 (`waveSpec` in `waves.ts`).
@@ -83,7 +90,7 @@ npm run build
 - Footer stamp is `v<package.json version> · <short sha>` from `scripts/merge-dist.mjs`. Bump `package.json` when Gabe says to ship.
 - `arcade.ts` must keep the dynamic import of `initLanderMusic`.
 
-## Gold-chancla logo burst (preview only, 2026-11-11)
+## Gold-chancla logo burst (in v1.1.10, 2026-11-11)
 Gabe rejected every pan/tilt/zoom camera intro, including the luchador pull-out, and then asked to cut the announcer audio and keep only the flying-in chancla with the burst. There is **no camera intro**, **no loading screen**, **no start delay**, and **no "CHANCLAZO!" audio stinger**. The game is live and playable from the first frame.
 
 On boot of Waves, Strike, or Slots, the gold chancla logo (`/lp/chancla_gold.webp`) spins in (a tumbling scale-up, gold backlight), then bursts with the existing hand-drawn starburst (`/lp/chancla_burst.webp`), gold and marigold sparks, a flash, and a Lilita One "CHANCLAZO!" slam. Then it clears. The overlay is `pointer-events: none` and never blocks a throw. The plaza / machine is already running underneath. `prefers-reduced-motion` shows a brief fade instead of the spin. `?start=1` and `?nointro=1` skip the burst so playtests stay clean. Same burst on Waves, Strike, and Slots. No Abuela, no slingshot, no outside-reference copying, no new paid art, no audio file in the build. A leftover free Piper take (not shipped) is still on the box at `/workspace/chz-demo/chanclazo-stinger.mp3` (and `.ogg`, plus the WAV master).
@@ -91,7 +98,7 @@ On boot of Waves, Strike, or Slots, the gold chancla logo (`/lp/chancla_gold.web
 Module: `src/play/player1Intro.ts`. Wired from `waves.ts`, `fling.ts`, and `slots.ts`. `playPlayer1Intro` calls `onDone` immediately. Crash is still parked. Test hook: `window.__p1intro.play(game)` replays the burst (even after `?start=1`). An earlier clip that included the audio is `/workspace/chz-demo/chanclazo-stinger-intro.mp4`. Older camera-intro clips (`player1-intro.mp4`, `player1-intro-v2.mp4`) are leftover and not used.
 
 
-## Soul burst and sticky chancla (preview only, 2026-11-11)
+## Soul burst and sticky chancla (in v1.1.10, 2026-11-11)
 Inspired by Gabe's newest X bookmark (11 Nov 2026): [Outpost — "How long can you hold the bridge?"](https://x.com/makeplayai/status/2120571405884600486) by @makeplayai, playable as [Outpost: Deadline Bridge](https://www.makeplay.ai/p/jnet66j6wp). What was cool, used as inspiration only (no art or code copied): hold-the-line pressure, enemies attacking *your* defensive line, and a planted defense when the waves get heavy.
 
 - **Soul burst (wave 2+).** Mid-field kids (jefe and the luchador more often) wind up for ~0.55s with a glowing marigold-and-cyan charge, then throw a hand-drawn wisp (gold petals, cyan spirit core, particle trail) down their lane at the marigold line. Travel starts at ~1.25s and ramps to a floor of 0.9s. Caps stay fair: at most 2 in flight (including wind-ups), cooldown 5.5s down to 2.6s, max per wave `2 + floor((wave-2)/2)` capped at 5. One throw per kid. Smash it with a regular chancla (generous radius, aim assist) for 100 pts, "SOUL SMASH!", and a combo tick. A bomb blast also smashes nearby souls. If it lands: 1 heart, "SOUL HIT!", a cyan-gold flare on that lane. Wave clear waits for in-flight souls. Wave 2 banner: "Souls incoming · smash them with a chancla".
@@ -102,13 +109,12 @@ Inspired by Gabe's newest X bookmark (11 Nov 2026): [Outpost — "How long can y
 ## Open
 - Girl knock-out is a billboard tumble of her complete hit frames (the atlas KO row is cropped and is not drawn). Shipped in v1.1.9. Phone playtest on 11 Nov (390×844 and 375×667): the fall is a complete character, not a cropped card. A real fall clip of this girl is still welcome if Gabe wants one. Ask before replacing the art again.
 - Concha crumb burst, natural bite poses, and the whole round loaf — shipped in v1.1.8. Phone playtest on 11 Nov (390×844 and 375×667): the concha is the full round bun with a golden curved base on the cobbles; the girl leans in with a natural bite (no flattened head); crumbs burst as small pink and gold bits and do not pile. No new bugs worth a code change.
-- WAVE CLEAR banner overlapping the papel picado — **fixed on preview, not live.** Anchored from mid-screen (`bottom: 46%`, 44% / 48% breakpoints); the settle animation rises from below, never up into the bunting. Clean at 390×844, 375×667, and desktop. Before/after: `/workspace/chz-shots/polish-before-waves-clear-*.png` and `polish-after-waves-clear-*.png`.
-- Strike level map touching the footer on short landscape phones — **fixed on preview, not live.** Short landscape (`max-height: 500px`) map card can scroll, and padding keeps "All games" and the content above the fixed copyright stamp. Gaps: ~14px at 667×375, ~22px at 844×390. Portrait and desktop unchanged. After stills: `/workspace/chz-shots/polish-after-strike-map-*.png`.
+- WAVE CLEAR banner overlapping the papel picado — **fixed in v1.1.10.** Anchored from mid-screen (`bottom: 46%`, 44% / 48% breakpoints); the settle animation rises from below, never up into the bunting. Clean at 390×844, 375×667, and desktop. Before/after: `/workspace/chz-shots/polish-before-waves-clear-*.png` and `polish-after-waves-clear-*.png`.
+- Strike level map touching the footer on short landscape phones — **fixed in v1.1.10.** Short landscape (`max-height: 500px`) map card can scroll, and padding keeps "All games" and the content above the fixed copyright stamp. Gaps: ~14px at 667×375, ~22px at 844×390. Portrait and desktop unchanged. After stills: `/workspace/chz-shots/polish-after-strike-map-*.png`.
+- Gold-chancla logo burst (visual only, no announcer audio), soul bursts, and the sticky chancla — **shipped in v1.1.10.**
 - On 375×667 the hearts still sit on the papel picado (pre-existing, not this work). Cosmetic.
 - `snack-elote.webp` is junk. Do not add it.
 - Boss and `waveSpec` numbers are playtest values. Don't retune unless Gabe says the waves are too easy or too hard.
-- The gold-chancla logo burst is preview-only. Do not ship it to `main` until Gabe says to.
-- Soul bursts and the sticky chancla are preview-only. Do not ship them to `main` until Gabe says to.
 
 
 ## Next, only if Gabe asks
