@@ -985,7 +985,7 @@ async function boot() {
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
   fit(); setHud();
   requestAnimationFrame(frame);
-  playPlayer1Intro('slots'); // sting + logo burst; machine is already live, overlay does not block
+  playPlayer1Intro('slots'); // logo burst; machine is already live, overlay does not block
   $('again').onclick = () => { $('end').classList.add('hidden'); mode = 'idle'; credits = START_CREDITS; peak = START_CREDITS; setHud(); };
 }
 boot();

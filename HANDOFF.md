@@ -6,7 +6,7 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
 - **Live right now is v1.1.9.** Gabe said "Looks better push live" at 5:36 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.9 ·` plus the short SHA of the Release v1.1.9 commit on `main`. The matching feature commit is the Release v1.1.9 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.8 · 9b07298`.
 - Preview of the feature branch: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
-- **On preview only, not live (11 Nov 2026, evening PT):** WAVE CLEAR sits in the mid-plaza below the papel picado; the Strike level map clears the footer on short landscape phones; a "CHANCLAZO!" announcer stinger and a gold-chancla logo burst play when Waves, Strike, or Slots starts (the game is live underneath, no camera intro and no delay); from wave 2, kids throw smashable soul bursts, and a sticky chancla can be planted on the marigold line. Live is still v1.1.9 until Gabe says to push it live.
+- **On preview only, not live (11 Nov 2026, evening PT):** WAVE CLEAR sits in the mid-plaza below the papel picado; the Strike level map clears the footer on short landscape phones; a gold-chancla logo burst (spin in, burst, "CHANCLAZO!" slam — visual only, no announcer audio) plays when Waves, Strike, or Slots starts (the game is live underneath, no camera intro and no delay); from wave 2, kids throw smashable soul bursts, and a sticky chancla can be planted on the marigold line. Live is still v1.1.9 until Gabe says to push it live.
 - **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, and v1.1.9.
 
 ## What v1.1.9 shipped (2026-11-11)
@@ -50,7 +50,7 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 6. The waves game is **Día de los Muertos**. URL stays `/waves`. One constant: `WAVES_NAME` in `src/gameNames.ts`.
 7. Day of the Dead palette. No floor confetti. Marigold petals are fine if they fade.
 8. Rapid fire = hold the gold chancla. Banner, timer ring, flames, sound.
-9. Free assets only. No paid APIs. Sounds are Web Audio, no audio files, with one preview-only exception: the short free Piper-generated "CHANCLAZO!" stinger at `public/play/sfx/chanclazo-stinger.mp3` (and `.ogg`).
+9. Free assets only. No paid APIs. Sounds are Web Audio, no audio files.
 10. Pause and game-over are button-only (no panel). The waves **title** is the quote card described above.
 
 ## Game name constant
@@ -69,8 +69,8 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 ### Día de los Muertos, short
 - Abuela after each cleared wave, slides in from the left, `ABUELA_LINES` shuffle bag, hold 2.5s, tap her to skip. Pause freezes her clock.
 - Boss luchador every 3rd wave. `bossHp`, `BOSS_DMG` 4, `BOSS_RAGE` 1.4.
-- Hooks: `window.__waves` → `ready`, `start`, `state`, `kids`, `conchas`, `crumbs`, `placeConcha(lane)`, `giveSnack`, `snack`, `wave(n)`, `spawn(kind, lane, z, speed)`, `clearWave`, `hurt`, `bomb`, `giveBomb`, `rapid`, `pause`, `abuela`, `abuelaLines`, `souls`, `spawnSoul(lane, fromZ, travel)`, `windSoul`, `throwAtSoul`, `giveSticky`, `placeSticky(lane)`, `stickies`, `stopSpawn`. Params: `?start=1` (skips the sting and logo burst), `?wave=N`, `?bombs=N`, `?sticky=N`, `?nointro=1` (same skip). `window.__p1intro.play(game)` replays the sting.
-- Wave atlases load while the plaza is already drawing. `newGame` waits only for those textures, never for the sting. `?start=1` skips the sting and still begins once textures are ready.
+- Hooks: `window.__waves` → `ready`, `start`, `state`, `kids`, `conchas`, `crumbs`, `placeConcha(lane)`, `giveSnack`, `snack`, `wave(n)`, `spawn(kind, lane, z, speed)`, `clearWave`, `hurt`, `bomb`, `giveBomb`, `rapid`, `pause`, `abuela`, `abuelaLines`, `souls`, `spawnSoul(lane, fromZ, travel)`, `windSoul`, `throwAtSoul`, `giveSticky`, `placeSticky(lane)`, `stickies`, `stopSpawn`. Params: `?start=1` (skips the logo burst), `?wave=N`, `?bombs=N`, `?sticky=N`, `?nointro=1` (same skip). `window.__p1intro.play(game)` replays the burst.
+- Wave atlases load while the plaza is already drawing. `newGame` waits only for those textures, never for the burst. `?start=1` skips the burst and still begins once textures are ready.
 
 ## Build and deploy
 ```bash
@@ -83,14 +83,12 @@ npm run build
 - Footer stamp is `v<package.json version> · <short sha>` from `scripts/merge-dist.mjs`. Bump `package.json` when Gabe says to ship.
 - `arcade.ts` must keep the dynamic import of `initLanderMusic`.
 
-## CHANCLAZO sting and logo burst (preview only, 2026-11-11)
-Gabe rejected every pan/tilt/zoom camera intro, including the luchador pull-out. There is **no camera intro**, **no loading screen**, and **no start delay**. The game is live and playable from the first frame. On boot of Waves, Strike, or Slots, two things play on top (the overlay is `pointer-events: none` and never blocks a throw):
+## Gold-chancla logo burst (preview only, 2026-11-11)
+Gabe rejected every pan/tilt/zoom camera intro, including the luchador pull-out, and then asked to cut the announcer audio and keep only the flying-in chancla with the burst. There is **no camera intro**, **no loading screen**, **no start delay**, and **no "CHANCLAZO!" audio stinger**. The game is live and playable from the first frame.
 
-1. **A ~1.15s "CHANCLAZO!" announcer stinger.** Generated for free on the box with [Piper TTS](https://github.com/rhasspy/piper) (MIT) and the free `es_MX-claude-high` Mexican Spanish voice from [piper-voices](https://huggingface.co/rhasspy/piper-voices) (MIT), speaking "¡Chanclazo!". Processed with ffmpeg only (rubberband pitch/tempo, announcer EQ, compression, a short slap echo, a synthesized pink-noise whoosh and a sine/noise punch at the burst, loudnorm to about −10 LUFS). No paid API, no Higgsfield, no copyrighted samples. Shipped as `public/play/sfx/chanclazo-stinger.mp3` (~24 KB, also `.ogg`). If mobile autoplay is blocked, the sting plays on the first tap without eating the gesture or pausing play. Muted sessions stay quiet. `?start=1` and `?nointro=1` skip it (and the burst) so playtests stay clean. Copies of the audio: `/workspace/chz-demo/chanclazo-stinger.mp3` (and `.ogg`, plus `chanclazo-stinger-master.wav`).
+On boot of Waves, Strike, or Slots, the gold chancla logo (`/lp/chancla_gold.webp`) spins in (a tumbling scale-up, gold backlight), then bursts with the existing hand-drawn starburst (`/lp/chancla_burst.webp`), gold and marigold sparks, a flash, and a Lilita One "CHANCLAZO!" slam. Then it clears. The overlay is `pointer-events: none` and never blocks a throw. The plaza / machine is already running underneath. `prefers-reduced-motion` shows a brief fade instead of the spin. `?start=1` and `?nointro=1` skip the burst so playtests stay clean. Same burst on Waves, Strike, and Slots. No Abuela, no slingshot, no outside-reference copying, no new paid art, no audio file in the build. A leftover free Piper take (not shipped) is still on the box at `/workspace/chz-demo/chanclazo-stinger.mp3` (and `.ogg`, plus the WAV master).
 
-2. **The gold chancla logo** (`/lp/chancla_gold.webp`) spins in (a tumbling scale-up, gold backlight), then bursts with the existing hand-drawn starburst (`/lp/chancla_burst.webp`), gold and marigold sparks, a flash, and a Lilita One "CHANCLAZO!" slam. Then it clears. The plaza / machine is already running underneath. `prefers-reduced-motion` shows a brief fade instead of the spin. Same sting on Waves, Strike, and Slots. No Abuela, no slingshot, no outside-reference copying, no new paid art.
-
-Module: `src/play/player1Intro.ts`. Wired from `waves.ts`, `fling.ts`, and `slots.ts`. `playPlayer1Intro` calls `onDone` immediately. Crash is still parked. Test hook: `window.__p1intro.play(game)` replays the sting (even after `?start=1`). Demo clip: `/workspace/chz-demo/chanclazo-stinger-intro.mp4`. Older camera-intro clips (`player1-intro.mp4`, `player1-intro-v2.mp4`) are leftover and not used.
+Module: `src/play/player1Intro.ts`. Wired from `waves.ts`, `fling.ts`, and `slots.ts`. `playPlayer1Intro` calls `onDone` immediately. Crash is still parked. Test hook: `window.__p1intro.play(game)` replays the burst (even after `?start=1`). An earlier clip that included the audio is `/workspace/chz-demo/chanclazo-stinger-intro.mp4`. Older camera-intro clips (`player1-intro.mp4`, `player1-intro-v2.mp4`) are leftover and not used.
 
 
 ## Soul burst and sticky chancla (preview only, 2026-11-11)
@@ -109,7 +107,7 @@ Inspired by Gabe's newest X bookmark (11 Nov 2026): [Outpost — "How long can y
 - On 375×667 the hearts still sit on the papel picado (pre-existing, not this work). Cosmetic.
 - `snack-elote.webp` is junk. Do not add it.
 - Boss and `waveSpec` numbers are playtest values. Don't retune unless Gabe says the waves are too easy or too hard.
-- The CHANCLAZO sting and logo burst are preview-only. Do not ship them to `main` until Gabe says to.
+- The gold-chancla logo burst is preview-only. Do not ship it to `main` until Gabe says to.
 - Soul bursts and the sticky chancla are preview-only. Do not ship them to `main` until Gabe says to.
 
 

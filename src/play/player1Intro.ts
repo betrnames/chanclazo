@@ -1,21 +1,14 @@
-// Boot sting: the gold chancla spins in and bursts, a "CHANCLAZO!" announcer
-// plays, and the game is already live underneath. No camera intro, no loading
-// wait, no blocking overlay. Free Piper-generated audio in /play/sfx/.
-import { isMuted } from '../game/sound';
-
+// Boot burst: the gold chancla spins in and bursts, and the game is already
+// live underneath. No camera intro, no loading wait, no blocking overlay, no
+// announcer audio.
 export type IntroGame = 'waves' | 'strike' | 'slots';
 
-const MP3 = '/play/sfx/chanclazo-stinger.mp3';
 const LOGO = '/lp/chancla_gold.webp';
 const BURST = '/lp/chancla_burst.webp';
 const TOTAL_MS = 1250;
 const BURST_AT = 0.50;
 
 let forceIntro = false;
-let audioEl: HTMLAudioElement | null = null;
-let armed = false;
-let played = false;
-let pending = false;
 let runningCleanup: (() => void) | null = null;
 
 export function shouldPlayIntro(): boolean {
@@ -25,69 +18,8 @@ export function shouldPlayIntro(): boolean {
   return true;
 }
 
-/** Kept so older hooks don't break. The sting is always short and never blocks. */
+/** Kept so older hooks don't break. The burst is always short and never blocks. */
 export function isShortIntro(): boolean { return true; }
-
-function ensureAudio(): HTMLAudioElement {
-  if (audioEl) return audioEl;
-  const a = document.createElement('audio');
-  a.preload = 'auto';
-  a.setAttribute('playsinline', '');
-  (a as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
-  a.setAttribute('webkit-playsinline', '');
-  a.src = MP3;
-  a.load();
-  audioEl = a;
-  return a;
-}
-
-function disarm(): void {
-  armed = false;
-  pending = false;
-}
-
-function tryPlayAudio(): boolean {
-  if (isMuted() || played) return true;
-  try {
-    const a = ensureAudio();
-    a.currentTime = 0;
-    a.volume = 1;
-    const p = a.play();
-    if (p && typeof p.then === 'function') {
-      p.then(() => { played = true; disarm(); }).catch(() => { pending = true; armGesture(); });
-    } else {
-      played = true; disarm();
-    }
-    return true;
-  } catch {
-    pending = true;
-    armGesture();
-    return false;
-  }
-}
-
-/** If autoplay is blocked, play on the first tap without eating the gesture or blocking play. */
-function armGesture(): void {
-  if (armed) return;
-  armed = true;
-  pending = true;
-  const evs: Array<keyof WindowEventMap> = ['pointerdown', 'touchend', 'click', 'keydown'];
-  const on = (): void => {
-    if (!pending || played) { evs.forEach((e) => removeEventListener(e, on, true)); disarm(); return; }
-    if (isMuted()) return;
-    try {
-      const a = ensureAudio();
-      a.currentTime = 0;
-      const p = a.play();
-      if (p && typeof p.then === 'function') {
-        p.then(() => { played = true; evs.forEach((e) => removeEventListener(e, on, true)); disarm(); }).catch(() => {});
-      } else {
-        played = true; evs.forEach((e) => removeEventListener(e, on, true)); disarm();
-      }
-    } catch { /* keep armed */ }
-  };
-  evs.forEach((e) => addEventListener(e, on, { capture: true, passive: true }));
-}
 
 const CSS = `
 @font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
@@ -188,7 +120,7 @@ function reduced(): boolean {
   return matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-function runBurst(opts?: { silent?: boolean; seekable?: boolean }): void {
+function runBurst(opts?: { seekable?: boolean }): void {
   runningCleanup?.();
   injectCss();
   // Preload art so the close-up isn't a blank box, but never hold the game.
@@ -207,11 +139,6 @@ function runBurst(opts?: { silent?: boolean; seekable?: boolean }): void {
   document.body.appendChild(host);
 
   if (opts?.seekable) host.classList.add('seek');
-  if (!opts?.silent) {
-    played = false;
-    pending = false;
-    tryPlayAudio();
-  }
 
   // Seek mode stays on screen until the next play() or a later seek-cleanup.
   const t = opts?.seekable ? 0 : window.setTimeout(() => { cleanup(); }, reduced() ? 800 : TOTAL_MS + 80);
@@ -226,20 +153,16 @@ function runBurst(opts?: { silent?: boolean; seekable?: boolean }): void {
 }
 
 /**
- * Fire the sting and logo burst. `onDone` is called immediately — the game
- * must start with no wait. The overlay is pointer-events: none.
+ * Fire the logo burst. `onDone` is called immediately — the game must start
+ * with no wait. The overlay is pointer-events: none. There is no audio.
  */
-export function playPlayer1Intro(_game: IntroGame, onDone?: () => void, opts?: { silent?: boolean; seekable?: boolean }): void {
+export function playPlayer1Intro(_game: IntroGame, onDone?: () => void, opts?: { seekable?: boolean }): void {
   const go = shouldPlayIntro();
   onDone?.();
   if (!go) return;
-  ensureAudio();
   // Next frame so the game's first paint is already under the burst.
   requestAnimationFrame(() => runBurst(opts));
 }
-
-// Warm the file as soon as the module loads (does not play).
-try { ensureAudio(); } catch { /* ignore */ }
 
 (window as unknown as { __p1intro: {
   play: (game: IntroGame, onDone?: () => void) => void;
@@ -249,20 +172,18 @@ try { ensureAudio(); } catch { /* ignore */ }
     runningCleanup?.();
     document.getElementById('czsting')?.remove();
     forceIntro = true;
-    played = false;
-    pending = false;
     const go = shouldPlayIntro();
     forceIntro = false;
     onDone?.();
-    if (go) { ensureAudio(); runBurst(); }
+    if (go) runBurst();
   },
-  /** Freeze the burst at u in [0, 1] (u * TOTAL_MS). Silent, for stills and clips. */
+  /** Freeze the burst at u in [0, 1] (u * TOTAL_MS), for stills and clips. */
   seek(u: number): void {
     forceIntro = true;
     let host = document.getElementById('czsting');
     if (!host) {
       runningCleanup?.();
-      runBurst({ silent: true, seekable: true });
+      runBurst({ seekable: true });
       host = document.getElementById('czsting');
     }
     forceIntro = false;

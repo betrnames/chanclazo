@@ -1709,8 +1709,8 @@ for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener
 $('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · smash incoming souls · plant a sticky chancla on the line' : 'Click or drag at a kid to throw · Space = gold chancla · S = sticky chancla';
 updateHud();
 // Plaza starts drawing at once. Wave art still gates newGame so kids have their
-// sheets, but there is no intro wait and no loading screen. The CHANCLAZO sting
-// and gold-chancla burst play on top and never block throws.
+// sheets, but there is no intro wait and no loading screen. The gold-chancla
+// burst plays on top and never blocks throws.
 stage.classList.add('on-title');
 prev = performance.now();
 requestAnimationFrame(frame);

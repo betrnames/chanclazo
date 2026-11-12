@@ -513,8 +513,8 @@ if (/[?&]debug=1/.test(location.search)) setInterval(() => { const a = (window a
 safe('wireMute', () => { A.wireMute($('mute') as HTMLButtonElement); initAudioControls('fling', (m) => A.setMuted(m)); });
 safe('level0', () => build(0));
 onLayout(); scheduleLayout();
-// Game starts immediately (no start card, no intro wait). The CHANCLAZO sting
-// and gold-chancla burst play on top and never block throws.
+// Game starts immediately (no start card, no intro wait). The gold-chancla
+// burst plays on top and never block throws.
 startScreen.classList.add('hidden');
 requestAnimationFrame(frame);
 playPlayer1Intro('strike', () => startGame());
