@@ -6,7 +6,7 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
 - **Live right now is v1.1.9.** Gabe said "Looks better push live" at 5:36 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.9 ·` plus the short SHA of the Release v1.1.9 commit on `main`. The matching feature commit is the Release v1.1.9 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.8 · 9b07298`.
 - Preview of the feature branch: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
-- **On preview only, not live (11 Nov 2026, evening PT):** WAVE CLEAR sits in the mid-plaza below the papel picado; the Strike level map clears the footer on short landscape phones; a "Player 1 Ready" intro plays when Waves, Strike, or Slots starts; from wave 2, kids throw smashable soul bursts, and a sticky chancla can be planted on the marigold line. Live is still v1.1.9 until Gabe says to push it live.
+- **On preview only, not live (11 Nov 2026, evening PT):** WAVE CLEAR sits in the mid-plaza below the papel picado; the Strike level map clears the footer on short landscape phones; a "Player 1 Ready" intro (larger-than-life luchador, then a pull-out to the start) plays when Waves, Strike, or Slots starts; from wave 2, kids throw smashable soul bursts, and a sticky chancla can be planted on the marigold line. Live is still v1.1.9 until Gabe says to push it live.
 - **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, and v1.1.9.
 
 ## What v1.1.9 shipped (2026-11-11)
@@ -84,11 +84,11 @@ npm run build
 - `arcade.ts` must keep the dynamic import of `initLanderMusic`.
 
 ## Player 1 Ready intro (preview only, 2026-11-11)
-A ~4s three.js cinematic plays the first time a game starts in a session; later starts in the same session get a ~1s cut. Tap (or Space / Enter / Escape) skips. `prefers-reduced-motion` skips entirely. `?start=1` and `?nointro=1` skip so playtests and hooks still work; `?intro=1` forces the full cut.
+A ~3.7s three.js cut plays the first time a game starts in a session; later starts in the same session get a ~1.1s cut. Tap (or Space / Enter / Escape) skips. `prefers-reduced-motion` skips entirely. `?start=1` and `?nointro=1` skip so playtests and hooks still work; `?intro=1` forces the full cut.
 
-Sequence: wide pan over the cempasúchil-lit plaza at dusk (papel swaying, candles flickering) → tilt and zoom onto the chosen arcade cabinet, whose CRT flickers on → the gold chancla relic twirls in, hovers and glows → big marigold "PLAYER 1 READY", a synthesized coin-drop, then 3-2-1 straight into the game. Per-game final beat: a luchador for Waves (`chibi_luchador_crossed.webp`), a swinging piñata for Slots, a concentric target for Strike. Existing art and three.js only; SFX in `crashAudio.ts` (`sfxCoin`, `sfxCount`). No new paid assets.
+There is **no arcade cabinet** and **no small skeletons**. The only character is the luchador (`chibi_luchador_crossed.webp`, then a flex to `chibi_luchador_flex.webp`). Sequence: a snappy snap-in to a low, close hero shot — he fills most of a 390×844 frame, looking up, gold backlight and a ring of cempasúchil at his feet — then a flex/pose punch, then a punchy pull-out (ease-out with a slight overshoot) that reveals the plaza as the game start. "PLAYER 1" slams (scale punch, flash, shake, `sfxSlam` + `sfxCoin`), then "READY?", then a 3-2-1-GO countdown with scale pops and chiptune blips (`sfxCount`, `sfxGo`). A gold chancla spins in at his feet on the slam as a supporting flourish. Same cut on Waves, Strike, and Slots. Existing art and three.js only; no Abuela, no slingshot, no new paid assets.
 
-Module: `src/play/player1Intro.ts`. Wired from `waves.ts`, `fling.ts`, and `slots.ts`. Crash is still parked, no intro. Test hook: `window.__p1intro.play(game, onDone)` always runs the full cut (clears the session flag); `.seek(u)` scrubs for stills. Session flag: `sessionStorage['cz-p1-intro']`. Demo clip of the full intro: `/workspace/chz-demo/player1-intro.mp4`.
+Module: `src/play/player1Intro.ts`. Wired from `waves.ts`, `fling.ts`, and `slots.ts`. Crash is still parked, no intro. Test hook: `window.__p1intro.play(game, onDone)` always runs the full cut (clears the session flag); `.seek(u)` scrubs for stills. Session flag: `sessionStorage['cz-p1-intro']`. Demo clip of this cut: `/workspace/chz-demo/player1-intro-v2.mp4` (the earlier street-pan / cabinet clip is `player1-intro.mp4`).
 
 
 ## Soul burst and sticky chancla (preview only, 2026-11-11)

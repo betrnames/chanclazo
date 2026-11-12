@@ -200,6 +200,16 @@ export function sfxCoin(): void {
   burst(t + 0.09, 0.05, 0.12, 'bandpass', 2000, 1400, 2);
 }
 
+/** PLAYER 1 hits the screen: a heavy slam and a gold chip. */
+export function sfxSlam(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(78, 36, 'sine', t, 0.32, 0.48);
+  burst(t, 0.14, 0.3, 'lowpass', 900, 180, 0.85);
+  tone(392, 523, 'square', t, 0.1, 0.12);
+  tone(784, 784, 'triangle', t + 0.05, 0.2, 0.09);
+  burst(t + 0.02, 0.06, 0.1, 'highpass', 3500, 6000, 0.6);
+}
+
 /** Countdown beep: 3, 2, 1 — pitch rises as the number drops. */
 export function sfxCount(n: number): void {
   const a = c(); if (!a) return; const t = now();
@@ -300,4 +310,14 @@ export function sfxStickyCatch(): void {
   if (!gate('stickyCatch', 80)) return;
   const a = c(); if (!a) return; const t = now();
   tone(320, 480, 'sine', t, 0.14, 0.1); tone(480, 280, 'triangle', t + 0.06, 0.16, 0.08);
+}
+
+/** GO: a short rising chiptune sting. */
+export function sfxGo(): void {
+  const a = c(); if (!a) return; const t = now();
+  tone(784, 784, 'square', t, 0.09, 0.15);
+  tone(1046, 1046, 'square', t + 0.06, 0.1, 0.16);
+  tone(1568, 1568, 'square', t + 0.13, 0.28, 0.2);
+  tone(3136, 2093, 'sine', t + 0.13, 0.24, 0.08);
+  burst(t + 0.12, 0.16, 0.14, 'highpass', 4000, 8000, 0.55);
 }
