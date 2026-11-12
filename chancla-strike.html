@@ -102,7 +102,26 @@ canvas{background:#140a24}
 .lvls button b{display:block;font-size:18px}
 .lvls button span{font-size:13px;color:#ffc46b;letter-spacing:1px}
 .lvls button.locked{opacity:.45;border-color:#6b5a7c}
-@media (max-height:500px){ .area{margin:4px 0} .lvls button{padding:4px} .lvls button b{font-size:15px} #map .card h1{font-size:20px} }
+/* Keep every overlay's content above the fixed footer (copyright + stamp). */
+.screen{padding:16px 16px calc(28px + env(safe-area-inset-bottom));box-sizing:border-box}
+@media (max-height:500px){
+  .area{margin:3px 0}
+  .aname{font-size:13px;margin-bottom:2px}
+  .lvls{gap:6px}
+  .lvls button{padding:3px 2px}
+  .lvls button b{font-size:14px}
+  .lvls button span{font-size:11px}
+  #map .card h1{font-size:18px;margin:2px 0 0}
+  #map .card{padding:10px 12px 8px}
+  #map .card .keys{margin:4px 0}
+  /* Short landscape phones: the 3-area map used to sit on the footer. Pin the
+     screen between the HUD and the stamp, and let the card shrink/scroll. */
+  #map.screen{align-items:center;justify-content:center;padding:56px 10px calc(26px + env(safe-area-inset-bottom)) 10px}
+  #map .card.wide{max-height:100%;overflow:auto;max-width:min(560px,100%)}
+}
+@media (max-height:500px) and (orientation:landscape){
+  #map.screen{padding-top:50px}
+}
 </style>
 <script type="module" src="/src/play/fling.ts"></script>
 <script type="module" src="/src/analytics-boot.ts"></script>

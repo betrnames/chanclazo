@@ -12,6 +12,7 @@ import { markGameStart, markFirstAction, track } from '../analytics';
 import { makeChancla, makeCandle, buildBackdrop, glowTex, dotTex } from './crashArt';
 import * as sfx from './crashAudio';
 import { FX, HitStop } from './fx3d';
+import { playPlayer1Intro } from './player1Intro';
 
 const G = 16;
 const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -166,8 +167,9 @@ interface Kid {
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number; eatAnim: number;
   bite?: THREE.Sprite; eatBody?: THREE.Mesh; fallBody?: THREE.Sprite;
+  soulWind: number; soulThrew: boolean; soulCharge?: THREE.Sprite; stuck: number; wasStuck: boolean;
 }
-interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean; lane?: number }
+interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean; lane?: number; fromSticky?: boolean }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
 type State = 'title' | 'play' | 'between' | 'paused' | 'over';
 let state: State = 'title', prevState: State = 'play';
@@ -192,6 +194,91 @@ const EAT_SHEETS: Record<string, EatSheet> = {
   jefe: { tex: tex('/waves/eat-jefe.webp?v=1'), n: 6, cw: 168, ch: 278, fps: 10 },
   girl: { tex: tex('/waves/eat-girl.webp?v=1'), n: 6, cw: 420, ch: 590, fps: 10 },
 };
+
+// ───────────────────────── soul bursts (wave 2+) & sticky chancla ─────────────────────────
+// Inspired by hold-the-line pressure (enemies attacking your defence, a planted helper when
+// the waves get heavy) — original Día de los Muertos art and rules, nothing copied.
+const STICKY_MAX = 2, STICKY_LIFE = 8, STICKY_THROWS = 4, STICKY_STICK = 1.35, SOUL_WIND = 0.55, SOUL_SMASH_R = 0.95, SOUL_PTS = 100;
+interface Soul {
+  group: THREE.Group; spr: THREE.Sprite; glow: THREE.Sprite; glow2: THREE.Sprite; trail: THREE.Sprite[];
+  start: THREE.Vector3; end: THREE.Vector3; p: THREE.Vector3; u: number; T: number; lane: number; dead: boolean; bob: number;
+}
+interface Sticky {
+  group: THREE.Group; shoe: THREE.Group; halo: THREE.Sprite; resin: THREE.Mesh;
+  lane: number; z: number; life: number; throws: number; fireAt: number; planted: number; alive: boolean; fading: number;
+}
+let souls: Soul[] = [];
+let fieldStickies: Sticky[] = [];
+let stickiesHeld = 0, lastSoulAt = -1e9, soulsThisWave = 0, stickyComboThisWave = false, placingSticky = false;
+let aimSoul: Soul | undefined;
+
+// Hand-drawn marigold + cyan spirit: ink outline, irregular petals, glowing cyan core.
+const soulTex = canvasTex(128, 128, (g) => {
+  g.clearRect(0, 0, 128, 128);
+  const ink = (lw: number, col: string) => { g.strokeStyle = col; g.lineWidth = lw; g.lineJoin = 'round'; g.lineCap = 'round'; };
+  const blob = (cx: number, cy: number, rx: number, ry: number, rot: number, seed: number) => {
+    g.beginPath();
+    const n = 9;
+    for (let i = 0; i <= n; i++) {
+      const t = (i / n) * Math.PI * 2 + rot;
+      const w = 1 + Math.sin(t * 3 + seed) * 0.18 + Math.sin(t * 5 + seed * 1.7) * 0.1;
+      const x = cx + Math.cos(t) * rx * w, y = cy + Math.sin(t) * ry * w;
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.closePath();
+  };
+  // soft outer glow
+  const gl = g.createRadialGradient(64, 68, 6, 64, 68, 62);
+  gl.addColorStop(0, 'rgba(255,210,63,0.95)'); gl.addColorStop(0.45, 'rgba(255,140,26,0.45)'); gl.addColorStop(1, 'rgba(24,200,192,0)');
+  g.fillStyle = gl; g.fillRect(0, 0, 128, 128);
+  // marigold petals
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 - 0.3;
+    g.save(); g.translate(64 + Math.cos(a) * 10, 66 + Math.sin(a) * 8); g.rotate(a);
+    blob(0, 0, 22, 13, 0, i * 1.7);
+    g.fillStyle = i % 2 ? '#ffb000' : '#ff8c1a'; g.fill();
+    ink(4, '#3b1a5c'); g.stroke();
+    ink(1.6, '#1a0826'); g.stroke();
+    g.restore();
+  }
+  // cyan spirit core
+  blob(64, 62, 18, 22, 0.2, 4.2);
+  const core = g.createRadialGradient(60, 54, 2, 64, 64, 22);
+  core.addColorStop(0, '#fffce6'); core.addColorStop(0.35, '#7ef0ee'); core.addColorStop(1, '#18c8c0');
+  g.fillStyle = core; g.fill();
+  ink(5, '#3b1a5c'); g.stroke();
+  ink(1.8, '#0b3a3a'); g.stroke();
+  // highlight scribble
+  g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(54, 52); g.quadraticCurveTo(62, 44, 72, 54); g.stroke();
+  // tiny eye dots — a friendly wisp, not a skull copy
+  g.fillStyle = '#3b1a5c';
+  g.beginPath(); g.arc(58, 62, 2.4, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(70, 61, 2.4, 0, Math.PI * 2); g.fill();
+});
+const resinTex = canvasTex(64, 64, (g) => {
+  const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,210,63,0.85)'); gr.addColorStop(0.45, 'rgba(24,200,192,0.45)'); gr.addColorStop(1, 'rgba(24,200,192,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+});
+const lanePads: THREE.Mesh[] = [];
+{
+  const ring = canvasTex(128, 128, (g) => {
+    g.clearRect(0, 0, 128, 128);
+    g.strokeStyle = '#3b1a5c'; g.lineWidth = 14; g.beginPath(); g.arc(64, 64, 48, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 10; g.beginPath(); g.arc(64, 64, 48, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = '#18c8c0'; g.lineWidth = 4; g.beginPath(); g.arc(64, 64, 34, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(255,210,63,0.45)'; g.beginPath(); g.arc(64, 64, 28, 0, Math.PI * 2); g.fill();
+  });
+  for (let i = 0; i < 4; i++) {
+    const m = new THREE.Mesh(
+      new THREE.CircleGeometry(0.7, 28),
+      new THREE.MeshBasicMaterial({ map: ring, transparent: true, opacity: 0.95, depthWrite: false, depthTest: false, fog: false }),
+    );
+    m.rotation.x = -Math.PI / 2; m.position.set(LANES[i], 0.08, LINE_Z - 0.35); m.visible = false; m.renderOrder = 10;
+    scene.add(m); lanePads.push(m);
+  }
+}
 
 // ───────────────────────── kids ─────────────────────────
 const planeGeo = new Map<string, THREE.PlaneGeometry>();
@@ -227,7 +314,7 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bodyW * 0.72, bodyW * 0.32), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.8 }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.02, 0.04); root.add(shadow);
   const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w: bodyW, golden, variant, sheet: a, map, edgeMat, anim: 'walk', animT: 0, frameKey: -1,
-    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0, eatAnim: 0 };
+    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0, eatAnim: 0, soulWind: 0, soulThrew: false, stuck: 0, wasStuck: false };
   if (kind === 'jefe') {
     k.pips = [];
     for (let i = 0; i < k.maxHp; i++) { const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: pipTex, depthWrite: false, fog: false })); p.scale.setScalar(0.3); p.position.set((i - (k.maxHp - 1) / 2) * 0.34, h + 0.16, 0.02); body.add(p); k.pips.push(p); }
@@ -268,12 +355,14 @@ function startWave(n: number): void {
   wave = n; const s = waveSpec(n); abuelaHide();
   toSpawn = waveTotal = s.count; spawned = 0; spawnT = 0.15;
   bossPending = n % 3 === 0; // the luchador boss shows up every 3rd wave
+  soulsThisWave = 0; lastSoulAt = clock; stickyComboThisWave = false;
   state = 'play';
   $('wave').textContent = `Wave ${n}`;
-  banner(`WAVE ${n}`, n === 1 ? 'Here they come!' : bossPending ? '¡Cuidado! El Luchador is coming' : `${s.count} kids · faster!`);
+  banner(`WAVE ${n}`, n === 1 ? 'Here they come!' : n === 2 ? 'Souls incoming · smash them with a chancla' : bossPending ? '¡Cuidado! El Luchador is coming' : `${s.count} kids · faster!`);
   sfx.sfxRapid();
   track('wave_start', { game: 'waves', wave: n });
   updateHud();
+  updateStickyBtn();
 }
 let goldenThisWave = false;
 function spawnTick(dt: number): void {
@@ -298,6 +387,7 @@ function spawnTick(dt: number): void {
 }
 function checkWaveDone(): void {
   if (state !== 'play' || toSpawn > 0 || kids.some(alive)) return;
+  if (souls.some((so) => !so.dead)) return; // wait for in-flight soul bursts
   const bonus = 250 * wave + hearts * 50;
   score += bonus; updateHud();
   state = 'between'; goldenThisWave = false;
@@ -305,7 +395,12 @@ function checkWaveDone(): void {
   abuelaSay();
   const gotBomb = wave >= 2 && bombs < BOMB_MAX; if (gotBomb) giveBomb(1);
   const gotSnack = snacks < SNACK_MAX; if (gotSnack) giveSnack(1);
-  banner(`WAVE ${wave} CLEAR!`, gotBomb ? `+${bonus} bonus · +1 bomb · +1 pan dulce` : `+${bonus} bonus · +1 pan dulce`);
+  const gotSticky = stickiesHeld < STICKY_MAX; if (gotSticky) giveSticky(1);
+  const extras: string[] = [];
+  if (gotBomb) extras.push('+1 bomb');
+  if (gotSnack) extras.push('+1 pan dulce');
+  if (gotSticky) extras.push('+1 sticky chancla');
+  banner(`WAVE ${wave} CLEAR!`, `+${bonus} bonus` + (extras.length ? ' · ' + extras.join(' · ') : ''));
   sfx.sfxWin();
   track('wave_clear', { game: 'waves', wave, hearts });
 }
@@ -433,7 +528,24 @@ function pointerAim(e: PointerEvent): void {
     let bestD = 0.13;
     for (const k of kids) { if (!alive(k)) continue; const s = kidCenter(k, tmpV).project(camera); const d = Math.hypot((s.x - ndc.x) * camera.aspect, s.y - ndc.y); if (d < bestD) { bestD = d; aimKid = k; } }
   }
-  if (aimKid) leadPoint(aimKid, aimPt);
+  aimSoul = undefined;
+  {
+    let bestD = aimKid ? 0.13 : 0.16;
+    if (aimKid) {
+      const sc = kidCenter(aimKid, tmpV).project(camera);
+      bestD = Math.hypot((sc.x - ndc.x) * camera.aspect, sc.y - ndc.y);
+    }
+    for (const so of souls) {
+      if (so.dead) continue;
+      const sc = so.p.clone().project(camera);
+      const d = Math.hypot((sc.x - ndc.x) * camera.aspect, sc.y - ndc.y);
+      if (d < bestD + 0.02) { bestD = d; aimKid = undefined; aimSoul = so; }
+    }
+  }
+  if (aimSoul) {
+    const lead = Math.min(0.32, (1 - aimSoul.u) * aimSoul.T * 0.45);
+    aimPt.copy(aimSoul.p).lerp(aimSoul.end, Math.min(1, lead / Math.max(0.05, (1 - aimSoul.u) * aimSoul.T)));
+  } else if (aimKid) leadPoint(aimKid, aimPt);
   else if (!ray.ray.intersectPlane(aimPlane, aimPt)) aimPt.set(0, 0.75, -6);
   aimPt.z = Math.min(aimPt.z, LINE_Z + 0.5);
 }
@@ -441,6 +553,11 @@ const canvas = renderer.domElement;
 canvas.addEventListener('pointerdown', (e) => {
   if (state !== 'play' && state !== 'between') return;
   sfx.unlockCrashAudio();
+  if (placingSticky) {
+    e.preventDefault();
+    placeSticky(laneFromEvent(e));
+    return;
+  }
   aiming = true; holding = true; canvas.setPointerCapture?.(e.pointerId); pointerAim(e);
   if (clock < rapidUntil) throwAt(aimPt.clone(), aimKid);
 });
@@ -464,6 +581,8 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Space' || e.code === 'Enter') { if (state === 'play' || state === 'between') { e.preventDefault(); autoThrow(); } }
   if (e.code === 'KeyB') useBomb();
   if (e.code === 'KeyF') useSnack();
+  if (e.code === 'KeyS') { e.preventDefault(); beginPlaceSticky(); }
+  if (e.code === 'Escape' && placingSticky) { e.preventDefault(); cancelPlaceSticky(); return; }
   if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
 });
 
@@ -538,6 +657,11 @@ function hitKid(k: Kid, s?: Shot, dmg = 1): void {
   popText(k, `+${pts}`, combo >= 2 || k.kind === 'jefe' || k.kind === 'lucha' ? 'big' : '');
   sfx.sfxPoint(Math.min(combo, 8));
   if (combo >= 2) showCombo(combo);
+  if (combo >= 4 && !stickyComboThisWave && stickiesHeld < STICKY_MAX) {
+    stickyComboThisWave = true;
+    giveSticky(1);
+    popText(k, '+STICKY', 'big');
+  }
   if (k.golden) startRapid();
   poof(at, k.kind === 'lucha' ? 70 : k.kind === 'jefe' ? 46 : 30);
   fx.sparks(at, 14, 0xffd36b, 4); fx.sparks(at, 8, 0xff8c1a, 3); sfx.sfxShimmer(k.kind === 'lucha' ? 1 : 0.6);
@@ -564,6 +688,9 @@ function updateBombBtn(): void {
   $('bombN').textContent = String(bombs);
 }
 const snackBtn = $('snack') as HTMLButtonElement;
+const stickyBtn = $('sticky') as HTMLButtonElement;
+stickyBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); if (stickiesHeld > 0) stickyBtn.classList.add('press'); beginPlaceSticky(); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) stickyBtn.addEventListener(ev, () => stickyBtn.classList.remove('press'));
 function giveSnack(n: number): void { snacks = Math.min(SNACK_MAX, snacks + n); updateSnackBtn(); }
 function updateSnackBtn(): void {
   const on = snacks > 0;
@@ -905,6 +1032,10 @@ function explode(at: THREE.Vector3): void {
     const d = Math.hypot(k.root.position.x - c.x, k.root.position.z - c.z);
     if (d < BOMB_R + k.w * 0.3) hitKid(k, undefined, k.kind === 'lucha' || k.kind === 'jefe' ? BOMB_DMG : 99);
   }
+  for (const so of souls) {
+    if (so.dead) continue;
+    if (Math.hypot(so.p.x - c.x, so.p.z - c.z) < BOMB_R + 0.4) smashSoul(so, undefined);
+  }
   fx.ring(c, 4.6, 0xffd36b); fx.ring(c.clone().setY(1.1), 3.0, 0xff7a2a);
   fx.sparks(c, 90, 0xffd36b, 9, 6); fx.sparks(c, 50, 0xff7a1a, 7, 5); fx.sparks(c, 20, 0xffffff, 5, 4);
   poof(c.clone().setY(1.2), 60);
@@ -913,6 +1044,343 @@ function explode(at: THREE.Vector3): void {
 }
 bombBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); bombBtn.classList.add('press'); useBomb(); });
 for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) bombBtn.addEventListener(ev, () => bombBtn.classList.remove('press'));
+
+function soulTravel(): number { return Math.max(0.9, 1.25 - Math.max(0, wave - 2) * 0.06); }
+function soulCooldown(): number { return Math.max(2.6, 5.5 - Math.max(0, wave - 2) * 0.55); }
+function soulCap(): number { return Math.min(5, 2 + Math.max(0, Math.floor((wave - 2) / 2))); }
+function soulsBusy(): number {
+  return souls.filter((so) => !so.dead).length + kids.filter((k) => alive(k) && k.soulWind > 0).length;
+}
+function freeSoul(so: Soul): void {
+  scene.remove(so.group);
+  for (const t of so.trail) { scene.remove(t); t.material.dispose(); }
+  so.spr.material.dispose(); so.glow.material.dispose(); so.glow2.material.dispose();
+}
+function launchSoul(k: Kid, forcedT?: number): Soul {
+  const start = kidCenter(k, new THREE.Vector3());
+  const lane = k.lane;
+  const end = new THREE.Vector3(LANES[lane], 0.78, LINE_Z + 0.08);
+  const T = forcedT ?? soulTravel();
+  const group = new THREE.Group();
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: 0xffb000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false, opacity: 1 }));
+  glow.scale.setScalar(2.4); glow.renderOrder = 8;
+  const glow2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: 0x3de8e8, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, fog: false, opacity: 0.85 }));
+  glow2.scale.setScalar(1.55); glow2.renderOrder = 8;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: soulTex, transparent: true, depthWrite: false, depthTest: false, fog: false }));
+  spr.scale.setScalar(1.85); spr.renderOrder = 9;
+  group.add(glow, glow2, spr); group.position.copy(start); scene.add(group);
+  const trail: THREE.Sprite[] = [];
+  for (let i = 0; i < 12; i++) {
+    const useWisp = i % 3 === 0;
+    const col = i % 2 ? 0x3de8e8 : 0xffb000;
+    const t = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: useWisp ? soulTex : glowTex(), color: useWisp ? 0xffffff : col,
+      transparent: true, blending: useWisp ? THREE.NormalBlending : THREE.AdditiveBlending,
+      depthWrite: false, depthTest: false, fog: false, opacity: 0,
+    }));
+    t.scale.setScalar(useWisp ? 0.85 : 0.7 - i * 0.03); t.renderOrder = 7; scene.add(t); trail.push(t);
+  }
+  const so: Soul = { group, spr, glow, glow2, trail, start: start.clone(), end, p: start.clone(), u: 0, T, lane, dead: false, bob: Math.random() * 6 };
+  souls.push(so);
+  soulsThisWave++;
+  lastSoulAt = clock;
+  k.soulThrew = true;
+  if (k.soulCharge) k.soulCharge.visible = false;
+  sfx.sfxSoulCast();
+  fx.ring(start, 0.7, 0x3de8e8);
+  return so;
+}
+/** Test/demo helper: place a mid-field kid at fromZ and launch a soul from their chest. */
+function spawnSoul(lane = 1, fromZ = -3.2, travel?: number): Soul | undefined {
+  const k = spawnKid('jefe', lane, 0.35);
+  k.z = fromZ; k.x = LANES[lane]; k.root.position.set(k.x, 0, k.z);
+  k.soulThrew = false;
+  return launchSoul(k, travel);
+}
+function windSoul(lane = 1, fromZ = -3.2): Kid {
+  const k = spawnKid('jefe', lane, 0.25);
+  k.z = fromZ; k.x = LANES[lane]; k.root.position.set(k.x, 0, k.z);
+  k.soulWind = SOUL_WIND;
+  lastSoulAt = clock;
+  return k;
+}
+function smashSoul(so: Soul, sh?: Shot): void {
+  if (so.dead) return;
+  so.dead = true;
+  const at = so.p.clone();
+  if (sh) { sh.spent = 0; sh.v.set(-sh.v.x * 0.2 + (Math.random() - 0.5) * 2, 6, Math.abs(sh.v.z) * 0.2 + 1.6); }
+  score += SOUL_PTS; updateHud(true);
+  combo = clock - comboT < 1.3 ? combo + 1 : 1; comboT = clock;
+  popAt(at.clone().setY(at.y + 0.4), 'SOUL SMASH!', 'big');
+  popAt(at.clone().setY(at.y + 0.15), `+${SOUL_PTS}`, '');
+  if (combo >= 2) showCombo(combo);
+  fx.ring(at, 1.15, 0xffd23f); fx.ring(at.clone().setY(at.y + 0.2), 0.7, 0x3de8e8);
+  fx.sparks(at, 16, 0xffd36b, 4); fx.sparks(at, 12, 0x3de8e8, 3);
+  poof(at, 18);
+  sfx.sfxSoulSmash(); sfx.sfxShimmer(0.7); sfx.buzz(16);
+  freeSoul(so);
+}
+function soulLand(so: Soul): void {
+  if (so.dead) return;
+  so.dead = true;
+  const at = so.p.clone().setY(0.5);
+  loseHeart(1, at, 'SOUL HIT!');
+  sfx.sfxSoulLand();
+  fx.ring(at, 1.6, 0x3de8e8); fx.ring(new THREE.Vector3(LANES[so.lane], 0.08, LINE_Z), 1.8, 0xff8c1a);
+  fx.sparks(at, 20, 0x3de8e8, 4); poof(at, 14);
+  // brief marigold flare on the lane
+  const flare = new THREE.Mesh(
+    new THREE.CircleGeometry(0.85, 20),
+    new THREE.MeshBasicMaterial({ color: 0x3de8e8, transparent: true, opacity: 0.7, depthWrite: false, fog: false }),
+  );
+  flare.rotation.x = -Math.PI / 2; flare.position.set(LANES[so.lane], 0.06, LINE_Z); flare.renderOrder = 3; scene.add(flare);
+  const born = clock;
+  const tickFlare = (): void => {
+    const u = (clock - born) / 0.7;
+    if (u >= 1 || !flare.parent) { scene.remove(flare); flare.geometry.dispose(); (flare.material as THREE.Material).dispose(); return; }
+    (flare.material as THREE.MeshBasicMaterial).opacity = 0.7 * (1 - u);
+    flare.scale.setScalar(1 + u * 0.8);
+  };
+  (flare as THREE.Mesh & { userData: { tickFlare?: () => void } }).userData.tickFlare = tickFlare;
+  laneFlares.push(flare);
+  freeSoul(so);
+}
+const laneFlares: THREE.Mesh[] = [];
+function tickFlares(): void {
+  for (let i = laneFlares.length - 1; i >= 0; i--) {
+    const fn = laneFlares[i].userData.tickFlare as (() => void) | undefined;
+    fn?.();
+    if (!laneFlares[i].parent) laneFlares.splice(i, 1);
+  }
+}
+function maybeStartSoul(): void {
+  if (state !== 'play' || wave < 2) return;
+  if (soulsThisWave >= soulCap()) return;
+  if (soulsBusy() >= 2) return;
+  if (clock - lastSoulAt < soulCooldown()) return;
+  const mid: Kid[] = [];
+  const wts: number[] = [];
+  for (const k of kids) {
+    if (!alive(k) || k.soulThrew || k.soulWind > 0 || k.eat > 0) continue;
+    if (k.z < SPAWN_Z + 2.0 || k.z > LINE_Z - 1.85) continue;
+    mid.push(k);
+    wts.push(k.kind === 'lucha' ? 3.2 : k.kind === 'jefe' ? 2.2 : k.kind === 'girl' ? 1.1 : 1);
+  }
+  if (!mid.length) return;
+  let r = Math.random() * wts.reduce((a, b) => a + b, 0), pick = mid[0];
+  for (let i = 0; i < mid.length; i++) { r -= wts[i]; if (r <= 0) { pick = mid[i]; break; } }
+  pick.soulWind = SOUL_WIND;
+  lastSoulAt = clock; // reserve the slot so we don't wind two at once
+  sfx.sfxShimmer(0.35);
+}
+function ensureCharge(k: Kid): void {
+  if (k.soulCharge) return;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: soulTex, transparent: true, depthWrite: false, depthTest: false, fog: false, opacity: 0.95 }));
+  sp.position.set(0, k.h * 0.78, 0.35); sp.renderOrder = 8; k.root.add(sp); k.soulCharge = sp;
+}
+function tickSouls(dt: number): void {
+  for (const k of kids) {
+    if (!alive(k)) {
+      if (k.soulCharge) k.soulCharge.visible = false;
+      continue;
+    }
+    if (k.soulWind > 0) {
+      ensureCharge(k);
+      k.soulWind -= dt;
+      const u = 1 - Math.max(0, k.soulWind) / SOUL_WIND;
+      if (k.soulCharge) {
+        k.soulCharge.visible = true;
+        const pulse = 0.9 + u * 1.15 + Math.sin(clock * 14) * 0.12;
+        k.soulCharge.scale.setScalar(pulse);
+        (k.soulCharge.material as THREE.SpriteMaterial).rotation = clock * 3;
+        (k.soulCharge.material as THREE.SpriteMaterial).opacity = 0.7 + u * 0.3;
+      }
+      if (k.soulWind <= 0) launchSoul(k);
+    } else if (k.soulCharge) k.soulCharge.visible = false;
+  }
+  for (const so of souls) {
+    if (so.dead) continue;
+    so.u += dt / so.T;
+    const t = Math.min(1, so.u);
+    const ease = t * t * (3 - 2 * t);
+    so.p.lerpVectors(so.start, so.end, ease);
+    so.p.y += Math.sin(t * Math.PI) * 0.58;
+    so.p.x += Math.sin(clock * 5.5 + so.bob) * 0.07 * (1 - t);
+    so.group.position.copy(so.p);
+    const wob = 0.94 + Math.sin(clock * 8 + so.bob) * 0.08;
+    so.spr.scale.setScalar(1.85 * wob);
+    so.glow.scale.setScalar(2.35 + Math.sin(clock * 7) * 0.25);
+    so.glow2.scale.setScalar(1.5 + Math.sin(clock * 9 + 1) * 0.18);
+    so.glow.material.opacity = 0.85 + Math.sin(clock * 6) * 0.15;
+    so.glow2.material.opacity = 0.7 + Math.sin(clock * 8) * 0.15;
+    (so.spr.material as THREE.SpriteMaterial).rotation = Math.sin(clock * 4 + so.bob) * 0.35;
+    for (let i = 0; i < so.trail.length; i++) {
+      const tu = Math.max(0, t - (i + 1) * 0.038);
+      const te = tu * tu * (3 - 2 * tu);
+      const tp = new THREE.Vector3().lerpVectors(so.start, so.end, te);
+      tp.y += Math.sin(tu * Math.PI) * 0.58;
+      tp.x += Math.sin(clock * 5.5 + so.bob + i * 0.4) * 0.04;
+      so.trail[i].position.copy(tp);
+      const fade = Math.max(0, 0.85 - i * 0.06) * (t > 0.04 ? 1 : t / 0.04);
+      so.trail[i].material.opacity = fade;
+      const useWisp = i % 3 === 0;
+      so.trail[i].scale.setScalar((useWisp ? 0.95 : 0.75 - i * 0.03) * (0.85 + Math.sin(clock * 10 + i) * 0.2));
+    }
+    if (Math.random() < 0.55) fx.trail(so.p);
+    if (t >= 1) soulLand(so);
+  }
+  souls = souls.filter((so) => !so.dead);
+  tickFlares();
+}
+
+function fieldStickyCount(): number { return fieldStickies.filter((st) => st.alive).length; }
+function updateStickyBtn(): void {
+  const on = stickiesHeld > 0 && (state === 'play' || state === 'between' || state === 'title' || state === 'paused' || state === 'over');
+  const canPlant = stickiesHeld > 0 && fieldStickyCount() < 1 && (state === 'play' || state === 'between');
+  stickyBtn.classList.toggle('ghost', !on);
+  stickyBtn.classList.toggle('ready', canPlant && !placingSticky);
+  stickyBtn.classList.toggle('placing', placingSticky);
+  stickyBtn.setAttribute('aria-disabled', canPlant ? 'false' : 'true');
+  $('stickyN').textContent = String(stickiesHeld);
+  $('stickyHint').classList.toggle('on', placingSticky);
+  lanePads.forEach((p) => { p.visible = placingSticky; });
+}
+function giveSticky(n: number): void {
+  const was = stickiesHeld;
+  stickiesHeld = Math.min(STICKY_MAX, stickiesHeld + n);
+  if (stickiesHeld > was) sfx.sfxBombReady();
+  updateStickyBtn();
+}
+function laneFromEvent(e: PointerEvent): number {
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  if (!ray.ray.intersectPlane(aimPlane, tmpV)) tmpV.set(0, 0, LINE_Z);
+  let best = 0, bestD = 1e9;
+  for (let i = 0; i < 4; i++) { const d = Math.abs(tmpV.x - LANES[i]); if (d < bestD) { bestD = d; best = i; } }
+  return best;
+}
+function beginPlaceSticky(): void {
+  if ((state !== 'play' && state !== 'between') || stickiesHeld <= 0 || fieldStickyCount() >= 1) {
+    if (stickiesHeld <= 0 || fieldStickyCount() >= 1) sfx.sfxClick();
+    return;
+  }
+  if (placingSticky) { cancelPlaceSticky(); return; }
+  placingSticky = true;
+  aiming = false; holding = false;
+  sfx.sfxClick();
+  updateStickyBtn();
+}
+function cancelPlaceSticky(): void {
+  placingSticky = false;
+  updateStickyBtn();
+}
+function freeSticky(st: Sticky): void {
+  scene.remove(st.group);
+  st.halo.material.dispose();
+  (st.resin.material as THREE.Material).dispose();
+  st.resin.geometry.dispose();
+}
+function placeSticky(lane: number): Sticky | undefined {
+  if (stickiesHeld <= 0 || fieldStickyCount() >= 1) { cancelPlaceSticky(); return undefined; }
+  if (state !== 'play' && state !== 'between') { cancelPlaceSticky(); return undefined; }
+  stickiesHeld--;
+  placingSticky = false;
+  const z = LINE_Z - 0.35;
+  const group = new THREE.Group();
+  const shoe = makeChancla();
+  shoe.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? relicSole : relicStrap; });
+  shoe.scale.setScalar(1.05);
+  shoe.rotation.set(0.15, 0.85, 0.05, 'YXZ');
+  shoe.position.y = 0.22;
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: 0xffd23f, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.85 }));
+  halo.scale.set(1.8, 1.15, 1); halo.position.y = 0.35; halo.renderOrder = 3;
+  const halo2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(), color: 0x18c8c0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, opacity: 0.45 }));
+  halo2.scale.set(1.3, 0.9, 1); halo2.position.y = 0.2; halo2.renderOrder = 3;
+  const resin = new THREE.Mesh(
+    new THREE.CircleGeometry(0.72, 22),
+    new THREE.MeshBasicMaterial({ map: resinTex, transparent: true, opacity: 0.85, depthWrite: false, fog: false }),
+  );
+  resin.rotation.x = -Math.PI / 2; resin.position.y = 0.04; resin.renderOrder = 2;
+  group.add(resin, halo, halo2, shoe);
+  group.position.set(LANES[lane], 0, z);
+  scene.add(group);
+  FX.glow(shoe, 1.3, 0.6);
+  const st: Sticky = { group, shoe, halo, resin, lane, z, life: STICKY_LIFE, throws: 0, fireAt: clock + 0.4, planted: clock, alive: true, fading: 0 };
+  fieldStickies.push(st);
+  sfx.sfxStickyPlant(); sfx.buzz(18);
+  fx.ring(new THREE.Vector3(LANES[lane], 0.1, z), 1.2, 0xffd23f);
+  popAt(new THREE.Vector3(LANES[lane], 1.1, z), 'STICKY!', 'big');
+  updateStickyBtn();
+  return st;
+}
+function stickyThrowAt(from: THREE.Vector3, to: THREE.Vector3, target?: Kid): void {
+  const T = THREE.MathUtils.clamp(from.distanceTo(to) / 17, 0.28, 0.7);
+  const v = new THREE.Vector3((to.x - from.x) / T, (to.y - from.y + 0.5 * G * T * T) / T, (to.z - from.z) / T);
+  const obj = shotProto.clone(); scene.add(obj); FX.glow(obj, 1.05, 0.55);
+  obj.position.copy(from); obj.scale.setScalar(0.88);
+  shots.push({ obj, p: from.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), target, born: clock, fromSticky: true });
+  sfx.sfxFire(); sfx.sfxWhoosh();
+}
+function tickStickies(dt: number): void {
+  for (const st of fieldStickies) {
+    if (!st.alive) continue;
+    st.life -= dt;
+    const s = clock;
+    st.shoe.rotation.set(0.15, 0.85 + Math.sin(s * 2.2) * 0.15, 0.05 + Math.sin(s * 1.6) * 0.04, 'YXZ');
+    st.shoe.position.y = 0.22 + Math.sin(s * 3.1) * 0.05;
+    st.halo.material.opacity = 0.7 + Math.sin(s * 5) * 0.2;
+    st.resin.scale.setScalar(1 + Math.sin(s * 3.4) * 0.07);
+    (st.resin.material as THREE.MeshBasicMaterial).opacity = 0.75 + Math.sin(s * 4) * 0.12;
+    // catch kids in this lane once
+    for (const k of kids) {
+      if (!alive(k) || k.lane !== st.lane || k.wasStuck || k.stuck > 0) continue;
+      if (Math.abs(k.z - st.z) < 0.58) {
+        k.stuck = STICKY_STICK; k.wasStuck = true;
+        sfx.sfxStickyCatch();
+        fx.ring(new THREE.Vector3(k.root.position.x, 0.12, k.z), 0.8, 0x18c8c0);
+        popText(k, 'STUCK!', '');
+      }
+    }
+    if (st.fading > 0) {
+      st.fading += dt;
+      const fade = Math.max(0, 1 - st.fading / 0.45);
+      st.group.scale.setScalar(0.7 + fade * 0.3);
+      st.halo.material.opacity *= fade;
+      (st.resin.material as THREE.MeshBasicMaterial).opacity *= fade;
+      if (st.fading >= 0.45) { st.alive = false; freeSticky(st); }
+      continue;
+    }
+    const done = st.life <= 0 || st.throws >= STICKY_THROWS;
+    if (done) { st.fading = 0.001; continue; }
+    if (clock >= st.fireAt && (state === 'play' || state === 'between')) {
+      // prefer an incoming soul in this lane, then the closest (or stuck) kid
+      const so = souls.find((x) => !x.dead && x.lane === st.lane);
+      const live = kids.filter((k) => alive(k) && k.lane === st.lane && k.z > SPAWN_Z + 0.4);
+      live.sort((a, b) => (b.stuck > 0 ? 2.5 : 0) + b.z - ((a.stuck > 0 ? 2.5 : 0) + a.z));
+      const from = st.group.position.clone(); from.y = 0.9;
+      if (so) {
+        stickyThrowAt(from, so.p.clone().lerp(so.end, 0.2));
+        st.throws++; st.fireAt = clock + 1.65;
+      } else if (live[0]) {
+        const to = predict(live[0], 0.38, new THREE.Vector3());
+        stickyThrowAt(from, to, live[0]);
+        st.throws++; st.fireAt = clock + 1.65;
+      } else {
+        st.fireAt = clock + 0.3;
+      }
+    }
+  }
+  fieldStickies = fieldStickies.filter((st) => st.alive);
+  // pulse the placing pads
+  if (placingSticky) {
+    lanePads.forEach((p, i) => {
+      (p.material as THREE.MeshBasicMaterial).opacity = 0.28 + Math.sin(clock * 6 + i) * 0.14;
+      p.scale.setScalar(1 + Math.sin(clock * 5 + i) * 0.08);
+    });
+  }
+}
+
 function startRapid(): void {
   rapidUntil = clock + 5; sfx.sfxRapid(); sfx.buzz([20, 40, 20]);
   banner('RAPID FIRE!', 'Hold to spray chanclas'); $('rapid').classList.remove('hidden');
@@ -948,14 +1416,9 @@ function tickPetals(dt: number): void {
 }
 function kidReachedLine(k: Kid): void {
   k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose();
-  hearts = Math.max(0, hearts - (k.kind === 'lucha' ? BOSS_DMG : 1)); if (k === boss) boss = undefined; updateHud();
-  const hs = $('hearts').children; const lostEl = hs[hearts] as HTMLElement | undefined;
-  if (lostEl) { lostEl.classList.remove('lost'); void lostEl.offsetWidth; lostEl.classList.add('lost'); }
-  const h = $('hurt'); h.classList.add('on'); setTimeout(() => h.classList.remove('on'), 90);
-  shake = 0.7; sfx.sfxBoing(); sfx.sfxThwack(0.5); sfx.buzz([40, 30, 60]);
-  popText(k, '−❤️', 'bad');
-  combo = 0;
-  if (hearts <= 0) gameOver();
+  if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose();
+  if (k === boss) boss = undefined;
+  loseHeart(k.kind === 'lucha' ? BOSS_DMG : 1, new THREE.Vector3(k.root.position.x, k.h + 0.2, k.root.position.z));
 }
 
 // ───────────────────────── HUD + overlays ─────────────────────────
@@ -977,23 +1440,46 @@ function showCombo(n: number): void {
   c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
   if (n >= 3) sfx.sfxCombo(Math.min(n - 1, 4));
 }
-function popText(k: Kid, text: string, cls: string): void {
-  const v = new THREE.Vector3(k.root.position.x, k.h + 0.2, k.root.position.z).project(camera);
+function popAt(at: THREE.Vector3, text: string, cls: string): void {
+  const v = at.clone().project(camera);
   const el = document.createElement('div'); el.className = `pop ${cls}`; el.textContent = text;
   el.style.left = `${(v.x * 0.5 + 0.5) * 100}%`; el.style.top = `${(-v.y * 0.5 + 0.5) * 100}%`;
   $('fx').appendChild(el); setTimeout(() => el.remove(), 1000);
 }
+function popText(k: Kid, text: string, cls: string): void {
+  popAt(new THREE.Vector3(k.root.position.x, k.h + 0.2, k.root.position.z), text, cls);
+}
+function loseHeart(n: number, at?: THREE.Vector3, label = '−❤️'): void {
+  const prev = hearts;
+  hearts = Math.max(0, hearts - n);
+  updateHud();
+  const hs = $('hearts').children;
+  for (let i = hearts; i < prev; i++) {
+    const lostEl = hs[i] as HTMLElement | undefined;
+    if (lostEl) { lostEl.classList.remove('lost'); void lostEl.offsetWidth; lostEl.classList.add('lost'); }
+  }
+  const h = $('hurt'); h.classList.add('on'); setTimeout(() => h.classList.remove('on'), 90);
+  shake = Math.max(shake, 0.7);
+  sfx.sfxBoing(); sfx.sfxThwack(0.5); sfx.buzz([40, 30, 60]);
+  if (at) popAt(at, label, 'bad');
+  combo = 0;
+  if (hearts <= 0) gameOver();
+}
 function clearField(): void {
-  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.map?.dispose(); m.dispose(); } }
+  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.map?.dispose(); m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); }
   for (const s of shots) scene.remove(s.obj);
   for (const p of petals) { fxGroup.remove(p.s); p.s.material.dispose(); }
   for (const c of conchas) freeLoaf(c.loaf);
   for (const m of crumbs) giveCrumb(m.sprite);
-  kids = []; shots = []; petals = []; conchas.length = 0; crumbs.length = 0; fx.clear(); boss = undefined;
+  for (const so of souls) { so.dead = true; freeSoul(so); }
+  for (const st of fieldStickies) { st.alive = false; freeSticky(st); }
+  for (const f of laneFlares) { scene.remove(f); f.geometry.dispose(); (f.material as THREE.Material).dispose(); }
+  kids = []; shots = []; petals = []; conchas.length = 0; crumbs.length = 0; souls = []; fieldStickies = []; laneFlares.length = 0; fx.clear(); boss = undefined;
+  placingSticky = false;
 }
 function newGame(): void {
   clearField();
-  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; snacks = 2; updateBombBtn(); updateSnackBtn();
+  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; snacks = 2; stickiesHeld = params.has('sticky') ? Math.min(STICKY_MAX, Math.max(0, Number(params.get('sticky')) || 0)) : 0; soulsThisWave = 0; stickyComboThisWave = false; placingSticky = false; updateBombBtn(); updateSnackBtn(); updateStickyBtn();
   ['title', 'over', 'pause'].forEach((id) => $(id).classList.add('hidden'));
   stage.classList.remove('on-title'); // HUD, hearts, fire and bomb buttons only show once play starts
   $('hint').classList.remove('gone');
@@ -1041,6 +1527,13 @@ function frame(now: number): void {
   if (state === 'between' && clock >= nextWaveAt) startWave(wave + 1);
   tickAbuela();
   tickConchas(dt);
+  if (state === 'play' || state === 'between') {
+    maybeStartSoul();
+    tickSouls(dt);
+    tickStickies(dt);
+  } else {
+    tickFlares();
+  }
   // rapid fire: holding the button or the field keeps spraying
   if (clock < rapidUntil && (state === 'play' || state === 'between')) {
     if (fireHeld) autoThrow();
@@ -1072,19 +1565,21 @@ function frame(now: number): void {
       if (k.hpBar) { k.hpBar.visible = false; k.hpFill!.visible = false; }
       if (k.bite) k.bite.visible = false;
       if (k.eatBody) k.eatBody.visible = false;
-      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.map?.dispose(); m.dispose(); } }
+      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.map?.dispose(); m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); }
       continue;
     }
     if (state === 'play' || state === 'between') {
       if (k.eat > 0) { k.eat = Math.max(0, k.eat - dt); k.eatAnim += dt; } else k.eatAnim = 0;
+      if (k.stuck > 0) k.stuck = Math.max(0, k.stuck - dt);
       const stop = holdZ(k);
-      let sp = k.stagger > 0 ? k.speed * 0.15 : k.speed;
+      const winding = k.soulWind > 0;
+      let sp = k.stuck > 0 ? 0 : k.stagger > 0 ? k.speed * 0.15 : winding ? k.speed * 0.22 : k.speed;
       if (stop !== undefined) sp *= 0.32; // the whole row slows down before the concha
       k.stagger = Math.max(0, k.stagger - dt);
       let nz = k.z + sp * dt;
       if (stop !== undefined && nz > stop) nz = stop; // nobody in this row walks past it
       k.z = nz;
-      k.wob += sp * dt;
+      k.wob += (k.stuck > 0 ? 0 : sp) * dt;
     }
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
     // walk frames follow distance so the planted feet in the atlas stay on the cobbles. No extra hop (that read as a skip).
@@ -1120,6 +1615,10 @@ function frame(now: number): void {
     }
     if (k.hpBar) { const pulse = k.hp / k.maxHp < 0.34 ? 1 + Math.sin(s * 12) * 0.06 : 1; k.hpBar.scale.set(1.7 * pulse, 0.32 * pulse, 1); }
     k.root.position.set(k.x, 0, k.z);
+    if (k.stuck > 0) {
+      k.root.position.y = Math.sin(s * 16) * 0.03;
+      k.body.rotation.z = Math.sin(s * 14) * 0.06;
+    }
     if (k.aura) { k.aura.material.opacity = 0.55 + Math.sin(s * 6) * 0.25; }
     if (k.z >= LINE_Z && state === 'play') kidReachedLine(k);
   }
@@ -1146,7 +1645,13 @@ function frame(now: number): void {
           }
           continue;
         }
-        for (const k of kids) {
+        if (sh.spent < 0) {
+          for (const so of souls) {
+            if (so.dead) continue;
+            if (sh.p.distanceTo(so.p) < SOUL_SMASH_R) { smashSoul(so, sh); break; }
+          }
+        }
+        if (sh.spent < 0) for (const k of kids) {
           if (!alive(k)) continue;
           const dx = sh.p.x - k.root.position.x, dz = sh.p.z - k.root.position.z;
           if (Math.abs(dx) < k.w * 0.48 + 0.18 && Math.abs(dz) < 0.55 && sh.p.y > 0.05 && sh.p.y < k.h + 0.15) { hitKid(k, sh); break; }
@@ -1201,20 +1706,22 @@ addEventListener('resize', resize);
 resize();
 autoUnlockAudio(); wireMute(); initAudioControls('waves', setMuted);
 for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener(ev, () => sfx.unlockCrashAudio(), { capture: true, passive: true });
-$('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · or tap the gold chancla' : 'Click or drag at a kid to throw · Space = gold chancla';
+$('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · smash incoming souls · plant a sticky chancla on the line' : 'Click or drag at a kid to throw · Space = gold chancla · S = sticky chancla';
 updateHud();
-Promise.all(texLoads).then(() => {
-  artReady = true;
-  newGame();
-  prev = performance.now();
-  requestAnimationFrame(frame);
-});
+// Plaza starts drawing at once. Wave art still gates newGame so kids have their
+// sheets, but there is no intro wait and no loading screen. The gold-chancla
+// burst plays on top and never blocks throws.
+stage.classList.add('on-title');
+prev = performance.now();
+requestAnimationFrame(frame);
+playPlayer1Intro('waves');
+Promise.all(texLoads).then(() => { artReady = true; newGame(); });
 
 // test / screenshot hooks
 (window as unknown as Record<string, unknown>).__waves = {
   ready: () => artReady,
   start: newGame,
-  state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil, bombs, booms, boss: boss && alive(boss) ? { hp: boss.hp, maxHp: boss.maxHp, z: +boss.root.position.z.toFixed(2) } : null }),
+  state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil, bombs, booms, stickiesHeld, souls: souls.filter((so) => !so.dead).length, stickyField: fieldStickyCount(), boss: boss && alive(boss) ? { hp: boss.hp, maxHp: boss.maxHp, z: +boss.root.position.z.toFixed(2) } : null }),
   kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden, lane: k.lane })),
   conchas: () => conchas.map((c) => ({ lane: c.lane, z: +c.z.toFixed(2), bites: c.bites })),
   crumbs: () => crumbs.length,
@@ -1231,6 +1738,21 @@ Promise.all(texLoads).then(() => {
   giveBomb: (n = 1) => giveBomb(n),
   abuela: () => ({ on: abuelaEl.classList.contains('in'), line: abuelaLine.textContent, mad: abuelaImg.src.includes('angry'), at: abuelaAt, out: abuelaOutAt, clock, nextWaveAt }),
   abuelaLines: () => ABUELA_LINES.map((l) => l.t),
-  clearWave: () => { toSpawn = 0; for (const k of kids) if (alive(k)) { kidGroup.remove(k.root); k.dead = true; } checkWaveDone(); },
+  clearWave: () => { toSpawn = 0; for (const k of kids) if (alive(k)) { kidGroup.remove(k.root); k.dead = true; } for (const so of souls) { so.dead = true; freeSoul(so); } souls = []; checkWaveDone(); },
   pause: (on: boolean) => { if (on !== (state === 'paused')) togglePause(); },
+  stopSpawn: () => { toSpawn = 0; },
+  clock: () => clock,
+
+
+  souls: () => souls.filter((so) => !so.dead).map((so) => ({ x: +so.p.x.toFixed(2), y: +so.p.y.toFixed(2), z: +so.p.z.toFixed(2), u: +so.u.toFixed(3), T: so.T, lane: so.lane })),
+  spawnSoul: (lane = 1, fromZ = -3.2, travel?: number) => spawnSoul(lane, fromZ, travel),
+  windSoul: (lane = 1, fromZ = -3.2) => { windSoul(lane, fromZ); },
+  throwAtSoul: () => { const so = souls.find((x) => !x.dead); if (!so) return false; lastThrow = -1e9; return throwAt(so.p.clone().lerp(so.end, 0.12)); },
+
+  giveSticky: (n = 1) => giveSticky(n),
+  placeSticky: (lane = 1) => placeSticky(lane),
+  stickies: () => ({ held: stickiesHeld, placing: placingSticky, field: fieldStickies.filter((st) => st.alive).map((st) => ({ lane: st.lane, z: +st.z.toFixed(2), life: +st.life.toFixed(2), throws: st.throws })) }),
+  kidsFull: () => kids.filter(alive).map((k) => ({ kind: k.kind, lane: k.lane, z: +k.z.toFixed(2), stuck: +k.stuck.toFixed(2), wasStuck: k.wasStuck, soulWind: +k.soulWind.toFixed(2), soulThrew: k.soulThrew })),
+  soulScreen: () => { const so = souls.find((x) => !x.dead); if (!so) return null; const v = so.p.clone().project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height, u: so.u }; },
+
 };

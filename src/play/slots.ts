@@ -3,6 +3,7 @@ import { markGameStart, markFirstAction, markBonus } from '../analytics';
 import { $, loadImg, autoUnlockAudio, wakeAudio } from './common';
 import * as A from './slotsAudio';
 import { initAudioControls } from './music';
+import { playPlayer1Intro } from './player1Intro';
 
 // ── Free-play only. Credits never buy or cash anything. ─────────────────────
 const START_CREDITS = 3000;
@@ -984,6 +985,7 @@ async function boot() {
   grid = Array.from({ length: COLS }, () => Array.from({ length: ROWS }, () => weighted()));
   fit(); setHud();
   requestAnimationFrame(frame);
+  playPlayer1Intro('slots'); // logo burst; machine is already live, overlay does not block
   $('again').onclick = () => { $('end').classList.add('hidden'); mode = 'idle'; credits = START_CREDITS; peak = START_CREDITS; setHud(); };
 }
 boot();
