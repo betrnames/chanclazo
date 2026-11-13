@@ -80,7 +80,11 @@ export class FX {
       if (f === 0) this.life[i] = this.max[i];
       this.col[j] = this.base[j] * f; this.col[j + 1] = this.base[j + 1] * f; this.col[j + 2] = this.base[j + 2] * f;
     }
-    const g = this.pts.geometry; g.attributes.position.needsUpdate = true; g.attributes.color.needsUpdate = true;
+    const g = this.pts.geometry;
+    // skip the 320-point buffer upload when nothing is moving (still true after a burst ends: last frame already hid them)
+    if (this.rings.length || this.life.some((l, i) => l < this.max[i])) {
+      g.attributes.position.needsUpdate = true; g.attributes.color.needsUpdate = true;
+    }
   }
   clear(): void { for (const r of this.rings) this.kill(r); this.rings = []; this.life.fill(0); this.max.fill(0); for (let i = 0; i < MAXP; i++) this.pos[i * 3 + 1] = -999; this.col.fill(0); }
   private kill(r: Ring): void { this.group.remove(r.m); (r.m.material as THREE.Material).dispose(); }

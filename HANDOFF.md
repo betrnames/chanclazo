@@ -7,6 +7,7 @@ Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitH
 - **Live right now is v1.1.12** on `main`. Gabe said "After you remove that push live" (the Safari outline) on 12 Nov 2026. Previous production was **v1.1.11 · 6984e33**.
 - This release brings the Abuela start intro to production (replacing the gold-chancla fly-in and burst) and hides Safari's empty-image outline on the Día de los Muertos cameo. Version is **1.1.12**.
 - Preview: https://feat-chancla-waves.chanclazo.pages.dev. Crash is parked but still at `/crash`.
+- **Runtime smoothness for Día de los Muertos is on this preview only** (see below). Not on production until Gabe says "push it live".
 - **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, v1.1.10, v1.1.11, and v1.1.12.
 
 ## Abuela start intro (shipped in v1.1.12, 2026-11-12)
@@ -27,6 +28,29 @@ Gabe asked to remove the flying-in chancla and burst, and instead have Abuela co
 - Stills of the intro: `/workspace/chz-intro/`.
 - Safari outline (found on preview 95da896, also present on production v1.1.11): after the intro, a thin gray rectangle sat on the left of Día de los Muertos. It is not a leftover of the start intro. It is the between-waves `#abuelaImg`, which has no `src` until she first speaks. Safari paints an empty-image frame at the HTML width (507px); that overflows the `translateX(-110%)` park and peeks onto the plaza. Fix: `#abuela img:not([src]){display:none}`. The cameo is unchanged. Chromium never showed it (it sizes the unsourced img at the CSS height, fully off-screen).
 
+
+## Runtime smoothness (preview on feat/chancla-waves, 2026-11-12)
+Gabe said Día de los Muertos was still too slow during play, maybe too many things at once. Load time was already fixed in v1.1.11; this is mid-wave frame rate on his iPhone.
+
+**Cause.** Two big ones, plus clutter:
+1. Every kid spawn (and eat pose, and knock-out) did `Texture.clone()`, which bumps `source.needsUpdate` and re-uploads the whole walk atlas to the GPU. The girl sheet is 3360×1770 (~23 MB). Disposing the clone when the kid left could evict that GPU texture, so the next spawn uploaded it again. In a phone-sized 6×-CPU profile this was **31% of CPU** (`texSubImage2D`). After the fix that function is gone from the hot list.
+2. Phones started at DPR 2 with a 1024 PCF shadow map, a point light, and a full-screen `backdrop-filter: blur(6px)` over the night photo — all expensive on iOS, and the auto quality drop only kicked in after four seconds of already-bad frames. Petal bursts were also unbounded (70 sprites per luchador KO, 129 on screen in a busy wave 9).
+
+**What changed** (gameplay rules and wave sizes are the same; Abuela intro and the Safari outline fix are unchanged; no slingshot):
+- `shareTex()` shares the atlas image without re-uploading. `renderer.initTexture` pins each atlas. Clones are no longer disposed in a way that evicts the GPU texture.
+- Phones start at quality 1: DPR 1.5, no real-time shadows (blob shadows under kids stay), no fill point light, no MSAA. If FPS stays under 42 for ~4 s, quality 0 freezes the papel animation and drops to DPR 1. Desktop stays at quality 2 (shadows, DPR 1.75) unless it also drops.
+- Petals are pooled and capped (36 on phones, 64 on desktop); KO/bomb bursts are smaller on phones. Crumbs cap at 48 on phones (96 desktop). Fewer spark trails during rapid fire.
+- Removed the `backdrop-filter` blur. Phone HUD buttons use a static glow instead of animated `box-shadow`. Score bumps no longer force a layout reflow.
+- Hooks: `window.__waves.perf()`, `window.__waves.setQuality(q, lock)`.
+
+**Before / after** (Playwright Chromium, 390×844, DPR 3, 6× CPU throttle, SwiftShader — pessimistic vs a real iPhone GPU, but the comparison is the same machine):
+- Wave 1: **8.5 → 18.4 FPS**; 95% of frames over 50 ms → 35%.
+- Wave 6 (busy): **11.1 → 16.9 FPS**; worst frame 400 ms → 300 ms; petals peaked at 95, now capped at 36.
+- Wave 9 (busiest): **11.4 → 16.6 FPS**; worst frame 167 ms → 133 ms; 16 kids on screen. `texSubImage2D` dropped off the profile.
+- Slots and the homepage were loaded at the same size; no console errors, no visual regression.
+- Phone screenshot of a busy wave 9 after the fix: `/workspace/chz-perf/after2/wave9-busy-q1.png`.
+
+**Visible tradeoffs on phones:** a slightly softer canvas (DPR 1.5 vs 2; 1.0 only if it is still struggling), no sharp contact shadows from kids or flying chanclas (the painted blob shadows are still there), fewer simultaneous marigold petals and crumbs, gold/bomb button glows are steady instead of pulsing. The hand-drawn art is the same.
 
 ## What v1.1.11 shipped (2026-11-12)
 Playtested on `feat/chancla-waves` (`89bec92` + `29f437d`, preview SHA `29f437d`) and now on production. Gameplay, visuals, and start rules are unchanged: the game starts instantly with no loading screen, the intro is only the gold chancla flying in and bursting, no camera intro, no "CHANCLAZO!" stinger audio, Abuela only as a between-waves cameo, hand-drawn art.

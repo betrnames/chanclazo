@@ -16,18 +16,55 @@ import { playPlayer1Intro } from './player1Intro';
 
 const G = 16;
 const isTouch = matchMedia('(pointer: coarse)').matches;
+// Phones start on the cheap path: Gabe's iPhone was dropping frames once a wave got busy.
+const PREFER_LOW = isTouch;
+const PETAL_CAP = PREFER_LOW ? 36 : 64;
+const TRAIL_CHANCE = PREFER_LOW ? 0.18 : 0.5;
 const params = new URLSearchParams(location.search);
 const LANES = [-2.25, -0.75, 0.75, 2.25];
 const SPAWN_Z = -9.5, LINE_Z = 2.0, HEARTS = 5;
 const BEST_KEY = 'cz_waves_best_v1';
 const LAUNCH = new THREE.Vector3();
 
+// Independent UV offset/repeat, same GPU image. Texture.clone() sets source.needsUpdate,
+// which re-uploads the whole atlas (the girl sheet is 3360×1770) on every spawn, eat pose, and knock-out.
+function shareTex(src: THREE.Texture): THREE.Texture {
+  const t = new THREE.Texture();
+  t.source = src.source;
+  t.colorSpace = src.colorSpace;
+  t.wrapS = src.wrapS; t.wrapT = src.wrapT;
+  t.magFilter = src.magFilter; t.minFilter = src.minFilter;
+  t.anisotropy = src.anisotropy;
+  t.flipY = src.flipY;
+  t.generateMipmaps = src.generateMipmaps;
+  t.premultiplyAlpha = src.premultiplyAlpha;
+  t.unpackAlignment = src.unpackAlignment;
+  t.format = src.format; t.type = src.type; t.mapping = src.mapping;
+  t.repeat.copy(src.repeat); t.offset.copy(src.offset); t.center.copy(src.center);
+  t.rotation = src.rotation;
+  t.matrixAutoUpdate = src.matrixAutoUpdate; t.matrix.copy(src.matrix);
+  // Initialized so Three binds the already-cached WebGL texture — do not bump source.version.
+  t.version = Math.max(1, src.version);
+  return t;
+}
+
 // ───────────────────────── renderer / scene ─────────────────────────
 const stage = $('stage');
-const renderer = new THREE.WebGLRenderer({ antialias: !isTouch || devicePixelRatio < 2, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? 2 : 1.75));
+const renderer = new THREE.WebGLRenderer({ antialias: !PREFER_LOW, powerPreference: 'high-performance' });
+let quality = PREFER_LOW ? 1 : 2; // 2 = desktop shadows + higher DPR; 1 = phone start; 0 = last-resort DPR 1
+let qualityLocked = false;
+function dprCap(q: number): number { return q >= 2 ? 1.75 : q >= 1 ? 1.5 : 1; }
+function applyQuality(q: number): void {
+  quality = Math.max(0, Math.min(2, q));
+  renderer.shadowMap.enabled = quality >= 2;
+  sun.castShadow = quality >= 2;
+  fill.visible = quality >= 2;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap(quality)));
+  resize();
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, dprCap(quality)));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = quality >= 2;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 stage.insertBefore(renderer.domElement, stage.firstChild);
 const scene = new THREE.Scene();
@@ -38,9 +75,10 @@ camera.position.copy(CAM_POS); camera.lookAt(camLook);
 const hemi = new THREE.HemisphereLight(0xffffff, 0x222222, 1.6); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(4, 12, 6); sun.target.position.set(0, 0, -5); scene.add(sun, sun.target);
-sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+sun.castShadow = quality >= 2; sun.shadow.mapSize.set(quality >= 2 ? 1024 : 256, quality >= 2 ? 1024 : 256);
 Object.assign(sun.shadow.camera, { left: -7, right: 7, top: 10, bottom: -8, near: 1, far: 40 }); sun.shadow.bias = -0.0008;
-const fill = new THREE.PointLight(0xffa64d, 12, 16, 1.6); fill.position.set(0, 3, -1); scene.add(fill);
+const fill = new THREE.PointLight(0xffa64d, 12, 16, 1.6); fill.position.set(0, 3, -1);
+fill.visible = quality >= 2; scene.add(fill);
 
 const backdrop = buildBackdrop('plaza');
 scene.add(backdrop.group); scene.fog = backdrop.fog; scene.background = backdrop.fog.color;
@@ -106,11 +144,12 @@ const texLoads: Promise<void>[] = [];
 const deferredTex: Array<() => void> = [];
 function tex(src: string, gate = true): THREE.Texture {
   const t = new THREE.Texture();
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = PREFER_LOW ? 1 : 4;
   const start = (done?: () => void) => {
     texLoader.load(src, (loaded) => {
       t.image = loaded.image;
       t.needsUpdate = true;
+      renderer.initTexture(t); // pin the GPU texture so disposing a shareTex clone cannot evict it
       done?.();
     }, undefined, () => { report(`texture failed: ${src}`); done?.(); });
   };
@@ -311,12 +350,12 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const a = kind === 'girl' ? ART.girl : kind === 'calaca' ? ART.calaca : kind === 'lucha' ? ART.lucha : ART.boy;
   const scale = kind === 'jefe' ? 1.3 : 1;
   const h = a.h * scale * (a.ch / 320), w = h * (a.cw / a.ch); // plane = one atlas cell
-  const map = a.tex.clone(); map.repeat.set(a.cw / a.W, a.ch / a.H); // the clone shares the image (no extra memory)
+  const map = shareTex(a.tex); map.repeat.set(a.cw / a.W, a.ch / a.H);
   const mat = new THREE.MeshBasicMaterial({ map, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   const flashMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
   const root = new THREE.Group();
   const gk = `${kind}${variant}`;
-  const body = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), mat); body.castShadow = true;
+  const body = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), mat); body.castShadow = quality >= 2;
   const flash = new THREE.Mesh(geoFor(gk, w, h, a.ax / a.cw, a.ay / a.ch), flashMat); flash.position.z = 0.01; body.add(flash);
   // no dark copy behind the cutout: it showed through the white faces as a black stain
   const edgeMat = new THREE.MeshBasicMaterial({ map, color: 0xffffff, alphaTest: 0.45, side: THREE.FrontSide, fog: false });
@@ -481,7 +520,7 @@ abuelaEl.addEventListener('pointerdown', (e) => {
 });
 
 // ───────────────────────── throwing ─────────────────────────
-const shotProto = makeChancla(); shotProto.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? relicSole : relicStrap; });
+const shotProto = makeChancla(); shotProto.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? relicSole : relicStrap; (c as THREE.Mesh).castShadow = quality >= 2; });
 const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
 function flightTime(to: THREE.Vector3): number { return THREE.MathUtils.clamp(LAUNCH.distanceTo(to) / 17, 0.32, 0.85); }
 function velFor(to: THREE.Vector3, T: number, out: THREE.Vector3): THREE.Vector3 {
@@ -607,7 +646,7 @@ addEventListener('keydown', (e) => {
 function ensureGirlFall(k: Kid): void {
   if (k.fallBody || k.kind !== 'girl') return;
   const sh = k.sheet;
-  const map = sh.tex.clone();
+  const map = shareTex(sh.tex);
   map.repeat.set(sh.cw / sh.W, sh.ch / sh.H);
   map.offset.set(0, 1 - (ANIM.hit.row + 1) * sh.ch / sh.H); // hit frame 0: full character, reacting
   const mat = new THREE.SpriteMaterial({ map, transparent: true, alphaTest: 0.05, depthWrite: false, depthTest: false, fog: false });
@@ -648,7 +687,7 @@ function hitKid(k: Kid, s?: Shot, dmg = 1): void {
   const at = kidCenter(k, new THREE.Vector3());
   if (s) { // chancla bounces off and spins away
     s.spent = 0; s.v.set(-s.v.x * 0.25 + (Math.random() - 0.5) * 2, 5.5, Math.abs(s.v.z) * 0.18 + 1.5);
-    fx.ring(at, 0.9); fx.sparks(at, 14); sfx.sfxImpact(0.7);
+    fx.ring(at, 0.9); fx.sparks(at, PREFER_LOW ? 8 : 14); sfx.sfxImpact(0.7);
   }
   if (k.pips) k.pips.forEach((p, i) => { p.visible = i < k.hp; });
   if (k.hpFill) k.hpFill.scale.x = 1.56 * (k.hp / k.maxHp);
@@ -677,7 +716,7 @@ function hitKid(k: Kid, s?: Shot, dmg = 1): void {
   }
   if (k.golden) startRapid();
   poof(at, k.kind === 'lucha' ? 70 : k.kind === 'jefe' ? 46 : 30);
-  fx.sparks(at, 14, 0xffd36b, 4); fx.sparks(at, 8, 0xff8c1a, 3); sfx.sfxShimmer(k.kind === 'lucha' ? 1 : 0.6);
+  fx.sparks(at, PREFER_LOW ? 8 : 14, 0xffd36b, 4); fx.sparks(at, PREFER_LOW ? 5 : 8, 0xff8c1a, 3); sfx.sfxShimmer(k.kind === 'lucha' ? 1 : 0.6);
   if (clock >= rapidUntil) hitStop.stop(k.kind === 'lucha' ? 160 : 40);
   if (k.kind === 'lucha') { boss = undefined; shake = 1; fx.ring(at, 3.2); banner('¡LUCHADOR DOWN!', bombs < BOMB_MAX ? '+1 chancla BOMB 💣' : 'Bombs full'); if (bombs < BOMB_MAX) giveBomb(1); }
 }
@@ -716,7 +755,7 @@ function ensureEater(k: Kid): void {
   if (k.eatBody) return;
   const sheet = EAT_SHEETS[k.kind];
   if (!sheet || !sheet.tex.image) return;
-  const map = sheet.tex.clone();
+  const map = shareTex(sheet.tex);
   map.repeat.set(1 / sheet.n, 1);
   map.offset.set(0, 0);
   const mat = new THREE.MeshBasicMaterial({ map, transparent: true, alphaTest: 0.12, depthWrite: false, side: THREE.FrontSide, fog: false });
@@ -755,7 +794,7 @@ interface Crumb { sprite: THREE.Sprite; v: THREE.Vector3; life: number; maxLife:
 const conchas: Concha[] = [];
 const crumbs: Crumb[] = [];
 // Pooled pastry bits, textured from snack-concha.webp. First-gen flakes split into smaller crumbs on landing, then fade — nothing piles on the floor.
-const CRUMB_COLS = 8, CRUMB_ROWS = 4, CRUMB_CELLS = 32, CRUMB_CELL = 64, CRUMB_GROUND = 0.08, CRUMB_CAP = 96;
+const CRUMB_COLS = 8, CRUMB_ROWS = 4, CRUMB_CELLS = 32, CRUMB_CELL = 64, CRUMB_GROUND = 0.08, CRUMB_CAP = PREFER_LOW ? 48 : 96;
 const crumbPool: THREE.Sprite[] = [];
 let crumbAtlas: THREE.CanvasTexture | undefined;
 function ensureCrumbAtlas(): THREE.CanvasTexture {
@@ -810,13 +849,14 @@ function ensureCrumbAtlas(): THREE.CanvasTexture {
   }
   crumbAtlas = new THREE.CanvasTexture(cv);
   crumbAtlas.colorSpace = THREE.SRGBColorSpace;
-  crumbAtlas.anisotropy = 4;
+  crumbAtlas.anisotropy = PREFER_LOW ? 1 : 4;
+  renderer.initTexture(crumbAtlas);
   return crumbAtlas;
 }
 function takeCrumb(): THREE.Sprite | undefined {
   if (crumbs.length >= CRUMB_CAP) return undefined;
   const sp = crumbPool.pop() ?? (() => {
-    const map = ensureCrumbAtlas().clone();
+    const map = shareTex(ensureCrumbAtlas());
     const mat = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, fog: false });
     const s = new THREE.Sprite(mat); s.renderOrder = 4; return s;
   })();
@@ -834,8 +874,7 @@ function giveCrumb(sp: THREE.Sprite): void {
   if (crumbPool.length < CRUMB_CAP) crumbPool.push(sp);
   else {
     const m = sp.material as THREE.SpriteMaterial;
-    m.map?.dispose();
-    m.dispose();
+    m.dispose(); // map is shareTex of the crumb atlas — leave the GPU texture alone
   }
 }
 function spit(x: number, y: number, z: number, scale: number, gen: number, vx: number, vy: number, vz: number, life: number): void {
@@ -846,7 +885,7 @@ function spit(x: number, y: number, z: number, scale: number, gen: number, vx: n
 }
 function burstCrumbs(c: Concha, last: boolean): void {
   const x = LANES[c.lane], y = 0.5 + c.shown * 0.1, z = c.z;
-  const n = last ? 20 : 14;
+  const n = last ? (PREFER_LOW ? 10 : 20) : (PREFER_LOW ? 8 : 14);
   for (let i = 0; i < n; i++) {
     const ang = Math.random() * Math.PI * 2;
     const kick = 1.15 + Math.random() * 1.7;
@@ -1399,19 +1438,37 @@ function startRapid(): void {
   banner('RAPID FIRE!', 'Hold to spray chanclas'); $('rapid').classList.remove('hidden');
 }
 const PETAL_COLORS = [0xff8c1a, 0xffb000, 0xffd23f, 0xff6a00, 0xe2197a];
+const petalPool: Petal[] = [];
+function givePetal(p: Petal): void {
+  fxGroup.remove(p.s);
+  if (p.spin === 0) { p.s.material.dispose(); return; } // glow puff: unique material, don't pool with petals
+  if (petalPool.length < PETAL_CAP) { p.s.material.opacity = 1; petalPool.push(p); }
+  else p.s.material.dispose();
+}
 function poof(at: THREE.Vector3, n: number): void {
-  for (let i = 0; i < n; i++) {
-    const m = new THREE.SpriteMaterial({ map: petalTex, color: PETAL_COLORS[i % PETAL_COLORS.length], transparent: true, depthWrite: false, fog: false });
-    const s = new THREE.Sprite(m); s.scale.setScalar(0.17 + Math.random() * 0.12); s.position.copy(at);
+  const want = Math.min(PREFER_LOW ? Math.max(8, Math.ceil(n * 0.4)) : n, 28);
+  while (petals.length + want > PETAL_CAP) {
+    const old = petals.shift();
+    if (old) givePetal(old);
+  }
+  for (let i = 0; i < want; i++) {
+    const p = petalPool.pop() ?? { s: new THREE.Sprite(new THREE.SpriteMaterial({ map: petalTex, transparent: true, depthWrite: false, fog: false })), v: new THREE.Vector3(), life: 0, max: 1, spin: 0 };
+    p.s.material.color.setHex(PETAL_COLORS[i % PETAL_COLORS.length]);
+    p.s.material.opacity = 1;
+    p.s.scale.setScalar(0.17 + Math.random() * 0.12);
+    p.s.position.copy(at);
     const a = Math.random() * Math.PI * 2, up = 2.5 + Math.random() * 4;
     const sp = 1.6 + Math.random() * 2.6;
-    fxGroup.add(s);
-    const max = 0.55 + Math.random() * 0.45;
-    petals.push({ s, v: new THREE.Vector3(Math.cos(a) * sp, up, Math.sin(a) * sp * 0.6), life: 0, max, spin: (Math.random() - 0.5) * 12 });
+    p.v.set(Math.cos(a) * sp, up, Math.sin(a) * sp * 0.6);
+    p.life = 0; p.max = 0.55 + Math.random() * 0.45; p.spin = (Math.random() - 0.5) * 12 || 0.01; // never 0 (0 marks the glow puff)
+    fxGroup.add(p.s);
+    petals.push(p);
   }
-  // a quick glow puff
-  const g = new THREE.Sprite(haloMat.clone()); g.position.copy(at); g.scale.setScalar(0.5); fxGroup.add(g);
-  petals.push({ s: g, v: new THREE.Vector3(0, 0.6, 0), life: 0, max: 0.35, spin: 0 });
+  // a quick glow puff — skip on phones when the burst is already full
+  if (!PREFER_LOW || petals.length < PETAL_CAP - 2) {
+    const g = new THREE.Sprite(haloMat.clone()); g.position.copy(at); g.scale.setScalar(0.5); fxGroup.add(g);
+    petals.push({ s: g, v: new THREE.Vector3(0, 0.6, 0), life: 0, max: 0.35, spin: 0 });
+  }
 }
 function tickPetals(dt: number): void {
   for (const p of petals) {
@@ -1425,10 +1482,10 @@ function tickPetals(dt: number): void {
     const lowFade = THREE.MathUtils.clamp((p.s.position.y - 0.35) / 0.6, 0, 1);
     p.s.material.opacity = Math.max(0, (1 - k * k)) * lowFade * (p.spin === 0 ? 0.8 : 1);
   }
-  petals = petals.filter((p) => { const done = p.life >= p.max || p.s.position.y < 0.35; if (done) { fxGroup.remove(p.s); p.s.material.dispose(); } return !done; });
+  petals = petals.filter((p) => { const done = p.life >= p.max || p.s.position.y < 0.35; if (done) givePetal(p); return !done; });
 }
 function kidReachedLine(k: Kid): void {
-  k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose();
+  k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); /* shareTex: keep the atlas on the GPU */
   if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose();
   if (k === boss) boss = undefined;
   loseHeart(k.kind === 'lucha' ? BOSS_DMG : 1, new THREE.Vector3(k.root.position.x, k.h + 0.2, k.root.position.z));
@@ -1437,7 +1494,11 @@ function kidReachedLine(k: Kid): void {
 // ───────────────────────── HUD + overlays ─────────────────────────
 function updateHud(bump = false): void {
   $('score').textContent = String(score);
-  if (bump) { const b = $('scoreBox'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
+  if (bump) {
+    const b = $('scoreBox');
+    b.classList.remove('bump');
+    requestAnimationFrame(() => b.classList.add('bump'));
+  }
   const hs = $('hearts');
   if (hs.children.length !== HEARTS) { hs.innerHTML = ''; for (let i = 0; i < HEARTS; i++) { const e = document.createElement('i'); e.textContent = '❤️'; hs.appendChild(e); } }
   Array.from(hs.children).forEach((e, i) => e.classList.toggle('off', i >= hearts));
@@ -1479,9 +1540,9 @@ function loseHeart(n: number, at?: THREE.Vector3, label = '−❤️'): void {
   if (hearts <= 0) gameOver();
 }
 function clearField(): void {
-  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.map?.dispose(); m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); }
+  for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); /* shareTex: keep the atlas on the GPU */ if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); }
   for (const s of shots) scene.remove(s.obj);
-  for (const p of petals) { fxGroup.remove(p.s); p.s.material.dispose(); }
+  for (const p of petals) givePetal(p);
   for (const c of conchas) freeLoaf(c.loaf);
   for (const m of crumbs) giveCrumb(m.sprite);
   for (const so of souls) { so.dead = true; freeSoul(so); }
@@ -1530,7 +1591,14 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
   const dtReal = Math.min(0.05, (now - prev) / 1000); prev = now;
   fpsAcc += dtReal; fpsN++;
-  if (fpsAcc > 2) { const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; if (fps < 45 && ++lowFps >= 2 && renderer.shadowMap.enabled) { renderer.shadowMap.enabled = false; renderer.setPixelRatio(Math.min(devicePixelRatio, 1.25)); resize(); report('quality: low'); } }
+  if (fpsAcc > 2) {
+    const fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
+    if (!qualityLocked && fps < 42 && quality > 0 && ++lowFps >= 2) {
+      lowFps = 0;
+      applyQuality(quality - 1);
+      report('quality: ' + quality);
+    } else if (fps >= 50) lowFps = 0;
+  }
   const running = state === 'play' || state === 'between' || state === 'over';
   const dt = state === 'paused' ? 0 : dtReal * hitStop.scale();
   if (state !== 'paused') clock += dt;
@@ -1578,7 +1646,7 @@ function frame(now: number): void {
       if (k.hpBar) { k.hpBar.visible = false; k.hpFill!.visible = false; }
       if (k.bite) k.bite.visible = false;
       if (k.eatBody) k.eatBody.visible = false;
-      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); k.map.dispose(); if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.map?.dispose(); m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.map?.dispose(); m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); }
+      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); /* shareTex: keep the atlas on the GPU */ if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); }
       continue;
     }
     if (state === 'play' || state === 'between') {
@@ -1676,7 +1744,7 @@ function frame(now: number): void {
     if (sh.spent >= 0) sh.spent += dt;
     sh.spin += dt * (sh.spent >= 0 ? 9 : 20);
     sh.obj.position.copy(sh.p);
-    if (sh.spent < 0 && dt > 0) { if (sh.bomb) fx.sparks(sh.p, 3, 0xff8a2a, 1.2, 0.6); else if (Math.random() < 0.5) fx.trail(sh.p); }
+    if (sh.spent < 0 && dt > 0) { if (sh.bomb) fx.sparks(sh.p, PREFER_LOW ? 2 : 3, 0xff8a2a, 1.2, 0.6); else if (Math.random() < TRAIL_CHANCE) fx.trail(sh.p); }
     if (sh.spent < 0) sh.obj.rotation.set(0.25, sh.yaw + sh.spin, 0, 'YXZ');
     else { sh.obj.rotation.set(sh.spin * 0.8, sh.yaw + sh.spin * 0.4, sh.spin * 0.3, 'YXZ'); sh.obj.scale.setScalar(Math.max(0.01, 1 - sh.spent * 1.6)); }
   }
@@ -1700,8 +1768,10 @@ function frame(now: number): void {
     ring.position.set(aimPt.x, 0.03, aimPt.z); ring.scale.setScalar(0.9 + Math.sin(s * 8) * 0.08);
     (ring.material as THREE.MeshBasicMaterial).color.setHex(aimKid ? 0xffffff : 0xb0a0c0);
   }
-  for (const f of flames) f.scale.set(0.42 + Math.sin(s * 13 + f.userData.phase) * 0.04, 0.55 + Math.sin(s * 9 + f.userData.phase) * 0.06, 1);
-  backdrop.update(now);
+  if (quality > 0) {
+    for (const f of flames) f.scale.set(0.42 + Math.sin(s * 13 + f.userData.phase) * 0.04, 0.55 + Math.sin(s * 9 + f.userData.phase) * 0.06, 1);
+    backdrop.update(now);
+  }
 
   // gold chancla button
   const fb = clock < rapidUntil && state !== 'over' ? 'rapid' : (state === 'play' || state === 'between') ? (canThrow() ? 'ready' : 'busy') : 'off';
@@ -1747,6 +1817,17 @@ Promise.all(texLoads).then(() => {
 (window as unknown as Record<string, unknown>).__waves = {
   ready: () => artReady,
   start: newGame,
+  setQuality: (q: number, lock = true) => { qualityLocked = lock; applyQuality(q); },
+  perf: () => {
+    const i = renderer.info;
+    return {
+      quality, dpr: renderer.getPixelRatio(), shadows: renderer.shadowMap.enabled, fill: fill.visible,
+      calls: i.render.calls, triangles: i.render.triangles, points: i.render.points,
+      textures: i.memory.textures, geometries: i.memory.geometries, programs: i.programs?.length ?? 0,
+      kids: kids.length, shots: shots.length, petals: petals.length, crumbs: crumbs.length,
+      canvas: { w: renderer.domElement.width, h: renderer.domElement.height },
+    };
+  },
   state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil, bombs, booms, stickiesHeld, souls: souls.filter((so) => !so.dead).length, stickyField: fieldStickyCount(), boss: boss && alive(boss) ? { hp: boss.hp, maxHp: boss.maxHp, z: +boss.root.position.z.toFixed(2) } : null }),
   kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden, lane: k.lane })),
   conchas: () => conchas.map((c) => ({ lane: c.lane, z: +c.z.toFixed(2), bites: c.bites })),
