@@ -168,8 +168,8 @@ const ANIM = { walk: { row: 0, n: 8, fps: 10 }, hit: { row: 1, n: 3, fps: 12 }, 
 type AnimName = keyof typeof ANIM;
 // h = world height that a 320px-tall body should be; stride = world units per walk cycle
 const ART = {
-  boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3, '?v=8'),
-  girl: sheet('catrina-girl', 3360, 1770, 420, 590, 210, 587, 1.38, 1.55, 8, 3, 4, '?v=7'),
+  boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3, '?v=8', false),
+  girl: sheet('catrina-girl', 3360, 1770, 420, 590, 210, 587, 1.38, 1.55, 8, 3, 4, '?v=7', false),
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
   calaca: sheet('calaverita-small', 2952, 1323, 492, 441, 246, 435, 1.25, 1.6, 6, 1, 6, '?v=7'),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
@@ -416,16 +416,35 @@ function startWave(n: number): void {
   updateStickyBtn();
 }
 let goldenThisWave = false;
+// First wave is only the little skeletons. Boy, girl, jefe, eat sheets, and the
+// luchador stay off the network until 10s of play, then spawn once those images arrive.
+let heavyAt = Infinity;
+let heavyStarted = false;
+function armHeavySheets(): void {
+  if (heavyAt < Infinity) return;
+  heavyAt = performance.now() + 10000;
+}
+function bigSheetsIn(): boolean {
+  return !!ART.boy.tex.image && !!ART.girl.tex.image;
+}
+function startHeavySheets(): void {
+  if (heavyStarted || performance.now() < heavyAt) return;
+  heavyStarted = true;
+  for (const start of deferredTex) start();
+  deferredTex.length = 0;
+  for (const src of Object.values(ABUELA_IMG)) { const i = new Image(); i.decoding = 'async'; i.src = src; }
+}
 function spawnTick(dt: number): void {
   if (toSpawn <= 0) return;
   spawnT -= dt; if (spawnT > 0) return;
   const s = waveSpec(wave);
   spawnT = s.gap * (0.7 + Math.random() * 0.6);
   const r = Math.random();
-  // Hold the boss slot until the deferred luchador atlas has arrived (normal play: long before wave 3).
-  if (bossPending && spawned >= Math.floor(waveTotal / 2) && !ART.lucha.tex.image) { spawnT = 0.15; return; }
-  const bossNow = bossPending && spawned >= Math.floor(waveTotal / 2);
-  const kind: Kind = bossNow ? 'lucha' : r < s.jefe ? 'jefe' : r < s.jefe + s.calaca ? 'calaca' : r < s.jefe + s.calaca + s.girl ? 'girl' : 'boy';
+  const onlySmall = wave === 1 || performance.now() < heavyAt || !bigSheetsIn();
+  // Hold the boss slot until the deferred luchador atlas has arrived (it starts at 10s).
+  if (!onlySmall && bossPending && spawned >= Math.floor(waveTotal / 2) && !ART.lucha.tex.image) { spawnT = 0.15; return; }
+  const bossNow = !onlySmall && bossPending && spawned >= Math.floor(waveTotal / 2);
+  const kind: Kind = onlySmall ? 'calaca' : bossNow ? 'lucha' : r < s.jefe ? 'jefe' : r < s.jefe + s.calaca ? 'calaca' : r < s.jefe + s.calaca + s.girl ? 'girl' : 'boy';
   const sp = s.speed * (kind === 'girl' ? 1.3 : kind === 'jefe' ? 0.62 : kind === 'calaca' ? 1.55 : kind === 'lucha' ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
   if (bossNow) { bossPending = false; banner('¡EL LUCHADOR!', 'Lots of hits · or drop a chancla BOMB 💣'); sfx.sfxCombo(3); shake = 0.5; }
   // avoid stacking two in the same lane back to back
@@ -1559,6 +1578,7 @@ function newGame(): void {
   $('hint').classList.remove('gone');
   setTimeout(() => $('hint').classList.add('gone'), 5000);
   markGameStart('waves');
+  armHeavySheets();
   startWave(params.has('wave') ? Math.max(1, Number(params.get('wave'))) : 1);
 }
 function gameOver(): void {
@@ -1602,6 +1622,7 @@ function frame(now: number): void {
   const running = state === 'play' || state === 'between' || state === 'over';
   const dt = state === 'paused' ? 0 : dtReal * hitStop.scale();
   if (state !== 'paused') clock += dt;
+  startHeavySheets();
   const s = now / 1000;
 
   if (state === 'play') spawnTick(dt);
@@ -1792,11 +1813,9 @@ autoUnlockAudio(); wireMute(); initAudioControls('waves', setMuted);
 for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener(ev, () => sfx.unlockCrashAudio(), { capture: true, passive: true });
 $('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · smash incoming souls · plant a sticky chancla on the line' : 'Click or drag at a kid to throw · Space = gold chancla · S = sticky chancla';
 updateHud();
-// Plaza starts drawing at once. Walk atlases and the concha gate newGame so kids
-// have their sheets, but eat poses, the boss atlas, and the between-waves Abuela
-// cameo wait their turn. No intro wait and no loading screen. Abuela's start
-// walk-in uses a small dedicated sprite, plays on top of the live plaza, and
-// never delays throws (a tap skips).
+// Plaza starts drawing at once. Wave 1 waits only on the little skeleton (and the
+// concha, which can be thrown immediately). Boy, girl, eat sheets, the luchador,
+// and Abuela's between-wave art start 10s into play. No loading screen.
 stage.classList.add('on-title');
 prev = performance.now();
 requestAnimationFrame(frame);
@@ -1804,13 +1823,6 @@ playPlayer1Intro('waves');
 Promise.all(texLoads).then(() => {
   artReady = true;
   newGame();
-  // eat sheets, luchador, and Abuela are not needed on wave 1 — warm them after the first frame so they don't steal bandwidth
-  const warmLater = () => {
-    for (const start of deferredTex) start();
-    for (const src of Object.values(ABUELA_IMG)) { const i = new Image(); i.decoding = 'async'; i.src = src; }
-  };
-  if (typeof requestIdleCallback === 'function') requestIdleCallback(warmLater, { timeout: 2500 });
-  else setTimeout(warmLater, 1200);
 });
 
 // test / screenshot hooks

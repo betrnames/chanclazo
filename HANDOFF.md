@@ -2,6 +2,16 @@
 
 Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitHub: betrnames)**. Repo: https://github.com/betrnames/chanclazo
 
+## Latest (2026-11-12, night PT) — first wave is only the little skeletons
+Gabe: "Load only the small skeletons on start first wave. Wait on larger sprite sheets until 10 secs in."
+
+On top of the v1.1.11 deferral (which still downloaded the boy and girl walk sheets before play):
+- `newGame` waits only on `calaverita-small` plus the concha loaf. Boy, girl, eat sheets, the luchador, and the between-waves Abuela art are not requested yet.
+- Wave 1 spawns **only** `calaca`.
+- At 10 real seconds after the first `newGame` (`performance.now() + 10000`), those larger sheets start downloading. Later waves mix in boy, girl, and jefe only after the boy and girl images have arrived. The luchador still waits for his own sheet. Wave 1 stays little skeletons even after the sheets land.
+- No loading screen. The game still starts as soon as the small skeleton is ready.
+- Not on production. Do not push `main` unless Gabe says push it live.
+
 ## Current state (2026-11-12, evening PT)
 - Production: **`main` → https://chanclazo.com**. Active follow-up branch can stay **`feat/chancla-waves`**.
 - **Live right now is v1.1.12** on `main`. Gabe said "After you remove that push live" (the Safari outline) on 12 Nov 2026. Previous production was **v1.1.11 · 6984e33**.
