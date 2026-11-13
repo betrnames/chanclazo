@@ -1723,9 +1723,10 @@ for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener
 $('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · smash incoming souls · plant a sticky chancla on the line' : 'Click or drag at a kid to throw · Space = gold chancla · S = sticky chancla';
 updateHud();
 // Plaza starts drawing at once. Walk atlases and the concha gate newGame so kids
-// have their sheets, but eat poses, the boss atlas, and Abuela wait their turn.
-// No intro wait and no loading screen. The gold-chancla burst plays on top and
-// never blocks throws.
+// have their sheets, but eat poses, the boss atlas, and the between-waves Abuela
+// cameo wait their turn. No intro wait and no loading screen. Abuela's start
+// walk-in uses a small dedicated sprite, plays on top of the live plaza, and
+// never delays throws (a tap skips).
 stage.classList.add('on-title');
 prev = performance.now();
 requestAnimationFrame(frame);

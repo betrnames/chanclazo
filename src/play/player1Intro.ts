@@ -1,15 +1,37 @@
-// Boot burst: the gold chancla spins in and bursts, and the game is already
-// live underneath. No camera intro, no loading wait, no blocking overlay, no
-// announcer audio.
+// Boot intro: Abuela steps in from the side of the live game scene, delivers a
+// short chancla line, and steps back out. No gold-chancla fly-in, no burst, no
+// "CHANCLAZO!" overlay, no camera intro, no loading screen, no voice, no SFX.
+// Only the game's music plays. The game is already running underneath. A tap
+// skips. The between-waves Abuela cameo in Día de los Muertos is unchanged.
+
 export type IntroGame = 'waves' | 'strike' | 'slots';
 
-const LOGO = '/lp/chancla_gold.webp';
-const BURST = '/lp/chancla_burst.webp';
-const TOTAL_MS = 1250;
-const BURST_AT = 0.50;
+/** Existing hand-drawn smiling chibi (holding her gold chancla), recompressed. */
+const ABUELA_SRC = '/play/abuela-intro.webp';
+
+export const INTRO_LINES: readonly string[] = [
+  'Mijo, this chancla has your name on it.',
+  'Órale — show me what you\'ve got.',
+  '¡Ándale! The chancla doesn\'t throw itself.',
+  'Ay, I brought the good one.',
+  'One chancla is all I need, mijo.',
+];
+
+const IN_MS = 420;
+const HOLD_MS = 1000;
+const OUT_MS = 380;
+const TOTAL_MS = IN_MS + HOLD_MS + OUT_MS; // 1800
+const REDUCE_MS = 1200;
 
 let forceIntro = false;
 let runningCleanup: (() => void) | null = null;
+let lineBag: number[] = [];
+let lastLine = -1;
+let currentLine = 0;
+
+function reduced(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 export function shouldPlayIntro(): boolean {
   if (forceIntro) return true;
@@ -18,179 +40,282 @@ export function shouldPlayIntro(): boolean {
   return true;
 }
 
-/** Kept so older hooks don't break. The burst is always short and never blocks. */
+/** Kept so older hooks don't break. The intro is always short and never delays start. */
 export function isShortIntro(): boolean { return true; }
 
-const CSS = `
-@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
-#czsting{position:fixed;inset:0;z-index:200;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
-#czsting .glow{position:absolute;width:min(80vw,380px);height:min(80vw,380px);border-radius:50%;
-  background:radial-gradient(circle,rgba(255,210,63,.55) 0%,rgba(255,140,26,.18) 40%,transparent 70%);
-  transform:scale(.2);opacity:0;animation:czglow 1.15s ease-out forwards}
-#czsting .burst{position:absolute;width:min(120vw,640px);height:min(120vw,640px);object-fit:contain;
-  transform:scale(.2) rotate(-12deg);opacity:0;animation:czburst 0.7s ${BURST_AT}s cubic-bezier(.15,1.55,.35,1) forwards}
-#czsting .logo{position:absolute;width:min(140vw,620px);height:min(140vw,620px);object-fit:contain;
-  filter:drop-shadow(0 0 22px rgba(255,210,63,.95)) drop-shadow(0 14px 22px rgba(0,0,0,.45));
-  animation:czspin .5s cubic-bezier(.14,1.55,.32,1) both, czout .62s ${BURST_AT}s cubic-bezier(.2,.7,.3,1) forwards}
-#czsting .word{position:absolute;top:56%;left:10px;right:10px;text-align:center;font:400 clamp(34px,11.2vw,72px)/.92 LilitaOne,system-ui,sans-serif;
-  color:#ffd23f;letter-spacing:.02em;-webkit-text-stroke:5px #3b1a5c;paint-order:stroke fill;
-  text-shadow:0 5px 0 #2a1040,0 0 22px rgba(255,200,60,.8);transform:scale(0);opacity:0;
-  animation:czslam .7s ${BURST_AT - 0.02}s cubic-bezier(.15,1.8,.35,1) forwards}
-#czsting .flash{position:absolute;inset:0;background:#fff6d4;opacity:0;mix-blend-mode:screen;animation:czflash .38s ${BURST_AT}s ease-out forwards}
-#czsting .sparks{position:absolute;inset:0;overflow:hidden}
-#czsting .spark{position:absolute;left:50%;top:48%;width:var(--s,10px);height:var(--s,10px);margin:0;padding:0;
-  background:var(--c,#ffd23f);border:2px solid #3b1a5c;border-radius:var(--br,2px);
-  transform:rotate(var(--r)) translateY(0) scale(0);opacity:0;
-  animation:czspark .7s ${BURST_AT}s ease-out forwards}
-@keyframes czspin{
-  0%{transform:perspective(800px) rotateZ(-700deg) rotateX(26deg) scale(.08);opacity:0}
-  70%{transform:perspective(800px) rotateZ(14deg) rotateX(-8deg) scale(1.16);opacity:1}
-  100%{transform:perspective(800px) rotateZ(0deg) rotateX(0deg) scale(1);opacity:1}
-}
-@keyframes czout{
-  0%{transform:perspective(800px) scale(1) rotate(0);opacity:1;filter:drop-shadow(0 0 22px rgba(255,210,63,.95))}
-  28%{transform:perspective(800px) scale(1.32) rotate(16deg);opacity:1}
-  100%{transform:perspective(800px) scale(2.35) rotate(48deg);opacity:0;filter:drop-shadow(0 0 4px rgba(255,210,63,0))}
-}
-@keyframes czburst{
-  0%{transform:scale(.25) rotate(-18deg);opacity:0}
-  35%{transform:scale(1.05) rotate(4deg);opacity:1}
-  100%{transform:scale(1.85) rotate(12deg);opacity:0}
-}
-@keyframes czslam{
-  0%{transform:scale(2.6) rotate(-10deg);opacity:0}
-  22%{transform:scale(1.08) rotate(-2deg);opacity:1}
-  68%{transform:scale(1) rotate(-2deg);opacity:1}
-  100%{transform:scale(1.12) rotate(-2deg);opacity:0}
-}
-@keyframes czflash{0%{opacity:.5}35%{opacity:.22}100%{opacity:0}}
-@keyframes czglow{
-  0%{transform:scale(.15);opacity:0}
-  35%{transform:scale(.85);opacity:.7}
-  55%{transform:scale(1.15);opacity:.55}
-  100%{transform:scale(2.2);opacity:0}
-}
-@keyframes czspark{
-  0%{transform:rotate(var(--r)) translateY(0) scale(.35);opacity:1}
-  100%{transform:rotate(var(--r)) translateY(var(--d)) scale(.15);opacity:0}
+function nextLineIndex(): number {
+  if (!lineBag.length) {
+    lineBag = INTRO_LINES.map((_, i) => i);
+    for (let i = lineBag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [lineBag[i], lineBag[j]] = [lineBag[j], lineBag[i]];
+    }
+    if (lineBag.length > 1 && lineBag[lineBag.length - 1] === lastLine) {
+      lineBag.unshift(lineBag.pop() as number);
+    }
+  }
+  const i = lineBag.pop() as number;
+  lastLine = i;
+  currentLine = i;
+  return i;
 }
 
-#czsting.seek .glow{animation-delay:calc(0s - var(--t));animation-play-state:paused;animation-fill-mode:both}
-#czsting.seek .logo{animation-delay:calc(0s - var(--t)),calc(.50s - var(--t));animation-play-state:paused,paused;animation-fill-mode:both,forwards}
-#czsting.seek .burst{animation-delay:calc(.50s - var(--t));animation-play-state:paused;animation-fill-mode:forwards}
-#czsting.seek .word{animation-delay:calc(.48s - var(--t));animation-play-state:paused;animation-fill-mode:forwards}
-#czsting.seek .flash{animation-delay:calc(.50s - var(--t));animation-play-state:paused;animation-fill-mode:forwards}
-#czsting.seek .spark{animation-delay:calc(.50s - var(--t));animation-play-state:paused;animation-fill-mode:forwards}
-#czsting.reduce .logo,#czsting.reduce .burst,#czsting.reduce .word,#czsting.reduce .glow,#czsting.reduce .flash,#czsting.reduce .spark{animation:none}
-#czsting.reduce .logo{transform:scale(1);opacity:1;transition:opacity .35s ease .25s}
-#czsting.reduce .word{opacity:1;transform:scale(1);transition:opacity .35s ease .4s}
-#czsting.reduce.out .logo,#czsting.reduce.out .word{opacity:0}
+function easeOutWalk(t: number): number { return 1 - (1 - t) ** 1.55; }
+function easeInCubic(t: number): number { return t * t * t; }
+
+/** x is percent-of-self to the left (0 on stage, -110 off). y is a step bob in px (up is negative). */
+function poseAt(ms: number, reduce: boolean): { x: number; y: number; bubble: number; opacity: number; done: boolean } {
+  const total = reduce ? REDUCE_MS : TOTAL_MS;
+  if (ms >= total) return { x: reduce ? 0 : -110, y: 0, bubble: 0, opacity: 0, done: true };
+  if (reduce) {
+    const fade = 220;
+    if (ms < fade) {
+      const t = ms / fade;
+      return { x: 0, y: 0, bubble: t, opacity: t, done: false };
+    }
+    if (ms < REDUCE_MS - fade) return { x: 0, y: 0, bubble: 1, opacity: 1, done: false };
+    const t = (ms - (REDUCE_MS - fade)) / fade;
+    return { x: 0, y: 0, bubble: 1 - t, opacity: 1 - t, done: false };
+  }
+  if (ms <= IN_MS) {
+    const u = easeOutWalk(ms / IN_MS);
+    const x = -110 + 110 * u;
+    // Two footfalls while she walks in.
+    const bob = Math.sin(u * Math.PI * 2) * 10 * (1 - u * 0.35);
+    const bubble = Math.max(0, Math.min(1, (ms - 260) / 200));
+    return { x, y: -bob, bubble, opacity: 1, done: false };
+  }
+  if (ms <= IN_MS + HOLD_MS) return { x: 0, y: 0, bubble: 1, opacity: 1, done: false };
+  const u = easeInCubic((ms - IN_MS - HOLD_MS) / OUT_MS);
+  const x = -110 * u;
+  const bob = Math.sin(u * Math.PI * 2) * 8 * (1 - u);
+  return { x, y: -bob, bubble: Math.max(0, 1 - u * 1.4), opacity: 1, done: false };
+}
+
+const CSS = `
+#czabuela{position:absolute;inset:0;z-index:80;overflow:hidden;pointer-events:auto;background:none}
+#czabuela.fixed{position:fixed}
+#czabuela .abu-wrap{position:absolute;left:0;bottom:calc(22% + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:flex-end;transform:translateX(-110%);will-change:transform;
+  filter:drop-shadow(0 10px 12px rgba(0,0,0,.55))}
+#czabuela.waves .abu-wrap{bottom:calc(22% + env(safe-area-inset-bottom,0px))}
+#czabuela.strike .abu-wrap{bottom:calc(13% + env(safe-area-inset-bottom,0px))}
+#czabuela.slots .abu-wrap{bottom:calc(16% + env(safe-area-inset-bottom,0px))}
+#czabuela img.abu{height:clamp(150px,30vh,260px);width:auto;display:block;flex:none;margin-left:-4px;
+  pointer-events:none;-webkit-user-select:none;user-select:none}
+#czabuela .bubble{position:relative;margin:0 0 clamp(96px,18vh,176px) 4px;max-width:min(250px,58vw);
+  background:#fff8ec;color:#3b1a5c;border:4px solid #3b1a5c;border-radius:22px;padding:10px 14px 8px;
+  box-shadow:0 6px 0 #3b1a5c,0 0 22px rgba(255,190,60,.45);transform-origin:12px 100%;
+  opacity:0;transform:scale(.72);pointer-events:none}
+#czabuela .bubble::before{content:"";position:absolute;left:-17px;bottom:16px;border:12px solid transparent;border-right:16px solid #3b1a5c;border-left:0}
+#czabuela .bubble::after{content:"";position:absolute;left:-10px;bottom:19px;border:9px solid transparent;border-right:12px solid #fff8ec;border-left:0}
+#czabuela .bubble p{margin:0;font:400 18px/1.2 LilitaOne,system-ui,sans-serif}
+#czabuela .bubble small{display:block;margin-top:4px;font:700 9px system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#a07ab8;text-align:right}
+@media (min-width:800px){
+  #czabuela img.abu{height:clamp(180px,32vh,300px)}
+  #czabuela .bubble{max-width:280px}
+  #czabuela .bubble p{font-size:20px}
+}
 `;
 
 function injectCss(): void {
-  if (document.getElementById('czsting-css')) return;
+  if (document.getElementById('czabuela-css')) return;
   const s = document.createElement('style');
-  s.id = 'czsting-css';
+  s.id = 'czabuela-css';
   s.textContent = CSS;
   document.head.appendChild(s);
 }
 
-function sparks(): HTMLElement {
-  const wrap = document.createElement('div');
-  wrap.className = 'sparks';
-  const colors = ['#ffd23f', '#ffd23f', '#ff8a2a', '#fff2a8', '#f4a000', '#ffe56a'];
-  for (let i = 0; i < 22; i++) {
-    const e = document.createElement('i');
-    e.className = 'spark';
-    const ang = (i / 22) * 360 + (i % 3) * 9 - 8;
-    const dist = 130 + (i % 5) * 28 + (i % 2) * 18;
-    const size = i % 4 === 0 ? 14 : i % 3 === 0 ? 7 : 10;
-    e.style.setProperty('--r', `${ang}deg`);
-    e.style.setProperty('--d', `${dist}px`);
-    e.style.setProperty('--s', `${size}px`);
-    e.style.setProperty('--c', colors[i % colors.length]);
-    e.style.setProperty('--br', i % 2 === 0 ? '1px' : '50%');
-    e.style.animationDelay = `${BURST_AT + (i % 6) * 0.012}s`;
-    wrap.appendChild(e);
-  }
-  return wrap;
+// Warm the (small) intro sprite as soon as the module evaluates so she is ready
+// on the first frame of the walk-in. The between-waves cameo still uses its own
+// deferred /crash/abuela-chibi.webp and is not requested here.
+const warm = new Image();
+warm.decoding = 'async';
+warm.src = ABUELA_SRC;
+
+function applyPose(wrap: HTMLElement, bubble: HTMLElement, p: { x: number; y: number; bubble: number; opacity: number }): void {
+  wrap.style.transform = `translate(${p.x}%, ${p.y}px)`;
+  wrap.style.opacity = String(p.opacity);
+  bubble.style.opacity = String(p.bubble);
+  const s = 0.72 + 0.28 * p.bubble;
+  bubble.style.transform = `scale(${s})`;
 }
 
-function reduced(): boolean {
-  return matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function runBurst(opts?: { seekable?: boolean }): void {
-  runningCleanup?.();
+function runIntro(game: IntroGame, opts?: { seekable?: boolean; line?: number }): () => void {
   injectCss();
-  // Preload art so the close-up isn't a blank box, but never hold the game.
+  document.getElementById('czabuela')?.remove();
+
   const host = document.createElement('div');
-  host.id = 'czsting';
-  host.setAttribute('aria-hidden', 'true');
-  if (reduced()) host.classList.add('reduce');
+  host.id = 'czabuela';
+  host.className = game;
+  host.setAttribute('role', 'status');
+  host.setAttribute('aria-live', 'polite');
+  host.setAttribute('aria-label', 'Abuela says');
 
-  const glow = document.createElement('div'); glow.className = 'glow';
-  const burst = document.createElement('img'); burst.className = 'burst'; burst.src = BURST; burst.alt = '';
-  const logo = document.createElement('img'); logo.className = 'logo'; logo.src = LOGO; logo.alt = '';
-  const word = document.createElement('div'); word.className = 'word'; word.textContent = 'CHANCLAZO!';
-  const flash = document.createElement('div'); flash.className = 'flash';
+  const stage = document.getElementById('stage');
+  if (stage) stage.appendChild(host);
+  else {
+    host.classList.add('fixed');
+    document.body.appendChild(host);
+  }
 
-  for (const n of [glow, burst, sparks(), logo, word, flash]) host.appendChild(n);
-  document.body.appendChild(host);
+  const wrap = document.createElement('div');
+  wrap.className = 'abu-wrap';
+  const img = document.createElement('img');
+  img.className = 'abu';
+  img.src = ABUELA_SRC;
+  img.alt = 'Abuela';
+  img.width = 364;
+  img.height = 720;
+  img.decoding = 'async';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  const p = document.createElement('p');
+  const idx = opts?.line ?? nextLineIndex();
+  currentLine = idx;
+  p.textContent = INTRO_LINES[idx];
+  const hint = document.createElement('small');
+  hint.textContent = 'tap to skip';
+  bubble.appendChild(p);
+  bubble.appendChild(hint);
+  // Same order as the between-waves cameo: figure on the left, bubble lifted at her shoulder on the right.
+  wrap.appendChild(img);
+  wrap.appendChild(bubble);
+  host.appendChild(wrap);
+  // The waves how-to hint sits in the same band as her bubble; tuck it away for the 2s she is on.
+  const howTo = document.getElementById('hint');
+  if (howTo) howTo.classList.add('gone');
 
-  if (opts?.seekable) host.classList.add('seek');
+  const reduce = reduced();
+  let start = performance.now();
+  let skipFrom: number | null = null; // ms into a shortened exit
+  let skipStartX = 0;
+  let skipStartBob = 0;
+  let skipStartBubble = 1;
+  let raf = 0;
+  let finished = false;
+  let frozen: number | null = opts?.seekable ? 0 : null;
 
-  // Seek mode stays on screen until the next play() or a later seek-cleanup.
-  const t = opts?.seekable ? 0 : window.setTimeout(() => { cleanup(); }, reduced() ? 800 : TOTAL_MS + 80);
-  const cleanup = (): void => {
-    if (runningCleanup !== cleanup) return;
-    runningCleanup = null;
-    if (t) window.clearTimeout(t);
-    if (reduced()) host.classList.add('out');
+  const SKIP_OUT = 280;
+
+  function finish(): void {
+    if (finished) return;
+    finished = true;
+    cancelAnimationFrame(raf);
+    host.removeEventListener('pointerdown', onSkip, true);
+    document.removeEventListener('keydown', onKey, true);
     host.remove();
-  };
+    if (runningCleanup === cleanup) runningCleanup = null;
+  }
+
+  function frame(now: number): void {
+    if (finished) return;
+    let ppose;
+    if (frozen !== null) {
+      ppose = poseAt(frozen, reduce);
+    } else if (skipFrom !== null) {
+      const t = Math.min(1, (now - skipFrom) / SKIP_OUT);
+      const e = easeInCubic(t);
+      ppose = {
+        x: skipStartX + (-110 - skipStartX) * e,
+        y: skipStartBob * (1 - e),
+        bubble: skipStartBubble * (1 - e),
+        opacity: reduce ? (1 - e) : 1,
+        done: t >= 1,
+      };
+    } else {
+      ppose = poseAt(now - start, reduce);
+    }
+    applyPose(wrap, bubble, ppose);
+    if (ppose.done && frozen === null) { finish(); return; }
+    raf = requestAnimationFrame(frame);
+  }
+
+  function beginSkip(e?: Event): void {
+    if (finished || skipFrom !== null || frozen !== null) return;
+    e?.preventDefault();
+    e?.stopPropagation();
+    const now = performance.now();
+    const cur = poseAt(now - start, reduce);
+    skipStartX = cur.x;
+    skipStartBob = cur.y;
+    skipStartBubble = cur.bubble;
+    skipFrom = now;
+  }
+
+  function onSkip(e: PointerEvent): void {
+    beginSkip(e);
+  }
+  function onKey(e: KeyboardEvent): void {
+    if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      beginSkip(e);
+    }
+  }
+
+  host.addEventListener('pointerdown', onSkip, true);
+  document.addEventListener('keydown', onKey, true);
+
+  const cleanup = (): void => { finish(); };
   runningCleanup = cleanup;
+
+  // Expose seek on the host for the hook below.
+  (host as unknown as { __seek: (u: number) => void }).__seek = (u: number) => {
+    frozen = Math.max(0, Math.min(1, u)) * (reduce ? REDUCE_MS : TOTAL_MS);
+  };
+
+  applyPose(wrap, bubble, poseAt(0, reduce));
+  raf = requestAnimationFrame(frame);
+  return cleanup;
 }
 
 /**
- * Fire the logo burst. `onDone` is called immediately — the game must start
- * with no wait. The overlay is pointer-events: none. There is no audio.
+ * Play the Abuela walk-in. `onDone` is called immediately — the game must start
+ * with no wait. The overlay is only Abuela and her bubble (no dim, no card);
+ * a tap skips her exit. There is no audio.
  */
-export function playPlayer1Intro(_game: IntroGame, onDone?: () => void, opts?: { seekable?: boolean }): void {
+export function playPlayer1Intro(_game: IntroGame, onDone?: () => void, opts?: { seekable?: boolean; line?: number }): void {
   const go = shouldPlayIntro();
   onDone?.();
   if (!go) return;
-  // Next frame so the game's first paint is already under the burst.
-  requestAnimationFrame(() => runBurst(opts));
+  // Next frame so the game's first paint is already under her walk-in.
+  requestAnimationFrame(() => runIntro(_game, opts));
 }
 
 (window as unknown as { __p1intro: {
   play: (game: IntroGame, onDone?: () => void) => void;
   seek: (u: number) => void;
+  skip: () => void;
+  line: () => { i: number; text: string };
+  lines: () => readonly string[];
 } }).__p1intro = {
   play(_game: IntroGame, onDone?: () => void): void {
     runningCleanup?.();
-    document.getElementById('czsting')?.remove();
+    document.getElementById('czabuela')?.remove();
     forceIntro = true;
     const go = shouldPlayIntro();
     forceIntro = false;
     onDone?.();
-    if (go) runBurst();
+    if (go) runIntro(_game);
   },
-  /** Freeze the burst at u in [0, 1] (u * TOTAL_MS), for stills and clips. */
+  /** Freeze the walk-in at u in [0, 1] (u * TOTAL_MS), for stills and clips. */
   seek(u: number): void {
     forceIntro = true;
-    let host = document.getElementById('czsting');
+    let host = document.getElementById('czabuela');
     if (!host) {
       runningCleanup?.();
-      runBurst({ seekable: true });
-      host = document.getElementById('czsting');
+      const game: IntroGame = /waves/.test(location.pathname) ? 'waves'
+        : /slots/.test(location.pathname) ? 'slots' : 'strike';
+      runIntro(game, { seekable: true });
+      host = document.getElementById('czabuela');
     }
     forceIntro = false;
-    if (!host) return;
-    host.classList.add('seek');
-    const t = Math.max(0, Math.min(1, u)) * (TOTAL_MS / 1000);
-    host.style.setProperty('--t', `${t}s`);
-    host.dataset.u = String(Math.max(0, Math.min(1, u)));
+    const fn = host && (host as unknown as { __seek?: (u: number) => void }).__seek;
+    fn?.(u);
   },
+  skip(): void {
+    const host = document.getElementById('czabuela');
+    host?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+  },
+  line: () => ({ i: currentLine, text: INTRO_LINES[currentLine] }),
+  lines: () => INTRO_LINES,
 };
