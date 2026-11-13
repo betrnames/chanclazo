@@ -584,7 +584,7 @@ function markDown(e: Ent): void {
   if (e.critter) { e.critter.setMood('dizzy'); sfx.sfxSquish(); }
   comboCount++;
   sfx.sfxPoint(comboCount);
-  if (comboCount === 2) combo('DOUBLE!', 1); else if (comboCount === 3) { if (!rapidOn && !rapidEarned && state === 'play') { rapidEarned = true; startRapid(); } else combo('TRIPLE!', 2); } else if (comboCount === 5) combo('MEGA!', 3); else if (comboCount === 8) combo('¡CHANCLAZO!', 4);
+  if (comboCount === 2) combo('COMBO x2', 1); else if (comboCount === 3) { if (!rapidOn && !rapidEarned && state === 'play') { rapidEarned = true; startRapid(); } else combo('COMBO x3', 2); } else if (comboCount === 5) combo('COMBO x5', 3); else if (comboCount === 8) combo('COMBO x8', 4);
   if (e.starred) {
     starredDown++;
     sfx.buzz(20);

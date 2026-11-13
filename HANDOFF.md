@@ -10,15 +10,15 @@ On top of the v1.1.11 deferral (which still downloaded the boy and girl walk she
 - Wave 1 spawns **only** `calaca`.
 - At 10 real seconds after the first `newGame` (`performance.now() + 10000`), those larger sheets start downloading. Later waves mix in boy, girl, and jefe only after the boy and girl images have arrived. The luchador still waits for his own sheet. Wave 1 stays little skeletons even after the sheets land.
 - No loading screen. The game still starts as soon as the small skeleton is ready.
-- Not on production. Do not push `main` unless Gabe says push it live.
+- Combo callouts are short only: `COMBO x2`, `COMBO x3`, and so on. The long `¡CHANCLAZO!` pop is gone (Waves and the parked Crash).
+- **Shipped live as v1.1.13** on 12 Nov 2026. Gabe said "Push live". This release also includes the phone smoothness pass (shared atlas, lower phone quality, capped petals).
 
-## Current state (2026-11-12, evening PT)
+## Current state (2026-11-12, night PT)
 - Production: **`main` → https://chanclazo.com**. Active follow-up branch can stay **`feat/chancla-waves`**.
-- **Live right now is v1.1.12** on `main`. Gabe said "After you remove that push live" (the Safari outline) on 12 Nov 2026. Previous production was **v1.1.11 · 6984e33**.
-- This release brings the Abuela start intro to production (replacing the gold-chancla fly-in and burst) and hides Safari's empty-image outline on the Día de los Muertos cameo. Version is **1.1.12**.
+- **Live right now is v1.1.13** on `main`. Gabe said "Push live" on 12 Nov 2026. Previous production was **v1.1.12**.
+- This release: wave 1 is only the little skeletons, larger sheets wait 10 seconds, combo text is `COMBO xN`, and the phone smoothness pass is included. Abuela's start intro and the Safari outline fix from v1.1.12 stay.
 - Preview: https://feat-chancla-waves.chanclazo.pages.dev. Crash is parked but still at `/crash`.
-- **Runtime smoothness for Día de los Muertos is on this preview only** (see below). Not on production until Gabe says "push it live".
-- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, v1.1.10, v1.1.11, and v1.1.12.
+- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7 through v1.1.13.
 
 ## Abuela start intro (shipped in v1.1.12, 2026-11-12)
 Gabe asked to remove the flying-in chancla and burst, and instead have Abuela come out from the side with a smart chancla quote so it looks like it is part of the scene. "No audio just music playing in start."
@@ -39,7 +39,7 @@ Gabe asked to remove the flying-in chancla and burst, and instead have Abuela co
 - Safari outline (found on preview 95da896, also present on production v1.1.11): after the intro, a thin gray rectangle sat on the left of Día de los Muertos. It is not a leftover of the start intro. It is the between-waves `#abuelaImg`, which has no `src` until she first speaks. Safari paints an empty-image frame at the HTML width (507px); that overflows the `translateX(-110%)` park and peeks onto the plaza. Fix: `#abuela img:not([src]){display:none}`. The cameo is unchanged. Chromium never showed it (it sizes the unsourced img at the CSS height, fully off-screen).
 
 
-## Runtime smoothness (preview on feat/chancla-waves, 2026-11-12)
+## Runtime smoothness (shipped in v1.1.13, 2026-11-12)
 Gabe said Día de los Muertos was still too slow during play, maybe too many things at once. Load time was already fixed in v1.1.11; this is mid-wave frame rate on his iPhone.
 
 **Cause.** Two big ones, plus clutter:

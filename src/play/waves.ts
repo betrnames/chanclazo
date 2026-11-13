@@ -1529,7 +1529,7 @@ function banner(title: string, sub: string): void {
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
 }
 function showCombo(n: number): void {
-  const c = $('combo'); c.textContent = n >= 4 ? `¡CHANCLAZO! x${n}` : `COMBO x${n}`;
+  const c = $('combo'); c.textContent = `COMBO x${n}`;
   c.classList.remove('show'); void c.offsetWidth; c.classList.add('show');
   if (n >= 3) sfx.sfxCombo(Math.min(n - 1, 4));
 }
