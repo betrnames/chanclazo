@@ -2,13 +2,14 @@
 
 Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitHub: betrnames)**. Repo: https://github.com/betrnames/chanclazo
 
-## Current state (2026-11-12, late afternoon PT)
-- Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
-- **Live right now is v1.1.11** on `main` (SHA `6984e33`). Gabe said "Push it live" at 4:34 PM PT on 12 Nov 2026. Footer on chanclazo.com: `v1.1.11 · 6984e33`. This preview branch is merged with that main. Previous production was `v1.1.10 · 70ee30f`.
-- Preview, including the Abuela start intro: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
-- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, v1.1.10, and v1.1.11. Version stays **1.1.11** (no bump). Production still has the gold-chancla fly-in and burst until he ships this.
+## Current state (2026-11-12, evening PT)
+- Production: **`main` → https://chanclazo.com**. Active follow-up branch can stay **`feat/chancla-waves`**.
+- **Live right now is v1.1.12** on `main`. Gabe said "After you remove that push live" (the Safari outline) on 12 Nov 2026. Previous production was **v1.1.11 · 6984e33**.
+- This release brings the Abuela start intro to production (replacing the gold-chancla fly-in and burst) and hides Safari's empty-image outline on the Día de los Muertos cameo. Version is **1.1.12**.
+- Preview: https://feat-chancla-waves.chanclazo.pages.dev. Crash is parked but still at `/crash`.
+- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, v1.1.10, v1.1.11, and v1.1.12.
 
-## Preview: Abuela start intro (2026-11-12) — on this branch, not on production
+## Abuela start intro (shipped in v1.1.12, 2026-11-12)
 Gabe asked to remove the flying-in chancla and burst, and instead have Abuela come out from the side with a smart chancla quote so it looks like it is part of the scene. "No audio just music playing in start."
 
 - The gold chancla fly-in, starburst, sparks, flash, and Lilita "CHANCLAZO!" overlay (`#czsting`) are gone from Waves (Día de los Muertos), Chancla Strike, and Slots. The gold relic in gameplay is unchanged. `/lp/chancla_burst.webp` is unused leftover — leave the file, do not wire it back in.
@@ -115,7 +116,7 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 ## Gabe's rules (non-negotiable)
 1. Feature work stays on `feat/chancla-waves`. **Never push `main` / chanclazo.com without Gabe saying to push it live.** No force pushes.
 2. **3D games use three.js** (cannon-es in Crash; Strike is Matter.js 2D). Phones are 390×844. No console errors.
-3. **Abuela appears in two places on this preview:** the start walk-in on Waves, Strike, and Slots, and the between-wave cameo in Día de los Muertos (unchanged). Production v1.1.11 still has only the cameo, plus the gold-chancla burst intro. No Abuela anywhere else. No AI-generated art.
+3. **Abuela appears in two places:** the start walk-in on Waves, Strike, and Slots, and the between-wave cameo in Día de los Muertos (unchanged). No Abuela anywhere else. No AI-generated art.
 4. **No slingshot, Y-fork, or bands.** The thrower is the floating gold relic chancla.
 5. **Chancla Crash is parked.** Not on the picker. Keep `/crash`. Maybe later a car / Mario Kart racer.
 6. The waves game is **Día de los Muertos**. URL stays `/waves`. One constant: `WAVES_NAME` in `src/gameNames.ts`.
@@ -154,8 +155,8 @@ npm run build
 - Footer stamp is `v<package.json version> · <short sha>` from `scripts/merge-dist.mjs`. Bump `package.json` when Gabe says to ship.
 - `arcade.ts` must keep the dynamic import of `initLanderMusic`.
 
-## Gold-chancla logo burst (in v1.1.10 and still on production v1.1.11)
-On this preview branch the burst is replaced by the Abuela start intro above. Production still has the burst until Gabe says to push this live. Originally: Gabe rejected every pan/tilt/zoom camera intro, including the luchador pull-out, and then asked to cut the announcer audio and keep only the flying-in chancla with the burst. There is **no camera intro**, **no loading screen**, **no start delay**, and **no "CHANCLAZO!" audio stinger**. The game is live and playable from the first frame.
+## Gold-chancla logo burst (in v1.1.10 and v1.1.11; replaced in v1.1.12 by the Abuela start intro)
+Originally: Gabe rejected every pan/tilt/zoom camera intro, including the luchador pull-out, and then asked to cut the announcer audio and keep only the flying-in chancla with the burst. There is **no camera intro**, **no loading screen**, **no start delay**, and **no "CHANCLAZO!" audio stinger**. The game is live and playable from the first frame.
 
 On boot of Waves, Strike, or Slots, the gold chancla logo (`/lp/chancla_gold.webp`) spins in (a tumbling scale-up, gold backlight), then bursts with the existing hand-drawn starburst (`/lp/chancla_burst.webp`), gold and marigold sparks, a flash, and a Lilita One "CHANCLAZO!" slam. Then it clears. The overlay is `pointer-events: none` and never blocks a throw. The plaza / machine is already running underneath. `prefers-reduced-motion` shows a brief fade instead of the spin. `?start=1` and `?nointro=1` skip the burst so playtests stay clean. Same burst on Waves, Strike, and Slots. No Abuela, no slingshot, no outside-reference copying, no new paid art, no audio file in the build. A leftover free Piper take (not shipped) is still on the box at `/workspace/chz-demo/chanclazo-stinger.mp3` (and `.ogg`, plus the WAV master).
 
