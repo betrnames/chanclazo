@@ -98,31 +98,43 @@ const flames: THREE.Sprite[] = [];
 }
 // ───────────────────────── art ─────────────────────────
 const texLoader = new THREE.TextureLoader();
-// Every atlas is loaded before the first render and before any kid clones its texture.
+// Walk atlases (and the concha, which the player can throw from the first wave) gate newGame
+// so kids have sheets before they spawn. Eat poses, the boss atlas, and Abuela are deferred:
+// they start after that so they do not compete for bandwidth, and they do not delay play.
 // (Rendering a clone whose image has not arrived yet logs "Texture marked for update but no image data found".)
 const texLoads: Promise<void>[] = [];
-function tex(src: string): THREE.Texture {
-  let done!: () => void; texLoads.push(new Promise<void>((r) => { done = r; }));
-  const t = texLoader.load(src, () => done(), undefined, () => { report(`texture failed: ${src}`); done(); });
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+const deferredTex: Array<() => void> = [];
+function tex(src: string, gate = true): THREE.Texture {
+  const t = new THREE.Texture();
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const start = (done?: () => void) => {
+    texLoader.load(src, (loaded) => {
+      t.image = loaded.image;
+      t.needsUpdate = true;
+      done?.();
+    }, undefined, () => { report(`texture failed: ${src}`); done?.(); });
+  };
+  if (gate) texLoads.push(new Promise<void>((resolve) => start(resolve)));
+  else deferredTex.push(() => start());
+  return t;
 }
 // ───────────────────────── art ─────────────────────────
 // Enemy art registry: animated Agent Sprite Forge atlases (public/waves/sprites/<name>-atlas.webp + .json).
 // Each atlas = uniform cells. Default rows: walk 8, hit 3, ko 4. Counts can be shorter (the boy sheet is 6 / 1 / 3).
 // Anchor = feet point inside every cell. To swap art, drop a new atlas in and update its numbers here (copied from its JSON meta).
 interface Sheet { tex: THREE.Texture; W: number; H: number; cw: number; ch: number; ax: number; ay: number; h: number; stride: number; walkN: number; hitN: number; koN: number }
-const sheet = (name: string, W: number, H: number, cw: number, ch: number, ax: number, ay: number, h: number, stride: number, walkN = 8, hitN = 3, koN = 4, v = ''): Sheet =>
-  ({ tex: tex(`/waves/sprites/${name}-atlas.webp${v}`), W, H, cw, ch, ax, ay, h, stride, walkN, hitN, koN });
+const sheet = (name: string, W: number, H: number, cw: number, ch: number, ax: number, ay: number, h: number, stride: number, walkN = 8, hitN = 3, koN = 4, v = '', gate = true): Sheet =>
+  ({ tex: tex(`/waves/sprites/${name}-atlas.webp${v}`, gate), W, H, cw, ch, ax, ay, h, stride, walkN, hitN, koN });
 const ANIM = { walk: { row: 0, n: 8, fps: 10 }, hit: { row: 1, n: 3, fps: 12 }, ko: { row: 2, n: 4, fps: 10 } } as const;
 type AnimName = keyof typeof ANIM;
 // h = world height that a 320px-tall body should be; stride = world units per walk cycle
 const ART = {
-  boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3),
+  boy: sheet('calavera-boy', 3328, 1302, 416, 434, 208, 422, 1.64, 1.5, 6, 1, 3, '?v=8'),
   girl: sheet('catrina-girl', 3360, 1770, 420, 590, 210, 587, 1.38, 1.55, 8, 3, 4, '?v=7'),
   // the little calaverita skeleton from the home-screen plaza: small, fast, hops toward the line, 1 hit
   calaca: sheet('calaverita-small', 2952, 1323, 492, 441, 246, 435, 1.25, 1.6, 6, 1, 6, '?v=7'),
   // the ORIGINAL Chanclazo luchador (red/yellow mask, shirtless, LUCHA belt; source public/play/luchador_sprite.webp) = the boss
-  lucha: sheet('luchador-boss', 2744, 1038, 343, 346, 170, 339, 4.1, 3.0), // 1.5x bigger boss (Gabe, 2026-11-10); hp bar follows via BOSS_HEAD
+  lucha: sheet('luchador-boss', 2744, 1038, 343, 346, 170, 339, 4.1, 3.0, 8, 3, 4, '?v=1', false), // 1.5x bigger boss; deferred — first boss is wave 3
 };
 const pmrem = new THREE.PMREMGenerator(renderer);
 const goldEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -183,16 +195,16 @@ const fx = new FX(scene, 0), hitStop = new HitStop();
 let bombs = 0, snacks = 0, bossPending = false, boss: Kid | undefined;
 const BOMB_MAX = 3, BOMB_R = 2.4, BOMB_DMG = 4;
 const SNACK_MAX = 4;
-const snackTex = tex('/waves/snack-concha.webp?v=2');
+const snackTex = tex('/waves/snack-concha.webp?v=3');
 const CONCHA_BITS = 5;
 // Eating sheets: the boy uses Gabe's eat-boy.webp (8 cells, 168×278) as-is, no squash.
 // Jefe and the flower-crown girl have their own 6-frame strips derived from their walk art
 // (reach, lean-in, bite, chew, chew, swallow). Head leans toward the concha; the face is never flattened.
 interface EatSheet { tex: THREE.Texture; n: number; cw: number; ch: number; fps: number }
 const EAT_SHEETS: Record<string, EatSheet> = {
-  boy:  { tex: tex('/waves/eat-boy.webp?v=1'),  n: 8, cw: 168, ch: 278, fps: 8.33 },
-  jefe: { tex: tex('/waves/eat-jefe.webp?v=1'), n: 6, cw: 168, ch: 278, fps: 10 },
-  girl: { tex: tex('/waves/eat-girl.webp?v=1'), n: 6, cw: 420, ch: 590, fps: 10 },
+  boy:  { tex: tex('/waves/eat-boy.webp?v=1', false),  n: 8, cw: 168, ch: 278, fps: 8.33 },
+  jefe: { tex: tex('/waves/eat-jefe.webp?v=1', false), n: 6, cw: 168, ch: 278, fps: 10 },
+  girl: { tex: tex('/waves/eat-girl.webp?v=1', false), n: 6, cw: 420, ch: 590, fps: 10 },
 };
 
 // ───────────────────────── soul bursts (wave 2+) & sticky chancla ─────────────────────────
@@ -371,6 +383,8 @@ function spawnTick(dt: number): void {
   const s = waveSpec(wave);
   spawnT = s.gap * (0.7 + Math.random() * 0.6);
   const r = Math.random();
+  // Hold the boss slot until the deferred luchador atlas has arrived (normal play: long before wave 3).
+  if (bossPending && spawned >= Math.floor(waveTotal / 2) && !ART.lucha.tex.image) { spawnT = 0.15; return; }
   const bossNow = bossPending && spawned >= Math.floor(waveTotal / 2);
   const kind: Kind = bossNow ? 'lucha' : r < s.jefe ? 'jefe' : r < s.jefe + s.calaca ? 'calaca' : r < s.jefe + s.calaca + s.girl ? 'girl' : 'boy';
   const sp = s.speed * (kind === 'girl' ? 1.3 : kind === 'jefe' ? 0.62 : kind === 'calaca' ? 1.55 : kind === 'lucha' ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
@@ -442,7 +456,6 @@ const ABUELA_LINES: { t: string; mad?: boolean }[] = [
 ];
 const abuelaEl = $('abuela'), abuelaImg = $('abuelaImg') as HTMLImageElement, abuelaLine = $('abuelaLine');
 const ABUELA_IMG = { calm: '/crash/abuela-chibi.webp', mad: '/crash/abuela-chibi-angry.webp' };
-new Image().src = ABUELA_IMG.mad; // warm the cache so the angry face swaps in instantly
 let abuelaBag: number[] = [], abuelaAt = Infinity, abuelaOutAt = 0, abuelaLast = -1;
 function abuelaSay(): void {
   if (!abuelaBag.length) {
@@ -702,7 +715,7 @@ function updateSnackBtn(): void {
 function ensureEater(k: Kid): void {
   if (k.eatBody) return;
   const sheet = EAT_SHEETS[k.kind];
-  if (!sheet) return;
+  if (!sheet || !sheet.tex.image) return;
   const map = sheet.tex.clone();
   map.repeat.set(1 / sheet.n, 1);
   map.offset.set(0, 0);
@@ -1584,7 +1597,8 @@ function frame(now: number): void {
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
     // walk frames follow distance so the planted feet in the atlas stay on the cobbles. No extra hop (that read as a skip).
     const cyc = (k.wob / (k.sheet.stride * (k.kind === 'jefe' ? 1.3 : 1)) + k.phase) % 1;
-    const plateArt = k.eat > 0 && !!EAT_SHEETS[k.kind];
+    const eatSheet = EAT_SHEETS[k.kind];
+    const plateArt = k.eat > 0 && !!eatSheet && !!eatSheet.tex.image;
     const eating = k.eat > 0 && (plateArt || !!k.bite);
     showEater(k, plateArt);
     if (plateArt) {
@@ -1708,14 +1722,25 @@ autoUnlockAudio(); wireMute(); initAudioControls('waves', setMuted);
 for (const ev of ['pointerup', 'touchend', 'keydown', 'click']) addEventListener(ev, () => sfx.unlockCrashAudio(), { capture: true, passive: true });
 $('hint').textContent = isTouch ? 'Tap or drag at a kid to throw · smash incoming souls · plant a sticky chancla on the line' : 'Click or drag at a kid to throw · Space = gold chancla · S = sticky chancla';
 updateHud();
-// Plaza starts drawing at once. Wave art still gates newGame so kids have their
-// sheets, but there is no intro wait and no loading screen. The gold-chancla
-// burst plays on top and never blocks throws.
+// Plaza starts drawing at once. Walk atlases and the concha gate newGame so kids
+// have their sheets, but eat poses, the boss atlas, and Abuela wait their turn.
+// No intro wait and no loading screen. The gold-chancla burst plays on top and
+// never blocks throws.
 stage.classList.add('on-title');
 prev = performance.now();
 requestAnimationFrame(frame);
 playPlayer1Intro('waves');
-Promise.all(texLoads).then(() => { artReady = true; newGame(); });
+Promise.all(texLoads).then(() => {
+  artReady = true;
+  newGame();
+  // eat sheets, luchador, and Abuela are not needed on wave 1 — warm them after the first frame so they don't steal bandwidth
+  const warmLater = () => {
+    for (const start of deferredTex) start();
+    for (const src of Object.values(ABUELA_IMG)) { const i = new Image(); i.decoding = 'async'; i.src = src; }
+  };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(warmLater, { timeout: 2500 });
+  else setTimeout(warmLater, 1200);
+});
 
 // test / screenshot hooks
 (window as unknown as Record<string, unknown>).__waves = {

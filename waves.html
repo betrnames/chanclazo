@@ -8,9 +8,11 @@
 <meta name="application-name" content="%%WAVES_NAME%%" />
 <meta name="description" content="The sugar-skull kids are marching on the ofrenda. Throw the gold chancla and hold the line, wave after wave. %%WAVES_NAME%% is a free Day of the Dead browser game." />
 <link rel="icon" href="/cruise/logo_chancla.webp" />
+<link rel="preload" as="font" type="font/woff2" href="/fonts/LilitaOne-Regular.woff2" crossorigin />
+<link rel="preload" as="image" type="image/webp" href="/play/night_bg.webp" />
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
+@font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.woff2) format("woff2"),url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
 html,body{margin:0;height:100%;background:#0b0312 url(/play/night_bg.webp) center/cover;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backdrop-filter:blur(6px)}
 #stage{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100vh * 3 / 4));overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.8);touch-action:none}
@@ -192,8 +194,8 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   <div id="fx"></div>
   <div id="hint" class="gone">Tap a kid to throw · or tap the gold chancla</div>
   <div id="rapid" class="hidden" aria-live="polite">🔥 RAPID FIRE <span class="rb"><i></i></span></div>
-  <div id="powers"><button id="snack" class="ready" aria-label="Throw a pan dulce. A sugar skull stops to eat it."><img src="/waves/snack-concha.webp?v=2" alt="" width="52" height="52" /><span id="snackN" class="bn">2</span><span class="use">TAP</span></button><button id="bomb" class="ghost" aria-label="Drop a gold chancla bomb" aria-disabled="true"><img src="/crash/chancla-btn.webp" alt="" width="54" height="30" /><span class="bb">💣</span><span id="bombN" class="bn">0</span><span class="use">TAP</span></button><button id="sticky" class="ghost" aria-label="Plant a sticky chancla on the marigold line. It holds kids and throws for you." aria-disabled="true"><img src="/crash/chancla-btn.webp" alt="" width="54" height="30" /><span id="stickyN" class="bn">0</span><span class="use">TAP</span></button></div><div id="stickyHint">TAP A LANE TO PLANT</div>
-  <div id="abuela" role="status" aria-live="polite" aria-label="Abuela says"><img id="abuelaImg" src="/crash/abuela-chibi.webp" alt="Abuela" width="507" height="1002" /><div class="bubble"><p id="abuelaLine"></p><small>tap to skip</small></div></div>
+  <div id="powers"><button id="snack" class="ready" aria-label="Throw a pan dulce. A sugar skull stops to eat it."><img src="/waves/snack-concha-icon.webp" alt="" width="52" height="52" /><span id="snackN" class="bn">2</span><span class="use">TAP</span></button><button id="bomb" class="ghost" aria-label="Drop a gold chancla bomb" aria-disabled="true"><img src="/crash/chancla-btn.webp" alt="" width="54" height="30" /><span class="bb">💣</span><span id="bombN" class="bn">0</span><span class="use">TAP</span></button><button id="sticky" class="ghost" aria-label="Plant a sticky chancla on the marigold line. It holds kids and throws for you." aria-disabled="true"><img src="/crash/chancla-btn.webp" alt="" width="54" height="30" /><span id="stickyN" class="bn">0</span><span class="use">TAP</span></button></div><div id="stickyHint">TAP A LANE TO PLANT</div>
+  <div id="abuela" role="status" aria-live="polite" aria-label="Abuela says"><img id="abuelaImg" alt="Abuela" width="507" height="1002" /><div class="bubble"><p id="abuelaLine"></p><small>tap to skip</small></div></div>
   <div id="boomflash" aria-hidden="true"></div>
   <button id="fire" aria-label="Throw the gold chancla at the closest kid"><img src="/crash/chancla-btn.webp" alt="" width="84" height="47" /><span class="tap">TAP!</span></button>
 

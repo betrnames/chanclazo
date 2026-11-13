@@ -2,11 +2,56 @@
 
 Self-contained takeover notes. Read this first. Owner and approver: **Gabe (GitHub: betrnames)**. Repo: https://github.com/betrnames/chanclazo
 
-## Current state (2026-11-11, late evening PT)
+## Current state (2026-11-12, afternoon PT)
 - Active branch: **`feat/chancla-waves`**. Production: **`main` → https://chanclazo.com**.
-- **Live right now is v1.1.10.** Gabe said "Looks good push live" at 11:56 PM PT on 11 Nov 2026. Footer stamp on chanclazo.com: `v1.1.10 ·` plus the short SHA of the Release v1.1.10 commit on `main`. The matching feature commit is the Release v1.1.10 commit on `feat/chancla-waves` (same tree as `main`). Previous production was `v1.1.9 · c7efe95`.
+- **Live right now is v1.1.11.** Gabe said "Push it live" at 4:34 PM PT on 12 Nov 2026. This ships only the load-time work from `89bec92` and `29f437d` on `feat/chancla-waves`, cherry-picked onto `main` at `70ee30f` (same tree as `9d52191`). Footer stamp on chanclazo.com: `v1.1.11 ·` plus the short SHA of the Release v1.1.11 commit on `main`. Previous production was `v1.1.10 · 70ee30f`.
 - Preview of the feature branch: https://feat-chancla-waves.chanclazo.pages.dev (`/`, `/choose`, `/waves`, `/chancla-strike`, `/slots`). Crash is parked but still at `/crash`.
-- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, and v1.1.10.
+- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7, v1.1.8, v1.1.9, v1.1.10, and v1.1.11.
+
+## What v1.1.11 shipped (2026-11-12)
+Playtested on `feat/chancla-waves` (`89bec92` + `29f437d`, preview SHA `29f437d`) and now on production. Gameplay, visuals, and start rules are unchanged: the game starts instantly with no loading screen, the intro is only the gold chancla flying in and bursting, no camera intro, no "CHANCLAZO!" stinger audio, Abuela only as a between-waves cameo, hand-drawn art.
+
+### What changed
+- **Smaller art, same look** (WebP q90, visual QA against the originals; skipped anything that softened: atlases, eat sheets, `head_llama`, gold chancla, burst, Sidro, lander backgrounds).
+  - `public/lp/lander-title.webp` 516 KB → 71 KB, plus 840w (39 KB) and 1260w (64 KB) srcset. Homepage preloads the title with `fetchpriority="high"` (taken off the background).
+  - `public/play/llama_choose.webp` 376 KB → 96 KB.
+  - `public/play/slots/llama_hd.webp` 86 KB → 59 KB (`?v=3`).
+  - `public/waves/snack-concha.webp` 188 KB → 121 KB (`?v=3`). New 256px `snack-concha-icon.webp` (17 KB) for the HUD button; the loaf in the lane still uses the full concha.
+- **WOFF2 fonts** (`LilitaOne-Regular.woff2` 12 KB) preferred over TTF, with a TTF fallback. Lilita is preloaded on the landing and each game.
+- **Deferred non-critical textures.** Waves `newGame` waits only on walk atlases + the concha loaf. Eat sheets, the luchador atlas, and Abuela warm after the first frame (`requestIdleCallback`, 2.5s timeout). The leftover `new Image().src = ABUELA_IMG.mad` at module load is gone. Eat/boss fallbacks still require the sheet image so kids never go invisible. Strike loads Cemetery + sprites first; Mercado and Catacombs wait the same way. Abuela's `<img>` has no `src` until she actually speaks. Walk-atlas `<link rel="preload">` tags were dropped in `29f437d` because they delayed first paint; the sheets still start from JS as soon as the module runs.
+- **Preloads** for each game's critical art (night bg, gold chancla + burst, Lilita), using the **same** `?v=` as the JS so the browser does not download twice. Boy atlas is `?v=8` to match.
+- **`scripts/merge-dist.mjs`** now cache-busts image and font URLs in JS and CSS as well as HTML (`/lp`, `/play`, `/waves`, `/crash`, `/fonts`).
+- **`public/_headers`**: long-cache `immutable` (1 year) for `/assets`, `/_astro`, `/fonts`, `/lp`, `/play`, `/waves`, `/crash`. HTML remains no-cache.
+
+### Preview numbers before this ship (https://feat-chancla-waves.chanclazo.pages.dev, SHA `29f437d`)
+Lighthouse 13.6.0, mobile, simulated Slow 4G. Same method as the v1.1.10 live baseline. All five routes play, no console errors, no failed requests. Kids spawn on wave 1. Screenshots match the live look. Title is visible. Abuela, eat sheets, and the luchador are **not** requested until after the game is playable (they show up later in a full Lighthouse session, which is why the waves *total* transfer is still ~2.8 MB). Mercado/Catacombs wait the same way on Strike.
+
+| Route | Perf | FCP | LCP | TBT | Transfer (LH full session) | At playable (Playwright, CF brotli) |
+|---|---:|---:|---:|---:|---:|---|
+| `/` | **99** (was 74) | 793 (was 951) | **1.8 s** (was **6.0 s**) | 124 (was 214) | **403 KB** (was 883) | 239 KB, title is the 38–62 KB srcset |
+| `/choose` | 98 (was 97) | 923 | 923 (was 961) | 174 | **370 KB** (was 658) | 180 KB, llama 94 KB (was 368) |
+| `/waves?start=1` | 45 (was 43) | 2.2 s simulated / **238 ms observed** (live was 1.0 s simulated / 245 ms observed) | **4.0 s** (was 4.8 s) | 51 s (was 53 s; 60fps game loop — expected, do not "fix") | 2841 KB full session (was 2903) | **1.56 MB** (three.js 147 KB br, no eat/lucha/Abuela yet), playable in ~2.4 s unthrottled, gated by the girl atlas 614 KB |
+| `/chancla-strike?start=1` | **100** (was 94) | 1.3 s | 1.3 s (was 1.4 s) | 28 | 595 KB (was 525; gold+burst preloads over the full session) | **257 KB**, Mercado/Catacombs not yet loaded |
+| `/slots?start=1` | **99** (was 72) | 1.2 s | 1.2 s (was 0.9 s) | **106** (was 2386) | 636 KB (was 593) | 197–454 KB, llama_hd 58 KB |
+
+The homepage LCP is now **good** (<2.5 s) and is the 840w title (38 KB) instead of the old 515 KB file. Waves Lighthouse TBT/TTI will stay high because the game loop is running; observed FCP on waves is the same as live (~240 ms). Cache headers: HTML `public, max-age=0, must-revalidate`; art, fonts, and hashed JS `public, max-age=31536000, immutable`.
+
+### What was slow (Lighthouse mobile, Slow 4G, live v1.1.10, before this release)
+| Route | Perf | FCP | LCP | TBT | Transfer | Notes |
+|---|---:|---:|---:|---:|---:|---|
+| `/` | 74 | 951 | **6012** | 214 | 883 KB | LCP is `#ttl` (`lander-title.webp` 515 KB, displayed ~306×66). `fetchpriority` was on the background, not the title. Title stayed `visibility:hidden` until JS `place()`. |
+| `/choose` | 97 | — | 961 | — | 658 KB | `llama_choose.webp` 368 KB. |
+| `/waves?start=1` | 43 | 911 | 4716 | 45335 | 2903 KB | TBT/TTI are inflated by the 60fps game loop — do **not** "fix" this by delaying start. `newGame` waited on every texture, including eat sheets, the luchador atlas, and Abuela (first needed on wave 3 / first snack / between waves). HUD used the full 188 KB concha for a 52×52 button. |
+| `/chancla-strike?start=1` | 94 | — | 1362 | — | 525 KB | Cemetery is level 0, but Mercado and Catacombs backgrounds also loaded immediately. |
+| `/slots?start=1` | 72 | — | 872 | 2386 | 593 KB | `llama_hd.webp` was heavier than it needed to be. |
+
+No videos on the site. three.js was already minified and code-split (589 KB raw / 147 KB brotli, only on `/waves`). Sounds are Web Audio (no audio files). GA `gtag` (~180 KB) was left in place.
+
+### Do not
+- Do not add a loading screen or delay start.
+- Do not "fix" waves TBT by pausing the loop or delaying `newGame`.
+- Do not recompress the character atlases, eat sheets, `head_llama`, gold chancla, or burst — those failed visual QA or were already tight.
+- Do not delete unused leftovers in `public/` (e.g. large lander-mobile-1500, `snack-elote.webp`); they are not requested.
 
 ## What v1.1.10 shipped (2026-11-11)
 Playtested on `feat/chancla-waves` (`126499c` and the work leading to it) and now on production.
@@ -39,7 +84,7 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 - Other lanes are not blocked.
 - It is eaten in bites (~0.38s each, `sfxSquish`). When the pieces are gone the row walks again.
 
-## What v1.1.7 already had (still true in v1.1.10; do not redo)
+## What v1.1.7 already had (still true in v1.1.11; do not redo)
 - Homepage: lowered logo, tagline centered under the logo, gold chancla floating in the middle, PLAY NOW under it going to `/choose`. No trio. No loading screen. PLAY NOW must not flash in the header. **Do not put a promo video on `/`.** Gabe is cutting the X video in another app. `vite.config.ts` `/` must stay `home.html`.
 - Día de los Muertos title is a card: game name, one rotating chanclazo quote (`#titleQuote`), TAP TO PLAY. No character lineup on that card.
 - Waves are hard from wave 1 (`waveSpec` in `waves.ts`).
