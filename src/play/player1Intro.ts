@@ -187,8 +187,11 @@ function runIntro(game: IntroGame, opts?: { seekable?: boolean; line?: number })
   if (howTo) howTo.classList.add('gone');
 
   const reduce = reduced();
-  let start = performance.now();
-  let skipFrom: number | null = null; // ms into a shortened exit
+  // Cap frame dt so a long first rAF or a WebGL stall cannot jump the walk-in to its end.
+  let last: number | null = null;
+  let elapsed = 0;
+  let skipElapsed = 0;
+  let skipping = false;
   let skipStartX = 0;
   let skipStartBob = 0;
   let skipStartBubble = 1;
@@ -197,6 +200,7 @@ function runIntro(game: IntroGame, opts?: { seekable?: boolean; line?: number })
   let frozen: number | null = opts?.seekable ? 0 : null;
 
   const SKIP_OUT = 280;
+  const MAX_DT = 50;
 
   function finish(): void {
     if (finished) return;
@@ -210,11 +214,14 @@ function runIntro(game: IntroGame, opts?: { seekable?: boolean; line?: number })
 
   function frame(now: number): void {
     if (finished) return;
+    const dt = last === null ? 0 : Math.min(MAX_DT, Math.max(0, now - last));
+    last = now;
     let ppose;
     if (frozen !== null) {
       ppose = poseAt(frozen, reduce);
-    } else if (skipFrom !== null) {
-      const t = Math.min(1, (now - skipFrom) / SKIP_OUT);
+    } else if (skipping) {
+      skipElapsed += dt;
+      const t = Math.min(1, skipElapsed / SKIP_OUT);
       const e = easeInCubic(t);
       ppose = {
         x: skipStartX + (-110 - skipStartX) * e,
@@ -224,7 +231,8 @@ function runIntro(game: IntroGame, opts?: { seekable?: boolean; line?: number })
         done: t >= 1,
       };
     } else {
-      ppose = poseAt(now - start, reduce);
+      elapsed += dt;
+      ppose = poseAt(elapsed, reduce);
     }
     applyPose(wrap, bubble, ppose);
     if (ppose.done && frozen === null) { finish(); return; }
@@ -232,15 +240,15 @@ function runIntro(game: IntroGame, opts?: { seekable?: boolean; line?: number })
   }
 
   function beginSkip(e?: Event): void {
-    if (finished || skipFrom !== null || frozen !== null) return;
+    if (finished || skipping || frozen !== null) return;
     e?.preventDefault();
     e?.stopPropagation();
-    const now = performance.now();
-    const cur = poseAt(now - start, reduce);
+    const cur = poseAt(elapsed, reduce);
     skipStartX = cur.x;
     skipStartBob = cur.y;
     skipStartBubble = cur.bubble;
-    skipFrom = now;
+    skipping = true;
+    skipElapsed = 0;
   }
 
   function onSkip(e: PointerEvent): void {

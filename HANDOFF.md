@@ -21,7 +21,7 @@ Gabe asked to remove the flying-in chancla and burst, and instead have Abuela co
   4. "Ay, I brought the good one."
   5. "One chancla is all I need, mijo."
 - No voice and no intro sound effects. Only the game's existing music plays at the start.
-- The game still starts instantly. `playPlayer1Intro` still calls `onDone` immediately. `?start=1` and `?nointro=1` still skip the intro. Test hook: `window.__p1intro.play(game)`, `.seek(u)`, `.skip()`, `.line()`, `.lines()`.
+- The game still starts instantly. `playPlayer1Intro` still calls `onDone` immediately. `?start=1` and `?nointro=1` still skip the intro. Test hook: `window.__p1intro.play(game)`, `.seek(u)`, `.skip()`, `.line()`, `.lines()`. The walk-in clock caps each animation frame at 50 ms so a WebGL hitch (common on Día de los Muertos in headless Chrome) cannot jump her to the end and skip the intro.
 - Load time: the 55 KB intro sprite is preloaded on the three game pages in place of `/lp/chancla_gold.webp` + `/lp/chancla_burst.webp` (~69 KB). Gold still loads from JS where the relic needs it. The 119 KB between-waves chibi is still deferred until she speaks between waves.
 - Stills of the intro: `/workspace/chz-intro/`.
 
