@@ -116,6 +116,8 @@ const CSS = `
   #czabuela .bubble{max-width:280px}
   #czabuela .bubble p{font-size:20px}
 }
+/* newGame un-hides the how-to hint; keep it off while she is saying her line. */
+#stage:has(#czabuela) #hint{opacity:0!important;visibility:hidden}
 `;
 
 function injectCss(): void {
