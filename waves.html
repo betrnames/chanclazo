@@ -74,10 +74,15 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
   #snack{bottom:94px;width:60px;height:60px}
   #bomb{width:60px;height:60px}
 }
-/* Abuela between-wave cameo (the ONLY place Abuela appears): slides in from the left, says one line, slides out. Tap her to skip. */
+/* Abuela between-wave cameo: slides in from the left, says one line, slides out. Tap her to skip.
+   The start-of-game walk-in is a separate intro on Waves, Strike, and Slots.
+   Hide the img until its src is set (deferred until she first speaks). Safari otherwise
+   paints a gray empty-image frame at the HTML width (507px), which overflows the
+   translateX(-110%) park and shows as a thin rectangle on the left of the plaza. */
 #abuela{position:absolute;left:0;bottom:calc(env(safe-area-inset-bottom) + 25%);z-index:9;display:flex;align-items:flex-end;pointer-events:none;transform:translateX(-110%);transition:transform .45s cubic-bezier(.5,0,.75,0);max-width:96%}
 #abuela.in{transform:translateX(0);transition:transform .45s cubic-bezier(.2,1.35,.45,1);pointer-events:auto;cursor:pointer}
-#abuela img{height:clamp(150px,30vh,260px);width:auto;flex:none;margin-left:-6px;filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))}
+#abuela img{height:clamp(150px,30vh,260px);width:auto;aspect-ratio:507/1002;flex:none;margin-left:-6px;filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))}
+#abuela img:not([src]){display:none}
 #abuela.in img{animation:abob .9s ease-in-out infinite alternate}
 @keyframes abob{from{transform:rotate(-2deg)}to{transform:rotate(2deg) translateY(-4px)}}
 #abuela .bubble{position:relative;margin:0 0 clamp(90px,17vh,170px) 2px;max-width:min(240px,58vw);background:#fff8ec;color:#3b1a5c;border:4px solid #3b1a5c;border-radius:22px;padding:10px 14px 8px;box-shadow:0 6px 0 #3b1a5c,0 0 22px rgba(255,190,60,.45);transform-origin:0 100%;opacity:0;transform:scale(.6);transition:opacity .2s,transform .25s cubic-bezier(.2,1.6,.4,1)}
