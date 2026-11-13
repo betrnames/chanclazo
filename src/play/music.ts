@@ -105,3 +105,12 @@ export function initLanderMusic(btn: HTMLButtonElement) {
   document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) { clearInterval(timer); ctx.suspend(); } else if (started && musicOn()) { ctx.resume(); nextT = ctx.currentTime + 0.1; clearInterval(timer); timer = window.setInterval(schedule, 100); } });
   (window as any).__audio = { get music() { return musicOn(); }, get playing() { return started && ctx?.state === 'running'; } };
 }
+
+// Chrome on iPhone still uses WebKit. Fast taps on the chancla count as a double-tap zoom.
+// Do not block pinch: if the page does zoom, the player has to be able to pinch back out.
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = Date.now();
+  if (now - lastTouchEnd < 300) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });

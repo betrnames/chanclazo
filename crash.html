@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <meta name="theme-color" content="#14061f" />
 <meta name="robots" content="noindex" />
 <title>Chancla Crash · Chanclazo</title>
@@ -9,10 +9,10 @@
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 @font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.woff2) format("woff2"),url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
-html,body{margin:0;height:100%;background:#0b0312 url(/play/night_bg.webp) center/cover;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;background:#0b0312 url(/play/night_bg.webp) center/cover;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backdrop-filter:blur(6px)}
-#stage{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100vh * 3 / 4));overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.8);touch-action:none}
-#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+#stage{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100vh * 3 / 4));overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.8);touch-action:manipulation}
+#stage canvas{display:block;width:100%;height:100%;touch-action:manipulation}
 .hidden{display:none!important}
 /* HUD */
 .hud{position:absolute;left:0;right:0;top:env(safe-area-inset-top);display:flex;align-items:center;gap:8px;padding:10px;z-index:5;pointer-events:none}
@@ -26,7 +26,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.82);backd
 .coins{display:flex;align-items:center;gap:5px;background:rgba(36,9,47,.9);border:3px solid #3b1a5c;border-radius:999px;padding:4px 10px 4px 5px;font:400 18px LilitaOne,system-ui;color:#ffd23f}
 .coin{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c0,#ffd23f 45%,#d48a00);border:2px solid #7a4a00}
 #mute{pointer-events:auto;background:rgba(36,9,47,.9);border:3px solid #3b1a5c;border-radius:12px;width:40px;height:40px;font-size:16px;cursor:pointer;color:#fff}
-#fire{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 44px);z-index:6;width:104px;height:104px;border-radius:50%;padding:0;border:5px solid #3b1a5c;background:radial-gradient(circle at 50% 36%,#7a35ad,#46196b 58%,#24092f);box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f;cursor:pointer;touch-action:none;transition:filter .25s,transform .09s,box-shadow .09s;display:flex;align-items:center;justify-content:center}
+#fire{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 44px);z-index:6;width:104px;height:104px;border-radius:50%;padding:0;border:5px solid #3b1a5c;background:radial-gradient(circle at 50% 36%,#7a35ad,#46196b 58%,#24092f);box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f;cursor:pointer;touch-action:manipulation;transition:filter .25s,transform .09s,box-shadow .09s;display:flex;align-items:center;justify-content:center}
 #fire img{width:88px;height:auto;pointer-events:none;filter:drop-shadow(0 4px 2px rgba(0,0,0,.55));transform:rotate(-24deg) translateY(-3px);transition:transform .2s cubic-bezier(.2,1.6,.4,1),opacity .2s}
 #fire .cnt{position:absolute;right:-8px;top:-8px;min-width:36px;height:36px;padding:0 6px;border-radius:18px;background:#ff3d9a;border:3px solid #3b1a5c;box-shadow:0 3px 0 #3b1a5c;display:flex;align-items:center;justify-content:center;font:400 21px LilitaOne,system-ui;color:#fff;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;pointer-events:none}
 #fire .tap{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);font:400 13px LilitaOne,system-ui;letter-spacing:.08em;color:#ffd23f;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none}

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <meta name="theme-color" content="#14061f" />
 <meta name="robots" content="noindex" />
 <title>%%WAVES_NAME%% · Chanclazo</title>
@@ -14,10 +14,10 @@
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 @font-face{font-family:LilitaOne;src:url(/fonts/LilitaOne-Regular.woff2) format("woff2"),url(/fonts/LilitaOne-Regular.ttf) format("truetype");font-display:swap}
-html,body{margin:0;height:100%;background:#0b0312 url(/play/night_bg.webp) center/cover;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;background:#0b0312 url(/play/night_bg.webp) center/cover;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.88)}
-#stage{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100vh * 3 / 4));overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.8);touch-action:none}
-#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+#stage{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:min(100vw,calc(100vh * 3 / 4));overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,.8);touch-action:manipulation}
+#stage canvas{display:block;width:100%;height:100%;touch-action:manipulation}
 .hidden{display:none!important}
 .hud{position:absolute;left:0;right:0;top:0;padding-top:calc(env(safe-area-inset-top) + 10px)!important;background:linear-gradient(180deg,rgba(10,3,15,.75),rgba(10,3,15,.45) 70%,rgba(10,3,15,0));padding-bottom:40px!important;display:flex;align-items:center;gap:8px;padding:10px;z-index:5;pointer-events:none}
 .hbtn{pointer-events:auto;width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff2a8,#ffd23f 50%,#f4a000);border:3px solid #3b1a5c;border-radius:14px;box-shadow:0 4px 0 #3b1a5c;color:#3b1a5c;font:900 18px system-ui;cursor:pointer;padding:0}
@@ -36,8 +36,8 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.88)}
 #hearts i.lost{animation:hlost .5s}
 @keyframes hlost{30%{transform:scale(1.6) rotate(-14deg)}100%{transform:scale(.8)}}
 #powers{position:absolute;left:12px;bottom:calc(env(safe-area-inset-bottom) + 20px);z-index:6;width:70px;height:268px;pointer-events:none}
-#bomb{position:absolute;left:0;bottom:22px;top:auto;width:70px;height:70px;border-radius:50%;padding:0;margin:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#ffcf6a,#ff6a1a 55%,#a8101e);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f;cursor:pointer;touch-action:none;-webkit-tap-highlight-color:transparent;filter:none;transform:none;animation:none;pointer-events:auto}
-#snack{position:absolute;left:0;bottom:108px;width:70px;height:70px;border-radius:50%;padding:0;margin:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#fff6d4,#ff8c1a 70%,#c45a00);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f;cursor:pointer;touch-action:none;pointer-events:auto}
+#bomb{position:absolute;left:0;bottom:22px;top:auto;width:70px;height:70px;border-radius:50%;padding:0;margin:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#ffcf6a,#ff6a1a 55%,#a8101e);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;filter:none;transform:none;animation:none;pointer-events:auto}
+#snack{position:absolute;left:0;bottom:108px;width:70px;height:70px;border-radius:50%;padding:0;margin:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#fff6d4,#ff8c1a 70%,#c45a00);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f;cursor:pointer;touch-action:manipulation;pointer-events:auto}
 #snack img{width:52px;height:52px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 2px 1px rgba(0,0,0,.35))}
 #snack .bn{position:absolute;right:-6px;top:-6px;min-width:24px;height:24px;border-radius:12px;background:#3b1a5c;border:2px solid #ffd23f;color:#fff;font:400 14px/20px LilitaOne,system-ui;text-align:center;pointer-events:none}
 #snack .use{position:absolute;left:50%;top:-16px;bottom:auto;transform:translateX(-50%);font:400 12px LilitaOne,system-ui;letter-spacing:.08em;color:#ffd23f;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none}
@@ -56,7 +56,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.88)}
 @keyframes bglow{from{box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f,0 0 10px rgba(255,120,40,.5)}to{box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f,0 0 22px rgba(255,170,60,.9)}}
 #bomb.ready{animation:bglow 1s ease-in-out infinite alternate}
 
-#sticky{position:absolute;left:0;bottom:194px;width:70px;height:70px;border-radius:50%;padding:0;margin:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#fffce6,#18c8c0 52%,#ff8c1a 92%);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f;cursor:pointer;touch-action:none;pointer-events:auto}
+#sticky{position:absolute;left:0;bottom:194px;width:70px;height:70px;border-radius:50%;padding:0;margin:0;border:4px solid #3b1a5c;background:radial-gradient(circle at 50% 38%,#fffce6,#18c8c0 52%,#ff8c1a 92%);box-shadow:0 6px 0 #1a0826,inset 0 0 0 3px #ffd23f;cursor:pointer;touch-action:manipulation;pointer-events:auto}
 #sticky img{width:50px;height:auto;pointer-events:none;transform:rotate(-18deg);filter:drop-shadow(0 3px 2px rgba(0,0,0,.5))}
 #sticky .bn{position:absolute;right:-6px;top:-6px;min-width:24px;height:24px;border-radius:12px;background:#3b1a5c;border:2px solid #ffd23f;color:#fff;font:400 14px/20px LilitaOne,system-ui;text-align:center;pointer-events:none}
 #sticky .use{position:absolute;left:50%;top:-16px;bottom:auto;transform:translateX(-50%);font:400 12px LilitaOne,system-ui;letter-spacing:.08em;color:#ffd23f;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none}
@@ -95,7 +95,7 @@ body::before{content:"";position:fixed;inset:0;background:rgba(6,2,12,.88)}
 #boomflash{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 45%,rgba(255,240,190,.85),rgba(255,140,40,.35) 45%,rgba(255,80,20,0) 75%)}
 #boomflash.on{animation:boomf .5s ease-out}@keyframes boomf{0%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){#bomb.ready{animation:none}#boomflash.on{animation:none}}
-#fire{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 40px);z-index:6;width:100px;height:100px;border-radius:50%;padding:0;border:5px solid #3b1a5c;background:radial-gradient(circle at 50% 36%,#7a35ad,#46196b 58%,#24092f);box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f;cursor:pointer;touch-action:none;transition:filter .2s,transform .09s,box-shadow .09s;display:flex;align-items:center;justify-content:center}
+#fire{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 40px);z-index:6;width:100px;height:100px;border-radius:50%;padding:0;border:5px solid #3b1a5c;background:radial-gradient(circle at 50% 36%,#7a35ad,#46196b 58%,#24092f);box-shadow:0 7px 0 #1a0826,inset 0 0 0 4px #ffd23f;cursor:pointer;touch-action:manipulation;transition:filter .2s,transform .09s,box-shadow .09s;display:flex;align-items:center;justify-content:center}
 #fire img{width:84px;height:auto;pointer-events:none;filter:drop-shadow(0 4px 2px rgba(0,0,0,.55));transform:rotate(-24deg) translateY(-3px)}
 #fire .tap{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);font:400 13px LilitaOne,system-ui;letter-spacing:.08em;color:#ffd23f;-webkit-text-stroke:3px #3b1a5c;paint-order:stroke fill;white-space:nowrap;pointer-events:none}
 #fire.ready{animation:fglow 1.25s ease-in-out infinite}
