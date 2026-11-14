@@ -11,14 +11,14 @@ On top of the v1.1.11 deferral (which still downloaded the boy and girl walk she
 - At 10 real seconds after the first `newGame` (`performance.now() + 10000`), those larger sheets start downloading. Later waves mix in boy, girl, and jefe only after the boy and girl images have arrived. The luchador still waits for his own sheet. Wave 1 stays little skeletons even after the sheets land.
 - No loading screen. The game still starts as soon as the small skeleton is ready.
 - Combo callouts are short only: `COMBO x2`, `COMBO x3`, and so on. The long `¡CHANCLAZO!` pop is gone (Waves and the parked Crash).
-- **Shipped live as v1.1.16** on 13 Nov 2026. Gabe said "Push live." The throw dial is gone. Chancla Strike throw types are a vertical stack of round buttons in the lower left: gold **C** Chancla at the bottom, brown **B** Boot, cyan **3** Triple on top. The picked one has the gold ring. They appear only after that throw unlocks. Triple still splits on a tap in the air.
+- **Shipped live as v1.1.17** on 13 Nov 2026. Gabe said "Push live." The round letter buttons are gone. Chancla Strike throw types are the chancla itself, in gold, brown, and cyan, sitting on a half-circle in the lower left. No button background. The selected throw is the biggest. Triple still splits on a tap in the air.
 
 ## Current state (2026-11-12, night PT)
 - Production: **`main` → https://chanclazo.com**. Active follow-up branch can stay **`feat/chancla-waves`**.
-- **Live right now is v1.1.16** on `main`. Gabe said "Push live" on 13 Nov 2026. Previous production was **v1.1.15**.
+- **Live right now is v1.1.17** on `main`. Gabe said "Push live" on 13 Nov 2026. Previous production was **v1.1.16**.
 - This release: wave 1 is only the little skeletons, larger sheets wait 10 seconds, combo text is `COMBO xN`, and the phone smoothness pass is included. Abuela's start intro and the Safari outline fix from v1.1.12 stay.
 - Preview: https://feat-chancla-waves.chanclazo.pages.dev. Crash is parked but still at `/crash`.
-- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7 through v1.1.16.
+- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7 through v1.1.17.
 
 ## Abuela start intro (shipped in v1.1.12, 2026-11-12)
 Gabe asked to remove the flying-in chancla and burst, and instead have Abuela come out from the side with a smart chancla quote so it looks like it is part of the scene. "No audio just music playing in start."

@@ -149,21 +149,29 @@ function drawShotBar() {
   const bar = $('shots'); const av = available(); bar.innerHTML = '';
   bar.classList.toggle('hidden', av.length < 2);
   if (av.length < 2) return;
-  // Stack grows up from the lower left. Chancla sits at the bottom, newest throw on top.
-  for (let i = av.length - 1; i >= 0; i--) {
-    const k = av[i];
+  const sel = Math.max(0, av.indexOf(shotType));
+  av.forEach((k, i) => {
+    const t = av.length === 1 ? 0.5 : i / (av.length - 1);
+    // Half circle, flat side on the left, curve opening to the right.
+    const ang = Math.PI / 2 - t * Math.PI;
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'orb ' + k + (k === shotType ? ' on' : '');
-    b.textContent = SHOT_INFO[k].mark;
+    const steps = Math.min(Math.abs(i - sel), av.length - Math.abs(i - sel));
+    b.className = 'arc' + (k === shotType ? ' on' : '');
+    b.style.left = `${46 + Math.cos(ang) * 54}px`;
+    b.style.top = `${78 + Math.sin(ang) * 58}px`;
+    b.style.width = b.style.height = (steps === 0 ? 58 : steps === 1 ? 40 : 32) + 'px';
+    b.style.transform = `translate(-50%,-50%) rotate(${(t - 0.5) * -42}deg)`;
     b.setAttribute('aria-label', SHOT_INFO[k].short);
-    b.onpointerdown = (e) => {
-      e.stopPropagation(); e.preventDefault();
-      shotType = k;
-      bar.querySelectorAll('button').forEach((el) => el.classList.toggle('on', el === b));
-    };
+    const img = document.createElement('img');
+    img.alt = '';
+    img.draggable = false;
+    const tint = k === 'boot' ? TINT.boot : k === 'triple' ? TINT.triple : undefined;
+    img.src = tint ? tint.toDataURL('image/webp') : '/play/t_chancla.webp';
+    b.appendChild(img);
+    b.onpointerdown = (e) => { e.stopPropagation(); e.preventDefault(); shotType = k; drawShotBar(); };
     bar.appendChild(b);
-  }
+  });
 }
 
 function build(n: number) {
