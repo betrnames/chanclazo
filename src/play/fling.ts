@@ -88,10 +88,10 @@ class Lv { // builder: every piece is placed exactly resting on the one below (n
   stack(x: number, b: number, ks: [BKind, number?, number?][]) { let y = b; for (const [k, w, h] of ks) y = this.add(k, x, y, w, h); return y; }
 }
 type ShotType = 'chancla' | 'boot' | 'triple';
-const SHOT_INFO: Record<ShotType, { label: string; r: number; density: number; from: number }> = {
-  chancla: { label: 'Chancla', r: 18, density: 0.006, from: 0 },
-  boot: { label: 'Heavy boot', r: 22, density: 0.016, from: 3 },
-  triple: { label: 'Triple (tap to split)', r: 15, density: 0.005, from: 6 },
+const SHOT_INFO: Record<ShotType, { label: string; short: string; mark: string; r: number; density: number; from: number }> = {
+  chancla: { label: 'Chancla', short: 'Chancla', mark: 'C', r: 18, density: 0.006, from: 0 },
+  boot: { label: 'Boot', short: 'Boot', mark: 'B', r: 22, density: 0.016, from: 3 },
+  triple: { label: 'Triple', short: 'Triple', mark: '3', r: 15, density: 0.005, from: 6 },
 };
 const AREAS = [
   { name: 'Cemetery', bg: 'bg', tint: ['rgba(10,4,30,.72)', 'rgba(25,8,40,.45)'], need: 0 },
@@ -148,7 +148,65 @@ function available(): ShotType[] { return (Object.keys(SHOT_INFO) as ShotType[])
 function drawShotBar() {
   const bar = $('shots'); const av = available(); bar.innerHTML = '';
   bar.classList.toggle('hidden', av.length < 2);
-  for (const k of av) { const b = document.createElement('button'); b.type = 'button'; b.className = k === shotType ? 'on' : ''; b.textContent = SHOT_INFO[k].label; b.onclick = (e) => { e.stopPropagation(); shotType = k; drawShotBar(); }; bar.appendChild(b); }
+  if (av.length < 2) return;
+  const dial = document.createElement('div');
+  dial.className = 'dial';
+  dial.setAttribute('role', 'radiogroup');
+  dial.setAttribute('aria-label', 'Throw');
+  const face = document.createElement('div');
+  const cap = document.createElement('div');
+  cap.className = 'cap';
+  const ticks: HTMLButtonElement[] = [];
+  const paint = () => {
+    const info = SHOT_INFO[shotType];
+    face.className = 'face ' + shotType;
+    face.textContent = info.mark;
+    cap.textContent = info.short;
+    ticks.forEach((b) => b.classList.toggle('on', b.dataset.k === shotType));
+  };
+  av.forEach((k, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tick'; b.dataset.k = k;
+    b.setAttribute('aria-label', SHOT_INFO[k].short);
+    const ang = Math.PI * 1.15 + (av.length === 1 ? 0 : (i / (av.length - 1)) * Math.PI * 0.7);
+    b.style.left = `${36 + Math.cos(ang) * 28}px`;
+    b.style.top = `${36 + Math.sin(ang) * 28}px`;
+    b.onpointerdown = (e) => { e.stopPropagation(); e.preventDefault(); shotType = k; paint(); };
+    dial.appendChild(b); ticks.push(b);
+  });
+  dial.appendChild(face);
+  let sx = 0, sy = 0, moved = false, dragging = false;
+  const nearest = (x: number, y: number): ShotType => {
+    const rect = dial.getBoundingClientRect();
+    const ang = Math.atan2(y - (rect.top + rect.height / 2), x - (rect.left + rect.width / 2));
+    let best = av[0], bestD = 99;
+    av.forEach((k, i) => {
+      const a = Math.PI * 1.15 + (i / Math.max(1, av.length - 1)) * Math.PI * 0.7;
+      let d = Math.abs(ang - a); if (d > Math.PI) d = Math.PI * 2 - d;
+      if (d < bestD) { bestD = d; best = k; }
+    });
+    return best;
+  };
+  dial.addEventListener('pointerdown', (e) => {
+    if ((e.target as HTMLElement).classList.contains('tick')) return;
+    dragging = true; moved = false; sx = e.clientX; sy = e.clientY;
+    dial.setPointerCapture(e.pointerId);
+  });
+  dial.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    if (Math.hypot(e.clientX - sx, e.clientY - sy) > 14) moved = true;
+    if (!moved) return;
+    const k = nearest(e.clientX, e.clientY);
+    if (k !== shotType) { shotType = k; paint(); }
+  });
+  dial.addEventListener('pointerup', (e) => {
+    if (!dragging) return; dragging = false;
+    if (!moved) { const i = av.indexOf(shotType); shotType = av[(i + 1) % av.length]; paint(); }
+    e.stopPropagation();
+  });
+  dial.addEventListener('pointercancel', () => { dragging = false; });
+  paint();
+  bar.appendChild(dial); bar.appendChild(cap);
 }
 
 function build(n: number) {
