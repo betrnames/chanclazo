@@ -32,6 +32,7 @@ function cleanGameUrls(): Plugin {
     "/match": "/match.html",
     "/slots": "/slots.html",
     "/lore": "/lore.html",
+    "/privacy": "/privacy.html",
     "/strike3d": "/strike3d.html",
     "/fling": "/chancla-strike.html",
   };

@@ -23,6 +23,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/crash.html': 'Chancla Crash',
   '/lore': 'Lore',
   '/lore.html': 'Lore',
+  '/privacy': 'Privacy',
+  '/privacy.html': 'Privacy',
 };
 
 

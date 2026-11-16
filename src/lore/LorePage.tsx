@@ -41,11 +41,11 @@ export default function LorePage() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#110d07', color: '#fff', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: '#04020c', color: '#fff', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Static Chancla Strike night-cemetery background (non-scrolling layer; no parallax, no background-attachment) */}
-      <style>{`.lore-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:url(/lp/final/bg-16x9.webp) center/cover no-repeat}
-@media (max-aspect-ratio:1/1){.lore-bg{background-image:url(/lp/final/bg-9x16.webp)}}
+      {/* Same plaza art as the homepage, fixed behind the article. */}
+      <style>{`.lore-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:#04020c url(/lp/v2/lander-desktop-1280.webp) center/cover no-repeat}
+@media (max-aspect-ratio:1/1){.lore-bg{background-image:url(/lp/v2/lander-mobile-720.webp)}}
 .lore-dim{display:none}
 .lore-box{background:rgba(10,5,20,.75);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-radius:6px;border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 40px rgba(0,0,0,.5)}
 @media (max-width:600px){.lore-box{margin:16px 12px 40px!important;width:auto!important}}
@@ -64,9 +64,14 @@ export default function LorePage() {
           <a href="/" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.2em', textDecoration: 'none' }}>
             chanclazo.com
           </a>
-          <a href="/" aria-label="Play Chanclazo games" style={{ fontSize: '11px', fontWeight: 700, color: '#F97316', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-            Play the games
-          </a>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <a href="/privacy" style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              Privacy
+            </a>
+            <a href="/" aria-label="Play Chanclazo games" style={{ fontSize: '11px', fontWeight: 700, color: '#F97316', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+              Play the games
+            </a>
+          </span>
         </div>
       </nav>
 

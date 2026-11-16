@@ -23,6 +23,7 @@ const TRAIL_CHANCE = PREFER_LOW ? 0.18 : 0.5;
 const params = new URLSearchParams(location.search);
 const LANES = [-2.25, -0.75, 0.75, 2.25];
 const SPAWN_Z = -9.5, LINE_Z = 2.0, HEARTS = 5;
+const FIELD_CAP = PREFER_LOW ? 12 : 16; // every wave, not just the late ones: past this the lanes overlap and the walk strobes
 const BEST_KEY = 'cz_waves_best_v1';
 const LAUNCH = new THREE.Vector3();
 
@@ -217,10 +218,10 @@ interface Kid {
   sheet: Sheet; map: THREE.Texture; edgeMat: THREE.Material; anim: AnimName; animT: number; frameKey: number;
   x: number; z: number; lane: number; speed: number; hp: number; maxHp: number; h: number; w: number; golden: boolean;
   phase: number; flashT: number; stagger: number; ko: number; koSpin: number; koVy: number; koY: number; dead: boolean; wob: number; wobA: number; eat: number; eatAnim: number;
-  bite?: THREE.Sprite; eatBody?: THREE.Mesh; fallBody?: THREE.Sprite;
-  soulWind: number; soulThrew: boolean; soulCharge?: THREE.Sprite; stuck: number; wasStuck: boolean;
+  bite?: THREE.Sprite; eatBody?: THREE.Mesh; fallBody?: THREE.Sprite; llama?: THREE.Sprite; popped?: boolean;
+  soulWind: number; soulThrew: boolean; soulCharge?: THREE.Sprite; stuck: number; wasStuck: boolean; freeze: number;
 }
-interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean; lane?: number; fromSticky?: boolean }
+interface Shot { obj: THREE.Group; p: THREE.Vector3; v: THREE.Vector3; spent: number; spin: number; yaw: number; target?: Kid; born: number; bomb?: boolean; snack?: boolean; freeze?: boolean; pinata?: boolean; lane?: number; fromSticky?: boolean }
 interface Petal { s: THREE.Sprite; v: THREE.Vector3; life: number; max: number; spin: number }
 type State = 'title' | 'play' | 'between' | 'paused' | 'over';
 let state: State = 'title', prevState: State = 'play';
@@ -231,9 +232,11 @@ let best = (() => { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } 
 const kidGroup = new THREE.Group(); scene.add(kidGroup);
 const fxGroup = new THREE.Group(); scene.add(fxGroup);
 const fx = new FX(scene, 0), hitStop = new HitStop();
-let bombs = 0, snacks = 0, bossPending = false, boss: Kid | undefined;
+let bombs = 0, snacks = 0, freezes = 0, freezeUnlocked = false, pinatas = 0, pinataUnlocked = false, pinataUntil = 0, bossPending = false, boss: Kid | undefined;
 const BOMB_MAX = 3, BOMB_R = 2.4, BOMB_DMG = 4;
 const SNACK_MAX = 4;
+const FREEZE_MAX = 2, FREEZE_TIME = 3.6;
+const PINATA_MAX = 2, PINATA_R = 2.7;
 const snackTex = tex('/waves/snack-concha.webp?v=3');
 const CONCHA_BITS = 5;
 // Eating sheets: the boy uses Gabe's eat-boy.webp (8 cells, 168×278) as-is, no squash.
@@ -365,7 +368,7 @@ function spawnKid(kind: Kind, lane: number, speed: number, golden = false): Kid 
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(bodyW * 0.72, bodyW * 0.32), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.8 }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.02, 0.04); root.add(shadow);
   const k: Kid = { kind, root, body, flash, shadow, mat, flashMat, x: LANES[lane], z: SPAWN_Z, lane, speed, hp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, maxHp: kind === 'jefe' ? 3 : kind === 'lucha' ? bossHp(wave) : 1, h, w: bodyW, golden, variant, sheet: a, map, edgeMat, anim: 'walk', animT: 0, frameKey: -1,
-    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0, eatAnim: 0, soulWind: 0, soulThrew: false, stuck: 0, wasStuck: false };
+    phase: Math.random() * 6, flashT: 0, stagger: 0, ko: -1, koSpin: 0, koVy: 0, koY: 0, dead: false, wob: 0, wobA: wave >= 2 && Math.random() < 0.45 ? 0.4 + Math.random() * 0.3 : 0, eat: 0, eatAnim: 0, soulWind: 0, soulThrew: false, stuck: 0, wasStuck: false, freeze: 0 };
   if (kind === 'jefe') {
     k.pips = [];
     for (let i = 0; i < k.maxHp; i++) { const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: pipTex, depthWrite: false, fog: false })); p.scale.setScalar(0.3); p.position.set((i - (k.maxHp - 1) / 2) * 0.34, h + 0.16, 0.02); body.add(p); k.pips.push(p); }
@@ -436,6 +439,8 @@ function startHeavySheets(): void {
 }
 function spawnTick(dt: number): void {
   if (toSpawn <= 0) return;
+  const onField = kids.reduce((n, k) => n + (!k.dead && k.ko < 0 ? 1 : 0), 0);
+  if (onField >= FIELD_CAP) { spawnT = 0.25; return; }
   spawnT -= dt; if (spawnT > 0) return;
   const s = waveSpec(wave);
   spawnT = s.gap * (0.7 + Math.random() * 0.6);
@@ -468,10 +473,14 @@ function checkWaveDone(): void {
   const gotBomb = wave >= 2 && bombs < BOMB_MAX; if (gotBomb) giveBomb(1);
   const gotSnack = snacks < SNACK_MAX; if (gotSnack) giveSnack(1);
   const gotSticky = stickiesHeld < STICKY_MAX; if (gotSticky) giveSticky(1);
+  const gotFreeze = wave >= 6 && freezes < FREEZE_MAX; if (gotFreeze) giveFreeze(1);
+  const gotPinata = wave >= 6 && pinatas < PINATA_MAX; if (gotPinata) givePinata(1);
   const extras: string[] = [];
   if (gotBomb) extras.push('+1 bomb');
   if (gotSnack) extras.push('+1 pan dulce');
   if (gotSticky) extras.push('+1 sticky chancla');
+  if (gotFreeze) extras.push('+1 freeze chancla');
+  if (gotPinata) extras.push('+1 llama piñata');
   banner(`WAVE ${wave} CLEAR!`, `+${bonus} bonus` + (extras.length ? ' · ' + extras.join(' · ') : ''));
   sfx.sfxWin();
   track('wave_clear', { game: 'waves', wave, hearts });
@@ -624,6 +633,7 @@ const canvas = renderer.domElement;
 canvas.addEventListener('pointerdown', (e) => {
   if (state !== 'play' && state !== 'between') return;
   sfx.unlockCrashAudio();
+  if (catchHeart(e)) return;
   if (placingSticky) {
     e.preventDefault();
     placeSticky(laneFromEvent(e));
@@ -699,35 +709,36 @@ function paintGirlFall(k: Kid): void {
   k.fallBody.position.x = dir * ease * -0.22;
 }
 
-function hitKid(k: Kid, s?: Shot, dmg = 1): void {
-  k.hp = Math.max(0, k.hp - dmg); k.flashT = 1; shake = Math.min(0.5, shake + 0.18);
+function hitKid(k: Kid, s?: Shot, dmg = 1, quiet = false): void {
+  if (clock < pinataUntil && k.ko < 0) { dmg = 99; k.popped = true; }
+  k.hp = Math.max(0, k.hp - dmg); k.flashT = 1; if (!quiet) shake = Math.min(0.5, shake + 0.18);
   const pan = THREE.MathUtils.clamp(k.root.position.x / 3, -1, 1);
-  sfx.sfxThwack(0.9); sfx.buzz(20);
+  if (!quiet) { sfx.sfxThwack(0.9); sfx.buzz(20); }
   const at = kidCenter(k, new THREE.Vector3());
   if (s) { // chancla bounces off and spins away
     s.spent = 0; s.v.set(-s.v.x * 0.25 + (Math.random() - 0.5) * 2, 5.5, Math.abs(s.v.z) * 0.18 + 1.5);
-    fx.ring(at, 0.9); fx.sparks(at, PREFER_LOW ? 8 : 14); sfx.sfxImpact(0.7);
+    if (!quiet) { fx.ring(at, 0.9); fx.sparks(at, PREFER_LOW ? 8 : 14); sfx.sfxImpact(0.7); }
   }
   if (k.pips) k.pips.forEach((p, i) => { p.visible = i < k.hp; });
   if (k.hpFill) k.hpFill.scale.x = 1.56 * (k.hp / k.maxHp);
   if (k.hp > 0) {
     const big = k.kind === 'lucha'; playAnim(k, 'hit'); k.stagger = big ? 0.1 : 0.45; k.z -= big ? 0.1 : 0.55;
-    if (big && !k.rage && k.hp <= k.maxHp / 2) { k.rage = true; k.speed *= BOSS_RAGE; shake = 0.6; popText(k, '¡FURIA!', 'bad'); banner('¡EL LUCHADOR IS MAD!', 'He\'s charging · drop a BOMB 💣'); } sfx.sfxWood(0.7, pan);
-    popText(k, big ? (dmg > 1 ? `BOOM −${dmg}` : `${k.hp}/${k.maxHp}`) : 'OUCH!', 'bad'); return;
+    if (big && !k.rage && k.hp <= k.maxHp / 2) { k.rage = true; k.speed *= BOSS_RAGE; shake = 0.6; if (!quiet) { popText(k, '¡FURIA!', 'bad'); banner('¡EL LUCHADOR IS MAD!', 'He\'s charging · drop a BOMB 💣'); } } if (!quiet) sfx.sfxWood(0.7, pan);
+    if (!quiet) popText(k, big ? (dmg > 1 ? `BOOM −${dmg}` : `${k.hp}/${k.maxHp}`) : 'OUCH!', 'bad'); return;
   }
   // knocked out
   k.ko = 0; k.koSpin = k.kind === 'girl' ? -1 : 0; k.koVy = 2.6; k.koY = 0; playAnim(k, 'ko');
   k.mat.transparent = true; k.mat.alphaTest = 0.05; k.mat.depthWrite = false;
-  sfx.sfxRattle(pan);
+  if (!quiet) sfx.sfxRattle(pan);
   knocked++;
   combo = clock - comboT < 1.3 ? combo + 1 : 1; comboT = clock;
   const base = k.kind === 'lucha' ? 1500 : k.kind === 'jefe' ? 300 : k.kind === 'girl' ? 150 : k.kind === 'calaca' ? 130 : 100;
   const far = THREE.MathUtils.clamp((LINE_Z - k.z) / (LINE_Z - SPAWN_Z), 0, 1); // earlier knock-outs pay more
   const pts = Math.round((base + far * 50) * Math.min(combo, 5) / 10) * 10;
   score += pts; updateHud(true);
-  popText(k, `+${pts}`, combo >= 2 || k.kind === 'jefe' || k.kind === 'lucha' ? 'big' : '');
-  sfx.sfxPoint(Math.min(combo, 8));
-  if (combo >= 2) showCombo(combo);
+  if (!quiet) popText(k, `+${pts}`, combo >= 2 || k.kind === 'jefe' || k.kind === 'lucha' ? 'big' : '');
+  if (!quiet) sfx.sfxPoint(Math.min(combo, 8));
+  if (!quiet && combo >= 2) showCombo(combo);
   if (combo >= 4 && !stickyComboThisWave && stickiesHeld < STICKY_MAX) {
     stickyComboThisWave = true;
     giveSticky(1);
@@ -735,8 +746,12 @@ function hitKid(k: Kid, s?: Shot, dmg = 1): void {
   }
   if (k.golden) startRapid();
   poof(at, k.kind === 'lucha' ? 70 : k.kind === 'jefe' ? 46 : 30);
-  fx.sparks(at, PREFER_LOW ? 8 : 14, 0xffd36b, 4); fx.sparks(at, PREFER_LOW ? 5 : 8, 0xff8c1a, 3); sfx.sfxShimmer(k.kind === 'lucha' ? 1 : 0.6);
-  if (clock >= rapidUntil) hitStop.stop(k.kind === 'lucha' ? 160 : 40);
+  if (k.popped && !quiet) {
+    fx.sparks(at, 16, 0xff3d9a, 6, 4); fx.sparks(at, 12, 0xffd23f, 5, 3); fx.sparks(at, 8, 0x1ec8c8, 4, 3);
+    sfx.sfxPinata(pan);
+  }
+  if (!quiet) { fx.sparks(at, PREFER_LOW ? 8 : 14, 0xffd36b, 4); fx.sparks(at, PREFER_LOW ? 5 : 8, 0xff8c1a, 3); sfx.sfxShimmer(k.kind === 'lucha' ? 1 : 0.6); }
+  if (!quiet && clock >= rapidUntil) hitStop.stop(k.kind === 'lucha' ? 160 : 40);
   if (k.kind === 'lucha') { boss = undefined; shake = 1; fx.ring(at, 3.2); banner('¡LUCHADOR DOWN!', bombs < BOMB_MAX ? '+1 chancla BOMB 💣' : 'Bombs full'); if (bombs < BOMB_MAX) giveBomb(1); }
 }
 // ───────────────────────── chancla BOMB power-up ─────────────────────────
@@ -1054,6 +1069,135 @@ function tickConchas(dt: number): void {
   }
   tickCrumbs(dt);
 }
+// Llama piñata mine. Throw it and it sits on the cobbles. The first skull to walk over it pops it,
+// and the blast knocks out everything standing nearby. Hidden until wave 6 is cleared.
+const PINATA_H = 1.62, PINATA_ASPECT = 455 / 827;
+interface PinataMine { lane: number; z: number; spr: THREE.Sprite; arm: number }
+const mines: PinataMine[] = [];
+let llamaTex: THREE.Texture | undefined;
+function llamaMap(): THREE.Texture {
+  if (llamaTex) return llamaTex;
+  llamaTex = new THREE.Texture();
+  llamaTex.colorSpace = THREE.SRGBColorSpace;
+  llamaTex.anisotropy = PREFER_LOW ? 1 : 4;
+  texLoader.load('/play/slots/llama_hd.webp?v=3', (loaded) => {
+    if (!llamaTex) return;
+    llamaTex.image = loaded.image;
+    llamaTex.needsUpdate = true;
+    renderer.initTexture(llamaTex);
+  });
+  return llamaTex;
+}
+function paintMine(m: PinataMine): void {
+  const h = PINATA_H, w = h * PINATA_ASPECT;
+  m.spr.scale.set(w, h, 1);
+  m.spr.position.set(LANES[m.lane], 0.08 + h * 0.5, m.z);
+}
+function freeMine(m: PinataMine): void {
+  scene.remove(m.spr);
+  (m.spr.material as THREE.Material).dispose();
+}
+function placePinata(lane: number, z?: number): void {
+  const drop = THREE.MathUtils.clamp(z ?? Math.min(LINE_Z - 0.7, frontOf(lane) + 0.9), SPAWN_Z + 1.1, LINE_Z - 0.55);
+  const have = mines.find((m) => m.lane === lane);
+  if (have) { have.z = drop; have.arm = 0.2; paintMine(have); return; }
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: llamaMap(), transparent: true, depthWrite: false, depthTest: false, fog: false }));
+  spr.renderOrder = 3;
+  scene.add(spr);
+  const m: PinataMine = { lane, z: drop, spr, arm: 0.2 };
+  mines.push(m);
+  paintMine(m);
+}
+function popMine(m: PinataMine): void {
+  const at = new THREE.Vector3(LANES[m.lane], 0.55, m.z);
+  const idx = mines.indexOf(m);
+  if (idx >= 0) mines.splice(idx, 1);
+  freeMine(m);
+  for (const k of kids) {
+    if (!alive(k) || k.ko >= 0) continue;
+    if (Math.hypot(k.root.position.x - at.x, k.root.position.z - at.z) < PINATA_R + k.w * 0.2) hitKid(k, undefined, k.kind === 'lucha' || k.kind === 'jefe' ? BOMB_DMG : 99);
+  }
+  fx.ring(at, 3.4, 0xff3d9a); fx.ring(at.clone().setY(1.1), 2.2, 0xffd23f);
+  fx.sparks(at, 28, 0xff3d9a, 7, 5); fx.sparks(at, 22, 0xffd23f, 6, 4); fx.sparks(at, 16, 0x1ec8c8, 6, 4); fx.sparks(at, 12, 0x8a3cff, 5, 3);
+  banner('¡PIÑATA!', 'The llama popped');
+  sfx.sfxPinata(0); sfx.sfxBoom();
+  shake = 1;
+}
+function tickMines(dt: number): void {
+  for (let i = mines.length - 1; i >= 0; i--) {
+    const m = mines[i];
+    m.arm = Math.max(0, m.arm - dt);
+    const h = PINATA_H;
+    m.spr.position.set(LANES[m.lane], 0.08 + h * 0.5 + Math.sin(clock * 3 + m.lane) * 0.05, m.z);
+    if (m.arm > 0 || (state !== 'play' && state !== 'between')) continue;
+    const tripped = kids.some((k) => alive(k) && k.ko < 0 && Math.abs(k.x - LANES[m.lane]) < 0.72 && Math.abs(k.z - m.z) < 0.5);
+    if (tripped) popMine(m);
+  }
+}
+function beginPinataFrenzy(): void {
+  pinataUntil = clock + 5;
+  llamaMap();
+  banner('¡PIÑATAS!', 'Hit them — 5 seconds');
+  sfx.sfxPinata(0);
+}
+function ensureLlama(k: Kid): THREE.Sprite {
+  if (k.llama) return k.llama;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: llamaMap(), transparent: true, depthWrite: false, depthTest: false, fog: false }));
+  spr.renderOrder = 6;
+  k.root.add(spr);
+  k.llama = spr;
+  return spr;
+}
+function paintLlama(k: Kid, fade = 1): void {
+  const on = (clock < pinataUntil || k.popped === true) && fade > 0;
+  if (!on && !k.llama) return;
+  const spr = ensureLlama(k);
+  spr.visible = on;
+  if (!on) return;
+  k.body.visible = false;
+  if (k.eatBody) k.eatBody.visible = false;
+  if (k.bite) k.bite.visible = false;
+  if (k.fallBody) k.fallBody.visible = false;
+  const bounce = Math.abs(Math.sin(clock * 8 + k.phase));
+  const h = k.h * (0.85 + bounce * 0.22) * fade;
+  spr.scale.set(h * PINATA_ASPECT, h, 1);
+  spr.position.set(0, h * 0.5 + bounce * k.h * 0.18, 0.25);
+  (spr.material as THREE.SpriteMaterial).opacity = fade;
+}
+function usePinata(): boolean {
+  if (!pinataUnlocked || pinatas <= 0 || !(state === 'play' || state === 'between')) return false;
+  const k = threat(); if (!k) return false;
+  pinatas--; updatePinataBtn();
+  const lane = k.lane;
+  const to = new THREE.Vector3(LANES[lane], 0.4, Math.min(LINE_Z - 0.7, frontOf(lane) + 0.9));
+  const T = flightTime(to);
+  const v = velFor(to, T, new THREE.Vector3());
+  const obj = new THREE.Group();
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: llamaMap(), transparent: true, depthWrite: false, depthTest: false, fog: false }));
+  sp.scale.set(PINATA_H * PINATA_ASPECT, PINATA_H, 1);
+  sp.renderOrder = 5;
+  obj.add(sp); scene.add(obj); obj.position.copy(LAUNCH);
+  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), born: clock, pinata: true, lane });
+  sfx.sfxWhoosh();
+  track('pinata', { game: 'waves', wave });
+  return true;
+}
+const pinataBtn = $('pinata') as HTMLButtonElement;
+function givePinata(n: number): void {
+  pinataUnlocked = true; pinatas = Math.min(PINATA_MAX, pinatas + n); llamaMap(); sfx.sfxBombReady(); updatePinataBtn();
+}
+function updatePinataBtn(): void {
+  pinataBtn.classList.toggle('locked', !pinataUnlocked);
+  const img = pinataBtn.querySelector('img');
+  if (pinataUnlocked && img && !img.getAttribute('src')) img.src = '/play/slots/llama_hd.webp?v=3';
+  const on = pinataUnlocked && pinatas > 0;
+  pinataBtn.classList.toggle('ghost', pinataUnlocked && !on);
+  pinataBtn.classList.toggle('ready', on);
+  pinataBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
+  $('pinataN').textContent = String(pinatas);
+}
+pinataBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); if (pinatas > 0) pinataBtn.classList.add('press'); usePinata(); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) pinataBtn.addEventListener(ev, () => pinataBtn.classList.remove('press'));
 function useSnack(): void {
   if ((state !== 'play' && state !== 'between') || snacks <= 0) return;
   const k = threat(); if (!k) return;
@@ -1099,22 +1243,68 @@ function explode(at: THREE.Vector3): void {
   booms++;
   const c = at.clone().setY(0.5);
   for (const k of kids) {
-    if (!alive(k)) continue;
-    const d = Math.hypot(k.root.position.x - c.x, k.root.position.z - c.z);
-    if (d < BOMB_R + k.w * 0.3) hitKid(k, undefined, k.kind === 'lucha' || k.kind === 'jefe' ? BOMB_DMG : 99);
+    if (!alive(k) || k.ko >= 0) continue;
+    hitKid(k, undefined, 99, true);
   }
   for (const so of souls) {
-    if (so.dead) continue;
-    if (Math.hypot(so.p.x - c.x, so.p.z - c.z) < BOMB_R + 0.4) smashSoul(so, undefined);
+    if (!so.dead) smashSoul(so, undefined);
   }
-  fx.ring(c, 4.6, 0xffd36b); fx.ring(c.clone().setY(1.1), 3.0, 0xff7a2a);
+  fx.ring(c, 5.2, 0xffd36b); fx.ring(c.clone().setY(1.1), 3.4, 0xff7a2a);
   fx.sparks(c, 90, 0xffd36b, 9, 6); fx.sparks(c, 50, 0xff7a1a, 7, 5); fx.sparks(c, 20, 0xffffff, 5, 4);
   poof(c.clone().setY(1.2), 60);
   const f = $('boomflash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
   shake = 1.2; hitStop.stop(120); sfx.sfxBoom(); sfx.buzz([60, 40, 90]);
+  banner('¡BOMB!', 'Everyone down');
 }
 bombBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); bombBtn.classList.add('press'); useBomb(); });
 for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) bombBtn.addEventListener(ev, () => bombBtn.classList.remove('press'));
+
+// Freeze chancla: hidden until wave 6 is cleared, then one ice chancla per cleared wave (max 2).
+const freezeProto = (() => {
+  const g = new THREE.Group(); const m = makeChancla();
+  const sole = new THREE.MeshStandardMaterial({ color: 0xd8f4ff, metalness: 0.9, roughness: 0.15, emissive: 0x1a6ea8, emissiveIntensity: 0.85, envMap: goldEnv, envMapIntensity: 1.4 });
+  const strap = relicStrap.clone(); strap.color.setHex(0x7ec8ff); strap.emissive.setHex(0x123a66);
+  m.children.forEach((c, i) => { (c as THREE.Mesh).material = i === 0 ? sole : strap; }); m.scale.setScalar(1.25); g.add(m);
+  FX.glow(g, 1.7, 0.7); const cold = FX.glow(g, 0.95, 0.85); cold.material.color.setHex(0x9fdfff);
+  return g;
+})();
+const freezeBtn = $('freeze') as HTMLButtonElement;
+function giveFreeze(n: number): void {
+  freezeUnlocked = true; freezes = Math.min(FREEZE_MAX, freezes + n); sfx.sfxBombReady(); updateFreezeBtn();
+}
+function updateFreezeBtn(): void {
+  freezeBtn.classList.toggle('locked', !freezeUnlocked);
+  const on = freezeUnlocked && freezes > 0;
+  freezeBtn.classList.toggle('ghost', freezeUnlocked && !on);
+  freezeBtn.classList.toggle('ready', on);
+  freezeBtn.setAttribute('aria-disabled', on ? 'false' : 'true');
+  $('freezeN').textContent = String(freezes);
+}
+function useFreeze(): boolean {
+  if (!freezeUnlocked || freezes <= 0 || !(state === 'play' || state === 'between')) return false;
+  const to = bombTarget(); if (!to) return false;
+  freezes--; updateFreezeBtn();
+  const T = 0.72, v = velFor(to, T, new THREE.Vector3());
+  const obj = freezeProto.clone(); scene.add(obj); obj.position.copy(LAUNCH);
+  shots.push({ obj, p: LAUNCH.clone(), v, spent: -1, spin: 0, yaw: Math.atan2(v.x, v.z), born: clock, freeze: true });
+  relicKick = 1.2; sfx.sfxFire(); sfx.sfxWhoosh(); sfx.buzz(16);
+  track('freeze', { game: 'waves', wave });
+  return true;
+}
+function frost(at: THREE.Vector3): void {
+  const c = at.clone().setY(0.5);
+  let n = 0;
+  for (const k of kids) {
+    if (!alive(k) || k.ko >= 0) continue;
+    k.freeze = FREEZE_TIME; n++;
+  }
+  fx.ring(c, 4.2, 0x9fdfff); fx.ring(c.clone().setY(1.05), 2.6, 0xffffff);
+  fx.sparks(c, 36, 0xd8f6ff, 6, 4);
+  if (n) banner('FROZEN!', n === 1 ? '1 skull stopped cold' : `${n} skulls stopped cold`);
+  sfx.buzz([14, 22, 18]);
+}
+freezeBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); sfx.unlockCrashAudio(); if (freezes > 0) freezeBtn.classList.add('press'); useFreeze(); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) freezeBtn.addEventListener(ev, () => freezeBtn.classList.remove('press'));
 
 function soulTravel(): number { return Math.max(0.9, 1.25 - Math.max(0, wave - 2) * 0.06); }
 function soulCooldown(): number { return Math.max(2.6, 5.5 - Math.max(0, wave - 2) * 0.55); }
@@ -1256,17 +1446,20 @@ function tickSouls(dt: number): void {
       continue;
     }
     if (k.soulWind > 0) {
-      ensureCharge(k);
-      k.soulWind -= dt;
-      const u = 1 - Math.max(0, k.soulWind) / SOUL_WIND;
-      if (k.soulCharge) {
-        k.soulCharge.visible = true;
-        const pulse = 0.9 + u * 1.15 + Math.sin(clock * 14) * 0.12;
-        k.soulCharge.scale.setScalar(pulse);
-        (k.soulCharge.material as THREE.SpriteMaterial).rotation = clock * 3;
-        (k.soulCharge.material as THREE.SpriteMaterial).opacity = 0.7 + u * 0.3;
+      if (k.freeze > 0) { if (k.soulCharge) k.soulCharge.visible = true; }
+      else {
+        ensureCharge(k);
+        k.soulWind -= dt;
+        const u = 1 - Math.max(0, k.soulWind) / SOUL_WIND;
+        if (k.soulCharge) {
+          k.soulCharge.visible = true;
+          const pulse = 0.9 + u * 1.15 + Math.sin(clock * 14) * 0.12;
+          k.soulCharge.scale.setScalar(pulse);
+          (k.soulCharge.material as THREE.SpriteMaterial).rotation = clock * 3;
+          (k.soulCharge.material as THREE.SpriteMaterial).opacity = 0.7 + u * 0.3;
+        }
+        if (k.soulWind <= 0) launchSoul(k);
       }
-      if (k.soulWind <= 0) launchSoul(k);
     } else if (k.soulCharge) k.soulCharge.visible = false;
   }
   for (const so of souls) {
@@ -1557,22 +1750,103 @@ function loseHeart(n: number, at?: THREE.Vector3, label = '−❤️'): void {
   if (at) popAt(at, label, 'bad');
   combo = 0;
   if (hearts <= 0) gameOver();
+  else heartWait = Math.min(heartWait, 4.5);
+}
+// A spare heart drifts across the plaza when you're hurt. Tap it before it floats off.
+const heartTex = canvasTex(128, 128, (g) => {
+  g.clearRect(0, 0, 128, 128);
+  g.translate(64, 68);
+  g.scale(1, 1.05);
+  g.beginPath();
+  g.moveTo(0, 22);
+  g.bezierCurveTo(-8, 4, -46, -6, -34, -32);
+  g.bezierCurveTo(-24, -54, 0, -40, 0, -18);
+  g.bezierCurveTo(0, -40, 24, -54, 34, -32);
+  g.bezierCurveTo(46, -6, 8, 4, 0, 22);
+  g.closePath();
+  const fill = g.createLinearGradient(0, -50, 0, 30);
+  fill.addColorStop(0, '#ff8aa0'); fill.addColorStop(0.45, '#ff2d55'); fill.addColorStop(1, '#9a1030');
+  g.fillStyle = fill; g.fill();
+  g.lineWidth = 6; g.strokeStyle = '#ffd23f'; g.stroke();
+});
+interface FloatHeart { spr: THREE.Sprite; p: THREE.Vector3; vx: number; life: number; bob: number }
+let floatHeart: FloatHeart | undefined;
+let heartWait = 9;
+function freeHeart(): void {
+  if (!floatHeart) return;
+  scene.remove(floatHeart.spr);
+  (floatHeart.spr.material as THREE.Material).dispose();
+  floatHeart = undefined;
+}
+function gainHeart(): void {
+  if (hearts >= HEARTS) return;
+  hearts += 1;
+  updateHud();
+  const el = $('hearts').children[hearts - 1] as HTMLElement | undefined;
+  if (el) { el.classList.remove('off'); }
+  sfx.sfxPoint(3);
+}
+function spawnFloatHeart(): void {
+  freeHeart();
+  const fromLeft = Math.random() < 0.5;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: heartTex, transparent: true, depthWrite: false, depthTest: false, fog: false }));
+  spr.renderOrder = 8;
+  const p = new THREE.Vector3(fromLeft ? -4.4 : 4.4, 1.45, -1.2 + Math.random() * 3.2);
+  spr.position.copy(p);
+  scene.add(spr);
+  floatHeart = { spr, p, vx: fromLeft ? 1.25 : -1.25, life: 7.5, bob: Math.random() * 6 };
+}
+function tickHearts(dt: number): void {
+  if (floatHeart) {
+    const h = floatHeart;
+    h.life -= dt;
+    h.p.x += h.vx * dt;
+    h.p.y = 1.45 + Math.sin(clock * 3.2 + h.bob) * 0.28;
+    h.spr.position.copy(h.p);
+    const s = 0.78 + Math.sin(clock * 5 + h.bob) * 0.06;
+    h.spr.scale.set(s, s, 1);
+    if (h.life <= 0 || Math.abs(h.p.x) > 5.2) freeHeart();
+    return;
+  }
+  if (state !== 'play' || hearts >= HEARTS || wave < 2) return;
+  heartWait -= dt;
+  if (heartWait > 0) return;
+  heartWait = 14 + Math.random() * 8;
+  spawnFloatHeart();
+}
+function catchHeart(e: PointerEvent): boolean {
+  if (!floatHeart || (state !== 'play' && state !== 'between')) return false;
+  const rect = canvas.getBoundingClientRect();
+  const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  const sc = floatHeart.p.clone().project(camera);
+  const d = Math.hypot((sc.x - ndcX) * camera.aspect, sc.y - ndcY);
+  if (d > 0.22) return false;
+  const at = floatHeart.p.clone();
+  freeHeart();
+  heartWait = 16;
+  gainHeart();
+  popAt(at, '+❤️', '');
+  banner('HEART', 'One life back');
+  return true;
 }
 function clearField(): void {
   for (const k of kids) { kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); /* shareTex: keep the atlas on the GPU */ if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); }
   for (const s of shots) scene.remove(s.obj);
   for (const p of petals) givePetal(p);
   for (const c of conchas) freeLoaf(c.loaf);
+  for (const m of mines) freeMine(m);
   for (const m of crumbs) giveCrumb(m.sprite);
   for (const so of souls) { so.dead = true; freeSoul(so); }
   for (const st of fieldStickies) { st.alive = false; freeSticky(st); }
   for (const f of laneFlares) { scene.remove(f); f.geometry.dispose(); (f.material as THREE.Material).dispose(); }
-  kids = []; shots = []; petals = []; conchas.length = 0; crumbs.length = 0; souls = []; fieldStickies = []; laneFlares.length = 0; fx.clear(); boss = undefined;
+  kids = []; shots = []; petals = []; conchas.length = 0; mines.length = 0; crumbs.length = 0; souls = []; fieldStickies = []; laneFlares.length = 0; fx.clear(); boss = undefined;
+  freeHeart();
   placingSticky = false;
 }
 function newGame(): void {
   clearField();
-  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; snacks = 2; stickiesHeld = params.has('sticky') ? Math.min(STICKY_MAX, Math.max(0, Number(params.get('sticky')) || 0)) : 0; soulsThisWave = 0; stickyComboThisWave = false; placingSticky = false; updateBombBtn(); updateSnackBtn(); updateStickyBtn();
+  hearts = HEARTS; score = 0; knocked = 0; thrown = 0; combo = 0; rapidUntil = 0; goldenThisWave = false; heartWait = 9; pinataUntil = 0; bombs = params.has('bombs') ? Math.min(BOMB_MAX, Number(params.get('bombs')) || 0) : 0; snacks = 2; freezes = 0; freezeUnlocked = params.has('freeze'); if (freezeUnlocked) freezes = Math.min(FREEZE_MAX, Number(params.get('freeze')) || 1); pinatas = 0; pinataUnlocked = params.has('pinata'); if (pinataUnlocked) pinatas = Math.min(PINATA_MAX, Number(params.get('pinata')) || 1); stickiesHeld = params.has('sticky') ? Math.min(STICKY_MAX, Math.max(0, Number(params.get('sticky')) || 0)) : 0; soulsThisWave = 0; stickyComboThisWave = false; placingSticky = false; updateBombBtn(); updateSnackBtn(); updateStickyBtn(); updateFreezeBtn(); updatePinataBtn();
   ['title', 'over', 'pause'].forEach((id) => $(id).classList.add('hidden'));
   stage.classList.remove('on-title'); // HUD, hearts, fire and bomb buttons only show once play starts
   $('hint').classList.remove('gone');
@@ -1629,6 +1903,8 @@ function frame(now: number): void {
   if (state === 'between' && clock >= nextWaveAt) startWave(wave + 1);
   tickAbuela();
   tickConchas(dt);
+  tickMines(dt);
+  tickHearts(dt);
   if (state === 'play' || state === 'between') {
     maybeStartSoul();
     tickSouls(dt);
@@ -1653,35 +1929,44 @@ function frame(now: number): void {
       k.root.position.y = k.koY;
       k.root.position.z -= dt * 1.2;
       const fade = THREE.MathUtils.clamp((1.15 - k.ko) / 0.45, 0, 1);
-      if (k.kind === 'girl') {
+      if (k.kind === 'girl' && !k.popped) {
         paintGirlFall(k);
         (k.fallBody!.material as THREE.SpriteMaterial).opacity = fade;
-      } else {
+      } else if (!k.popped) {
         setFrame(k, 'ko', Math.floor(k.ko * ANIM.ko.fps)); k.body.rotation.set(0.28, 0, 0); k.body.scale.set(1, 1, 1);
         k.mat.opacity = fade;
         k.body.visible = true;
       }
+      paintLlama(k, k.popped ? fade : 0);
       (k.shadow.material as THREE.MeshBasicMaterial).opacity = fade;
       if (k.pips) k.pips.forEach((p) => { p.visible = false; });
       if (k.aura) k.aura.visible = false;
       if (k.hpBar) { k.hpBar.visible = false; k.hpFill!.visible = false; }
       if (k.bite) k.bite.visible = false;
       if (k.eatBody) k.eatBody.visible = false;
-      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); /* shareTex: keep the atlas on the GPU */ if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); }
+      if (k.ko > 1.15) { k.dead = true; kidGroup.remove(k.root); k.mat.dispose(); k.flashMat.dispose(); k.edgeMat.dispose(); /* shareTex: keep the atlas on the GPU */ if (k.bite) (k.bite.material as THREE.Material).dispose(); if (k.eatBody) { const m = k.eatBody.material as THREE.MeshBasicMaterial; m.dispose(); k.eatBody.geometry.dispose(); } if (k.fallBody) { const m = k.fallBody.material as THREE.SpriteMaterial; m.dispose(); } if (k.soulCharge) (k.soulCharge.material as THREE.Material).dispose(); if (k.llama) (k.llama.material as THREE.Material).dispose(); }
       continue;
     }
     if (state === 'play' || state === 'between') {
-      if (k.eat > 0) { k.eat = Math.max(0, k.eat - dt); k.eatAnim += dt; } else k.eatAnim = 0;
+      if (k.eat > 0 && k.freeze <= 0) { k.eat = Math.max(0, k.eat - dt); k.eatAnim += dt; } else if (k.freeze <= 0) k.eatAnim = 0;
       if (k.stuck > 0) k.stuck = Math.max(0, k.stuck - dt);
+      if (k.freeze > 0) k.freeze = Math.max(0, k.freeze - dt);
       const stop = holdZ(k);
       const winding = k.soulWind > 0;
-      let sp = k.stuck > 0 ? 0 : k.stagger > 0 ? k.speed * 0.15 : winding ? k.speed * 0.22 : k.speed;
+      let sp = k.stuck > 0 || k.freeze > 0 ? 0 : k.stagger > 0 ? k.speed * 0.15 : winding ? k.speed * 0.22 : k.speed;
       if (stop !== undefined) sp *= 0.32; // the whole row slows down before the concha
       k.stagger = Math.max(0, k.stagger - dt);
       let nz = k.z + sp * dt;
       if (stop !== undefined && nz > stop) nz = stop; // nobody in this row walks past it
+      let lead = Infinity;
+      for (const o of kids) {
+        if (o === k || o.dead || o.ko >= 0 || o.lane !== k.lane || o.z <= k.z) continue;
+        if (o.z < lead) lead = o.z;
+      }
+      if (lead < Infinity) nz = Math.min(nz, Math.max(k.z, lead - 0.95));
       k.z = nz;
-      k.wob += (k.stuck > 0 ? 0 : sp) * dt;
+      const animSp = k.stuck > 0 || k.freeze > 0 ? 0 : Math.min(sp, 1.65);
+      k.wob += animSp * dt;
     }
     k.x = k.wobA ? LANES[k.lane] + Math.sin(k.wob * 1.3) * k.wobA : LANES[k.lane];
     // walk frames follow distance so the planted feet in the atlas stay on the cobbles. No extra hop (that read as a skip).
@@ -1717,12 +2002,14 @@ function frame(now: number): void {
       k.body.rotation.set(0.2, -k.x * 0.04, k.stagger > 0 ? Math.sin(s * 40) * 0.05 : 0);
     }
     if (k.hpBar) { const pulse = k.hp / k.maxHp < 0.34 ? 1 + Math.sin(s * 12) * 0.06 : 1; k.hpBar.scale.set(1.7 * pulse, 0.32 * pulse, 1); }
-    k.root.position.set(k.x, 0, k.z);
+    k.mat.color.setHex(k.freeze > 0 ? 0xb7e7ff : k.kind === 'jefe' ? 0xd8c8ff : 0xffffff);
+    k.root.position.set(k.x, k.freeze > 0 ? Math.sin(s * 8 + k.phase) * 0.02 : 0, k.z);
     if (k.stuck > 0) {
       k.root.position.y = Math.sin(s * 16) * 0.03;
       k.body.rotation.z = Math.sin(s * 14) * 0.06;
     }
     if (k.aura) { k.aura.material.opacity = 0.55 + Math.sin(s * 6) * 0.25; }
+    paintLlama(k, clock < pinataUntil ? 1 : 0);
     if (k.z >= LINE_Z && state === 'play') kidReachedLine(k);
   }
   kids = kids.filter((k) => !k.dead);
@@ -1740,10 +2027,22 @@ function frame(now: number): void {
           if (touch || sh.p.y <= 0.3) { explode(sh.p); sh.spent = 0.61; sh.obj.visible = false; break; }
           continue;
         }
+        if (sh.freeze) {
+          const touch = kids.some((k) => alive(k) && Math.abs(sh.p.x - k.root.position.x) < k.w * 0.55 && Math.abs(sh.p.z - k.root.position.z) < 0.7 && sh.p.y < k.h);
+          if (touch || sh.p.y <= 0.3) { frost(sh.p); sh.spent = 0.61; sh.obj.visible = false; break; }
+          continue;
+        }
         if (sh.snack) {
           // it lands on the row, in front of that line. It is not eaten out of the air.
           if (sh.p.y <= 0.2) {
             placeConcha(sh.lane ?? sh.target?.lane ?? 0);
+            sh.spent = 0.61; sh.obj.visible = false; break;
+          }
+          continue;
+        }
+        if (sh.pinata) {
+          if (sh.p.y <= 0.22) {
+            beginPinataFrenzy();
             sh.spent = 0.61; sh.obj.visible = false; break;
           }
           continue;
@@ -1841,7 +2140,7 @@ Promise.all(texLoads).then(() => {
     };
   },
   state: () => ({ state, wave, hearts, score, knocked, thrown, kids: kids.filter(alive).length, toSpawn, shots: shots.length, petals: petals.length, rapid: clock < rapidUntil, bombs, booms, stickiesHeld, souls: souls.filter((so) => !so.dead).length, stickyField: fieldStickyCount(), boss: boss && alive(boss) ? { hp: boss.hp, maxHp: boss.maxHp, z: +boss.root.position.z.toFixed(2) } : null }),
-  kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden, lane: k.lane })),
+  kids: () => kids.filter(alive).map((k) => ({ kind: k.kind, x: +k.root.position.x.toFixed(2), z: +k.root.position.z.toFixed(2), hp: k.hp, golden: k.golden, lane: k.lane, llama: k.llama?.visible === true })),
   conchas: () => conchas.map((c) => ({ lane: c.lane, z: +c.z.toFixed(2), bites: c.bites })),
   crumbs: () => crumbs.length,
   giveSnack: (n = 1) => giveSnack(n),
@@ -1855,6 +2154,15 @@ Promise.all(texLoads).then(() => {
   rapid: startRapid,
   bomb: useBomb,
   giveBomb: (n = 1) => giveBomb(n),
+  freeze: useFreeze,
+  giveFreeze: (n = 1) => giveFreeze(n),
+  spawnHeart: () => { hearts = Math.min(hearts, HEARTS - 1); updateHud(); spawnFloatHeart(); return hearts; },
+  takeHeart: () => { if (!floatHeart) return hearts; freeHeart(); gainHeart(); return hearts; },
+  pinata: usePinata,
+  givePinata: (n = 1) => givePinata(n),
+  frenzy: () => { beginPinataFrenzy(); return pinataUntil - clock; },
+  placePinata: (lane = 1, z?: number) => placePinata(lane, z),
+  mines: () => mines.map((m) => ({ lane: m.lane, z: +m.z.toFixed(2), arm: +m.arm.toFixed(2) })),
   abuela: () => ({ on: abuelaEl.classList.contains('in'), line: abuelaLine.textContent, mad: abuelaImg.src.includes('angry'), at: abuelaAt, out: abuelaOutAt, clock, nextWaveAt }),
   abuelaLines: () => ABUELA_LINES.map((l) => l.t),
   clearWave: () => { toSpawn = 0; for (const k of kids) if (alive(k)) { kidGroup.remove(k.root); k.dead = true; } for (const so of souls) { so.dead = true; freeSoul(so); } souls = []; checkWaveDone(); },
@@ -1871,7 +2179,7 @@ Promise.all(texLoads).then(() => {
   giveSticky: (n = 1) => giveSticky(n),
   placeSticky: (lane = 1) => placeSticky(lane),
   stickies: () => ({ held: stickiesHeld, placing: placingSticky, field: fieldStickies.filter((st) => st.alive).map((st) => ({ lane: st.lane, z: +st.z.toFixed(2), life: +st.life.toFixed(2), throws: st.throws })) }),
-  kidsFull: () => kids.filter(alive).map((k) => ({ kind: k.kind, lane: k.lane, z: +k.z.toFixed(2), stuck: +k.stuck.toFixed(2), wasStuck: k.wasStuck, soulWind: +k.soulWind.toFixed(2), soulThrew: k.soulThrew })),
+  kidsFull: () => kids.filter(alive).map((k) => ({ kind: k.kind, lane: k.lane, z: +k.z.toFixed(2), stuck: +k.stuck.toFixed(2), freeze: +k.freeze.toFixed(2), wasStuck: k.wasStuck, soulWind: +k.soulWind.toFixed(2), soulThrew: k.soulThrew })),
   soulScreen: () => { const so = souls.find((x) => !x.dead); if (!so) return null; const v = so.p.clone().project(camera); const r = canvas.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height, u: so.u }; },
 
 };

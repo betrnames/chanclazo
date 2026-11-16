@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Privacy — Chanclazo</title>
+<meta name="description" content="Chanclazo is a free browser game. We use Google Analytics to see which games are played. We do not sell personal information." />
+<link rel="icon" href="/cruise/logo_chancla.webp" />
+<style>
+html,body{margin:0;background:#04020c;color:#fff;font-family:system-ui,-apple-system,sans-serif}
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:#04020c url(/lp/v2/lander-desktop-1280.webp) center/cover no-repeat}
+@media (max-aspect-ratio:1/1){.bg{background-image:url(/lp/v2/lander-mobile-720.webp)}}
+.bar{height:3px;background:linear-gradient(90deg,#C2410C,#F97316,#C2410C);position:relative;z-index:2}
+nav{position:relative;z-index:2;border-bottom:1px solid rgba(255,255,255,.06)}
+nav div{max-width:560px;margin:0 auto;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+nav a{font-size:11px;letter-spacing:.15em;text-transform:uppercase;text-decoration:none}
+nav a.home{color:rgba(255,255,255,.35)}
+nav a.play{color:#F97316;font-weight:700}
+main{position:relative;z-index:2;max-width:560px;margin:32px auto 72px;padding:36px 28px 44px;background:rgba(10,5,20,.78);border:1px solid rgba(255,255,255,.08);border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+h1{font-size:clamp(36px,8vw,52px);line-height:1;margin:8px 0 8px}
+.kicker{font-size:10px;color:#F97316;letter-spacing:.22em;text-transform:uppercase;font-weight:700;margin:0}
+.updated{color:rgba(255,255,255,.45);font-size:13px;margin:0 0 22px}
+h2{font-size:16px;color:#ffd23f;margin:22px 0 8px}
+p,li{font-size:16px;line-height:1.65;color:rgba(255,255,255,.84)}
+ul{margin:0;padding-left:18px}
+a{color:#ffd23f}
+@media (max-width:600px){main{margin:16px 12px 64px;padding:28px 18px 36px}}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"></div>
+<div class="bar"></div>
+<nav>
+  <div>
+    <a class="home" href="/">chanclazo.com</a>
+    <a class="play" href="/choose">Play the games</a>
+  </div>
+</nav>
+<main>
+  <p class="kicker">Privacy</p>
+  <h1>Privacy</h1>
+  <p class="updated">Updated November 16, 2026</p>
+  <p>Chanclazo is a free browser game. There is no account and no real money. We do not sell personal information.</p>
+
+  <h2>What we measure</h2>
+  <p>We use Google Analytics to see which pages and games people open, when a game starts, the first tap, and about how long a visit lasts. Some games also send the wave or bonus you used. Analytics sets a cookie in your browser so it can tell a return visit from a new one. We ask Google to shorten IP addresses. We do not use this for ads.</p>
+
+  <h2>What stays on your device</h2>
+  <p>Best scores, sound settings, and an X handle you type are saved in this browser. They are not sent anywhere unless you choose to save a score.</p>
+
+  <h2>Leaderboards</h2>
+  <p>On Chancla Strike and Match, Save score sends the X handle you typed, the score, and the level to our leaderboard. If that save cannot be stored, the score stays on this device only. Share on X opens X. We do not post for you.</p>
+
+  <h2>Kids</h2>
+  <p>The games are made for a general audience. We do not ask for a name, email, or age.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this page: <a href="https://x.com/ChanclaStrike" target="_blank" rel="noopener">@ChanclaStrike</a> on X.</p>
+</main>
+<script type="module" src="/src/analytics-boot.ts"></script>
+</body>
+</html>
