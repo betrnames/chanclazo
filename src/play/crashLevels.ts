@@ -117,7 +117,7 @@ export const LEVELS: LevelDef[] = [
       b.skel(-2.6, 0, -8); b.skel(2.6, 0, -8);
     } },
   ] },
-  { world: 'cemetery', name: 'Ofrenda', stages: [
+  { world: 'cemetery', name: 'Marigold steps', stages: [
     { ammo: 4, build(b) {
       const a = b.pedestal(0, -6.8, 5, 1.0, 0.7);
       for (const x of [-1.8, -0.6, 0.6, 1.8]) b.candle(x, a, -6.8, 0.35 + Math.abs(x) * 0.1);

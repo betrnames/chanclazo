@@ -26,7 +26,8 @@ function cleanGameUrls(): Plugin {
   const map: Record<string, string> = {
     "/": "/home.html",
     "/choose": "/choose.html",
-    "/waves": "/waves.html",
+    "/dia-de-los-muertos": "/dia-de-los-muertos.html",
+    "/waves": "/dia-de-los-muertos.html",
     "/crash": "/crash.html",
     "/chancla-strike": "/chancla-strike.html",
     "/match": "/match.html",
@@ -67,7 +68,7 @@ export default defineConfig({
         slots: path.resolve(__dirname, 'slots.html'),
         strike3d: path.resolve(__dirname, 'strike3d.html'),
         crash: path.resolve(__dirname, 'crash.html'),
-        waves: path.resolve(__dirname, 'waves.html'),
+        waves: path.resolve(__dirname, 'dia-de-los-muertos.html'),
       },
     },
   },

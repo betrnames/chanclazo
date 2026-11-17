@@ -12,14 +12,14 @@ On top of the v1.1.11 deferral (which still downloaded the boy and girl walk she
 - No loading screen. The game still starts as soon as the small skeleton is ready.
 - Combo callouts are short only: `COMBO x2`, `COMBO x3`, and so on. The long `¡CHANCLAZO!` pop is gone (Waves and the parked Crash).
 - **Shipped live as v1.1.17** on 13 Nov 2026. Gabe said "Push live." The round letter buttons are gone. Chancla Strike throw types are the chancla itself, in gold, brown, and cyan, sitting on a half-circle in the lower left. No button background. The selected throw is the biggest. Triple still splits on a tap in the air.
-- **Shipped live as v1.1.20** on 16 Nov 2026. Gabe said "Push live." The homepage footer no longer shows the X link or the Privacy link. Copyright and the version stay. Lore and Privacy under the Play button stay. The share image from v1.1.19 stays.
+- **Shipped live as v1.1.21** on 16 Nov 2026. Gabe said "Push live." Día de los Muertos is back on the picker at `/dia-de-los-muertos` (`/waves` redirects). Piñata Slots stays off the picker. The line under Play says 12+. Player-facing copy no longer treats the ofrenda as a target or a joke. The goal is the marigold line. v1.1.20 footer cleanup stays.
 
 ## Current state (2026-11-12, night PT)
 - Production: **`main` → https://chanclazo.com**. Active follow-up branch can stay **`feat/chancla-waves`**.
-- **Live right now is v1.1.20** on `main`. Gabe said "Push live" on 16 Nov 2026. Previous production was **v1.1.19**.
+- **Live right now is v1.1.21** on `main`. Gabe said "Push live" on 16 Nov 2026. Previous production was **v1.1.20**.
 - This release: wave 1 is only the little skeletons, larger sheets wait 10 seconds, combo text is `COMBO xN`, and the phone smoothness pass is included. Abuela's start intro and the Safari outline fix from v1.1.12 stay.
 - Preview: https://feat-chancla-waves.chanclazo.pages.dev. Crash is parked but still at `/crash`.
-- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7 through v1.1.20.
+- **Do not push or merge to `main` unless Gabe says "push it live" in that turn.** He did say that for v1.1.7 through v1.1.21.
 
 ## Abuela start intro (shipped in v1.1.12, 2026-11-12)
 Gabe asked to remove the flying-in chancla and burst, and instead have Abuela come out from the side with a smart chancla quote so it looks like it is part of the scene. "No audio just music playing in start."
@@ -154,24 +154,24 @@ These were playtested on `feat/chancla-waves` (`05e1080` and the work leading to
 3. **Abuela appears in two places:** the start walk-in on Waves, Strike, and Slots, and the between-wave cameo in Día de los Muertos (unchanged). No Abuela anywhere else. No AI-generated art.
 4. **No slingshot, Y-fork, or bands.** The thrower is the floating gold relic chancla.
 5. **Chancla Crash is parked.** Not on the picker. Keep `/crash`. Maybe later a car / Mario Kart racer.
-6. The waves game is **Día de los Muertos**. URL stays `/waves`. One constant: `WAVES_NAME` in `src/gameNames.ts`.
+6. The waves game is **Día de los Muertos**. Public URL is `/dia-de-los-muertos`. `/waves` redirects there. One constant: `WAVES_NAME` in `src/gameNames.ts`. Do not write the ofrenda as a target, a prize, or a joke. The play is the marigold line and the chancla.
 7. Day of the Dead palette. No floor confetti. Marigold petals are fine if they fade.
 8. Rapid fire = hold the gold chancla. Banner, timer ring, flames, sound.
 9. Free assets only. No paid APIs. Sounds are Web Audio, no audio files.
 10. Pause and game-over are button-only (no panel). The waves **title** is the quote card described above.
 
 ## Game name constant
-`src/gameNames.ts` → `export const WAVES_NAME = 'Día de los Muertos'`. That one line feeds the arcade marquee, choose meta, `waves.html` via `%%WAVES_NAME%%` (`htmlEnv` in `vite.config.ts`), and the share text. Paths and `window.__waves` stay "waves".
+`src/gameNames.ts` → `export const WAVES_NAME = 'Día de los Muertos'`. That one line feeds the arcade marquee, choose meta, `dia-de-los-muertos.html` via `%%WAVES_NAME%%`, and the share text. The page file is `dia-de-los-muertos.html`. Sprite files stay in `public/waves/`. `window.__waves` stays "waves".
 
 ## Games and files
 | Game | URL | Files | Notes |
 |---|---|---|---|
 | Chancla Crash (PARKED) | `/crash` | `crash.html`, `src/play/crash.ts` | Not on the picker. Hooks: `window.__crash`. |
-| Día de los Muertos | `/waves` | `waves.html`, `src/play/waves.ts`, `public/waves/` | Lane defence. Concha + bomb + sticky chancla on the left, ghosted until ready, must not jump. Gold chancla throws. Soul bursts from wave 2. See the concha, eating, and soul/sticky notes. |
+| Día de los Muertos | `/dia-de-los-muertos` (`/waves` redirects) | `dia-de-los-muertos.html`, `src/play/waves.ts`, `public/waves/` | Lane defence. The goal is the marigold line, not an ofrenda. Concha + bomb + sticky chancla on the left, ghosted until ready, must not jump. Gold chancla throws. Soul bursts from wave 2. |
 | Chancla Strike | `/chancla-strike` (`/fling` redirects) | `chancla-strike.html`, `src/play/fling.ts` | Matter.js fort topple. Vertical. No rotate control. Hooks: `window.__fling`. |
-| Piñata Slots | `/slots` | `slots.html`, `src/play/slots.ts` | HD llama in the bonus. Gold chevron back, no Games button. |
+| Piñata Slots | `/slots` | `slots.html`, `src/play/slots.ts` | Not on the picker. HD llama in the bonus. Gold chevron back, no Games button. |
 | Landing | `/` | `astro/pages/index.astro` (production), `home.html` (vite) | Gold chancla, PLAY NOW → `/choose`. |
-| Picker | `/choose` | `src/choose/arcade.ts` | Three cabinets: Día de los Muertos, Chancla Strike, Piñata Slots. No Crash, no Abuela. |
+| Picker | `/choose` | `src/choose/arcade.ts` | Two cabinets: Día de los Muertos, Chancla Strike. No Slots, no Crash, no Abuela. |
 
 ### Día de los Muertos, short
 - Abuela after each cleared wave, slides in from the left, `ABUELA_LINES` shuffle bag, hold 2.5s, tap her to skip. Pause freezes her clock.

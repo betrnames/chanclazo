@@ -14,9 +14,8 @@ export interface Cab {
 }
 
 export const CABS: Cab[] = [
-  { id: 'waves', href: '/waves', name: WAVES_NAME, line1: marqueeLines(WAVES_NAME)[0], line2: marqueeLines(WAVES_NAME)[1], tag: 'NEW', attract: 'HOLD THE LINE', art: '/play/v2/sidro.webp', artW: 306, artH: 720, artCls: 'char', c: '#ff8c1a', c2: '#e2197a' },
+  { id: 'waves', href: '/dia-de-los-muertos', name: WAVES_NAME, line1: marqueeLines(WAVES_NAME)[0], line2: marqueeLines(WAVES_NAME)[1], tag: 'NEW', attract: 'HOLD THE LINE', art: '/play/v2/sidro.webp', artW: 306, artH: 720, artCls: 'char', c: '#ff8c1a', c2: '#e2197a' },
   { id: 'strike', href: '/chancla-strike?start=1', name: 'Chancla Strike', line1: 'CHANCLA', line2: 'STRIKE', tag: 'MAIN GAME', attract: 'FLING THE RELIC', art: '/lp/chancla_gold.webp', artW: 800, artH: 800, artCls: 'relic', c: '#ffd23f', c2: '#ff8c1a' },
-  { id: 'slots', href: '/slots?start=1', name: 'Piñata Slots', line1: 'PIÑATA', line2: 'SLOTS', tag: 'MINI GAME', attract: 'SPIN TO WIN', art: '/play/llama_choose.webp', artW: 504, artH: 954, artCls: 'char', c: '#e2197a', c2: '#18c8c0' },
 ];
 
 // tiny seeded random so the server and client draw the same stars

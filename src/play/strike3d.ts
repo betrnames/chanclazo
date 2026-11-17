@@ -9,7 +9,7 @@ const A = '/play/v2/abuela.webp', AP = '/play/v2/abuela.webp', AS = '/play/v2/ab
 type Panel = { bg: string; cap: string; imgs?: { src: string; style: string }[]; bubbles?: { text: string; style: string; tx?: string }[]; fx?: string; glow?: boolean };
 const STORY: Record<string, Panel[]> = {
   intro: [
-    { bg: 'hill', cap: 'Día de los Muertos. One road down the hill to the ofrenda.', imgs: [{ src: A, style: 'left:4%;height:62%' }], bubbles: [{ text: `${BOY}. Straight down. No stopping.`, style: 'right:5%;top:22%', tx: '18%' }] },
+    { bg: 'hill', cap: 'Día de los Muertos. One road down the hill to the plaza.', imgs: [{ src: A, style: 'left:4%;height:62%' }], bubbles: [{ text: `${BOY}. Straight down. No stopping.`, style: 'right:5%;top:22%', tx: '18%' }] },
     { bg: 'smoke', cap: `${BOY} is small, and the dark is big. So he puts on the mask.`, imgs: [{ src: L, style: 'right:3%;height:62%' }], bubbles: [{ text: "Tonight I'm somebody braver.", style: 'left:5%;top:24%', tx: '72%' }] },
     { bg: 'road', cap: 'Abuela hands over her chanclas.', imgs: [{ src: AP, style: 'left:1%;height:62%' }, { src: L, style: 'right:1%;height:62%' }], bubbles: [{ text: "You'll know when to strike!", style: 'left:8%;top:20%', tx: '25%' }] },
   ],

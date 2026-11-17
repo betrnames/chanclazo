@@ -25,6 +25,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/lore.html': 'Lore',
   '/privacy': 'Privacy',
   '/privacy.html': 'Privacy',
+  '/dia-de-los-muertos': 'Día de los Muertos',
+  '/dia-de-los-muertos.html': 'Día de los Muertos',
+  '/waves': 'Día de los Muertos',
+  '/waves.html': 'Día de los Muertos',
 };
 
 
@@ -79,7 +83,7 @@ export function gameFromPath(pathname = location.pathname): Game {
   if (p === '/slots') return 'slots';
   if (p === '/lore') return 'lore';
   if (p === '/crash') return 'crash';
-  if (p === '/waves') return 'waves';
+  if (p === '/waves' || p === '/dia-de-los-muertos') return 'waves';
   return 'home';
 }
 

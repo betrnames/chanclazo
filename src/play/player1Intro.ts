@@ -313,7 +313,7 @@ export function playPlayer1Intro(_game: IntroGame, onDone?: () => void, opts?: {
     let host = document.getElementById('czabuela');
     if (!host) {
       runningCleanup?.();
-      const game: IntroGame = /waves/.test(location.pathname) ? 'waves'
+      const game: IntroGame = /waves|dia-de-los-muertos/.test(location.pathname) ? 'waves'
         : /slots/.test(location.pathname) ? 'slots' : 'strike';
       runIntro(game, { seekable: true });
       host = document.getElementById('czabuela');

@@ -1,5 +1,4 @@
-// The /waves game, now called "Día de los Muertos" (display name: WAVES_NAME in src/gameNames.ts): a Plants-vs-Zombies-style lane defence (three.js).
-// The sugar-skull boy and Catrina girl march on the ofrenda in waves; throw the gold chancla to knock them out.
+// The /dia-de-los-muertos game (display name: WAVES_NAME). Sugar-skull kids march the plaza lanes; throw the gold chancla to knock them out. The marigold line is the goal. Do not write the ofrenda as something to attack or defend.
 // Tap / drag at a kid to throw (aim follows the finger, release throws), or tap the gold chancla button to auto-aim.
 // Each kid that crosses the marigold line costs a heart. Waves get bigger and faster; there is no last wave.
 import * as THREE from 'three';
@@ -92,8 +91,8 @@ function resize(): void {
   // keep ~40° horizontal on narrow phones so all four lanes fit
   const hv = 46 * Math.PI / 180, vNeeded = 2 * Math.atan(Math.tan(hv / 2) / aspect) * 180 / Math.PI;
   camera.fov = Math.max(68, Math.min(84, vNeeded)); camera.updateProjectionMatrix();
-  // the relic floats ~80% down the screen, a little in front of the ofrenda
-  // Tilt the view so the front of the ofrenda table sits just above the bottom buttons.
+  // the relic floats ~80% down the screen, a little in front of the marigold line
+  // Tilt the view so the front of the line sits just above the bottom buttons.
   // On tall phones this removes the empty band under the table: the plaza and lanes fill the screen.
   const want = -1 + 2 * Math.max(96, h * 0.115) / h; // NDC y for the table's front-bottom edge
   const front = new THREE.Vector3(0, 0, LINE_Z + 1.7), pv = new THREE.Vector3();
@@ -109,7 +108,7 @@ function resize(): void {
   LAUNCH.copy(camera.position).addScaledVector(d, 5.0);
 }
 
-// ───────────────────────── the street: lanes, marigold line, ofrenda ─────────────────────────
+// ───────────────────────── the street: lanes, marigold line ─────────────────────────
 const lambert = (o: THREE.MeshLambertMaterialParameters) => new THREE.MeshLambertMaterial(o);
 const flames: THREE.Sprite[] = [];
 {
@@ -131,7 +130,7 @@ const flames: THREE.Sprite[] = [];
     c.group.position.set(-3.3 + i * (6.6 / 7), 0, LINE_Z + 0.85); scene.add(c.group);
     c.flame.userData.phase = i; flames.push(c.flame);
   }
-  // ofrenda table behind the line (what the kids are after)
+  // table behind the line (scenery only, not a target)
   const tbl = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.35, 0.6), lambert({ color: 0x3b1a5c })); tbl.position.set(0, 0.17, LINE_Z + 1.35); tbl.receiveShadow = true; scene.add(tbl);
   const cloth = new THREE.Mesh(new THREE.BoxGeometry(5.7, 0.06, 0.7), lambert({ color: 0xe2197a })); cloth.position.set(0, 0.36, LINE_Z + 1.35); scene.add(cloth);
 }
@@ -493,7 +492,7 @@ function checkWaveDone(): void {
 const TITLE_QUOTES = [
   'When words fail, the chanclazo speaks.',
   'One chancla. A whole parade of skulls.',
-  'The ofrenda is closed. The chancla is not.',
+  'The plaza is quiet. The chancla is not.',
   'Aim with love. Throw with purpose.',
   'Hold the line. The candles are watching.',
   'Abuela doesn\'t miss. Neither should you.',
@@ -511,13 +510,13 @@ const ABUELA_LINES: { t: string; mad?: boolean }[] = [
   { t: 'Did you eat? You throw like you didn\'t eat.' },
   { t: 'That\'s my grandbaby! Now sweep up those skulls.' },
   { t: 'Don\'t make me take off MY chancla, mijo.', mad: true },
-  { t: '¡Mira nomás! Not one kid touched my ofrenda.' },
+  { t: '¡Mira nomás! Not one kid got past the line.' },
   { t: 'Your abuelo had better aim. And he wore bifocales.', mad: true },
   { t: 'Rest? Ten minutes. ¡No! Five. Okay, two.' },
   { t: 'Use the wrist, mijo. Like flipping tortillas.' },
   { t: '¡Cuidado! More are coming. My knees told me.' },
   { t: 'Very good. I\'m telling your tía you\'re my favorite.' },
-  { t: 'If they touch my ofrenda, it\'s chancla time.', mad: true },
+  { t: 'If they cross that line, it\'s chancla time.', mad: true },
   { t: 'Sit up straight! Champions don\'t slouch.', mad: true },
   { t: '¡Eso! Now drink some water, you look pale.' },
 ];
@@ -1861,7 +1860,7 @@ function gameOver(): void {
   $('oWave').textContent = String(wave); $('oScore').textContent = String(score);
   $('oBest').textContent = isBest && score > 0 ? '🏆 New best!' : `Best: ${best}`;
   const txt = `I held the marigold line to wave ${wave} with ${score} points in ${WAVES_NAME} 🥿💀🌼`;
-  ($('share') as HTMLAnchorElement).href = `https://x.com/intent/post?text=${encodeURIComponent(txt)}&url=${encodeURIComponent('https://chanclazo.com/waves')}`;
+  ($('share') as HTMLAnchorElement).href = `https://x.com/intent/post?text=${encodeURIComponent(txt)}&url=${encodeURIComponent('https://chanclazo.com/dia-de-los-muertos')}`;
   sfx.sfxLose();
   setTimeout(() => { if (state === 'over') $('over').classList.remove('hidden'); }, 900);
   track('game_over', { game: 'waves', wave, score, knocked, thrown });

@@ -3,9 +3,8 @@
 import Base from '../layouts/Base.astro';
 import { arcadeHtml } from '../../src/choose/arcade';
 import '../../src/choose/arcade.css';
-import { WAVES_NAME } from '../../src/gameNames';
 ---
-<Base title="Chanclazo: Pick your game at the arcade" description={`The Chanclazo arcade: pick a glowing cabinet to play ${WAVES_NAME}, Chancla Strike or Piñata Slots. Free Day of the Dead browser games.`}>
+<Base title="Chanclazo: Pick your game at the arcade" description="The Chanclazo arcade: Día de los Muertos and Chancla Strike. Free browser games. Ages 12 and up.">
 <Fragment set:html={arcadeHtml()} />
 </Base>
 <script>

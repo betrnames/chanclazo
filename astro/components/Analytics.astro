@@ -13,7 +13,7 @@ const gaId = (import.meta.env.PUBLIC_GA_ID || import.meta.env.VITE_GA_ID || '').
     s.dataset.ga = gaId;
     document.head.appendChild(s);
     var path = location.pathname.replace(/\.html$/, '') || '/';
-    var titles = { '/': 'Home', '/choose': 'Choose a Game', '/chancla-strike': 'Chancla Strike', '/fling': 'Chancla Strike', '/match': 'Chanclazo Match', '/slots': 'Piñata Slots', '/lore': 'Lore', '/privacy': 'Privacy' };
+    var titles = { '/': 'Home', '/choose': 'Choose a Game', '/chancla-strike': 'Chancla Strike', '/fling': 'Chancla Strike', '/match': 'Chanclazo Match', '/slots': 'Piñata Slots', '/lore': 'Lore', '/privacy': 'Privacy', '/dia-de-los-muertos': 'Día de los Muertos', '/waves': 'Día de los Muertos' };
     window.gtag('event', 'page_view', {
       page_title: titles[path] || document.title,
       page_path: path,
@@ -26,6 +26,7 @@ const gaId = (import.meta.env.PUBLIC_GA_ID || import.meta.env.VITE_GA_ID || '').
       var game = null;
       if ((href.indexOf('/chancla-strike') === 0 || href.indexOf('/fling') === 0)) game = 'fling';
       else if (href.indexOf('/match') === 0) game = 'match';
+      else if (href.indexOf('/dia-de-los-muertos') === 0 || href.indexOf('/waves') === 0) game = 'waves';
       else if (href.indexOf('/slots') === 0) game = 'slots';
       else if (href.indexOf('/lore') === 0) game = 'lore';
       if (game && window.gtag) window.gtag('event', 'landing_card_click', { game: game });
