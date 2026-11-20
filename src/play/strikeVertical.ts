@@ -12,7 +12,7 @@ const VMAX = 19;          // launch speed at full pull (apex ~15 units above the
 const PULL_MAX = 2.2;     // world units of drag for full power
 const WALL = 3.4;         // side walls at x = ±WALL (levels are built inside these)
 const GROUND = 0.6;       // top of the ground
-const SLING = new THREE.Vector2(0, 2.5);
+const SLING = new THREE.Vector2(0, 3.1);
 const STEP = 1 / 120;
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -278,7 +278,7 @@ el.addEventListener('pointermove', (e) => {
   if (state !== 'drag' || !dragStart) return; e.preventDefault();
   const p = toWorld(e.clientX, e.clientY); pull.copy(p).sub(dragStart); if (pull.length() > PULL_MAX) pull.setLength(PULL_MAX);
   if (pull.y > 0.6) pull.y = 0.6; // you pull down/back, not up
-  const ox = SLING.x + pull.x, oy = SLING.y + pull.y; ready.position.set(ox, oy, 0.6); setBands(ox, oy);
+  const ox = SLING.x + pull.x, oy = Math.max(GROUND + 0.6, SLING.y + pull.y); ready.position.set(ox, oy, 0.6); setBands(ox, oy); // never pulled into the ground
   const k = pull.length() / PULL_MAX; A.stretch(k);
   if (k > 0.08) { const v = pull.clone().multiplyScalar(-VMAX / PULL_MAX); showDots(ox, oy, v.x, v.y); } else dots.visible = false;
 });
@@ -286,7 +286,7 @@ const release = (e: PointerEvent) => {
   A.unlock();
   if (state !== 'drag') return; e.preventDefault(); A.stretchStop(); dots.visible = false;
   if (pull.length() < 0.3 || pull.y > -0.05) { state = 'aim'; ready.position.set(SLING.x, SLING.y, 0.6); setBands(SLING.x, SLING.y); return; }
-  const v = pull.clone().multiplyScalar(-VMAX / PULL_MAX); launch(SLING.x + pull.x, SLING.y + pull.y, v.x, v.y);
+  const v = pull.clone().multiplyScalar(-VMAX / PULL_MAX); launch(SLING.x + pull.x, Math.max(GROUND + 0.6, SLING.y + pull.y), v.x, v.y);
 };
 el.addEventListener('pointerup', release); el.addEventListener('pointercancel', release);
 
@@ -359,6 +359,6 @@ function frame(now: number) {
 initAudioControls('fling', (m) => { muted = m; A.setMuted(m); });
 void muted;
 // small test hook (headless checks): state, targets, and a scripted launch
-(window as any).__sv = { get state() { return state; }, get level() { return lvl + 1; }, get score() { return score; }, get shotsLeft() { return shotsLeft; }, get ch() { return chancla ? [+chancla.body.position.x.toFixed(2), +chancla.body.position.y.toFixed(2), +chancla.body.velocity.x.toFixed(2), +chancla.body.velocity.y.toFixed(2)] : null; }, targetsLeft, targets: () => objs.filter((o) => !o.dead && (o.kind === 'skull' || o.kind === 'boss')).map((o) => [o.kind, +o.body.position.x.toFixed(2), +o.body.position.y.toFixed(2)]), launch: (vx: number, vy: number) => { if (state === 'aim') launch(SLING.x, SLING.y, vx, vy); }, G, VMAX };
+(window as any).__sv = { get state() { return state; }, get level() { return lvl + 1; }, get score() { return score; }, get shotsLeft() { return shotsLeft; }, get ch() { return chancla ? [+chancla.body.position.x.toFixed(2), +chancla.body.position.y.toFixed(2), +chancla.body.velocity.x.toFixed(2), +chancla.body.velocity.y.toFixed(2)] : null; }, targetsLeft, targets: () => objs.filter((o) => !o.dead && (o.kind === 'skull' || o.kind === 'boss')).map((o) => [o.kind, +o.body.position.x.toFixed(2), +o.body.position.y.toFixed(2)]), launch: (vx: number, vy: number) => { if (state === 'aim') { const k = PULL_MAX / VMAX; launch(SLING.x - vx * k, Math.max(GROUND + 0.6, SLING.y - vy * k), vx, vy); } }, G, VMAX };
 startLevel(0);
 requestAnimationFrame(frame);
