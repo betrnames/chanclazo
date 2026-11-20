@@ -19,7 +19,7 @@ if (!existsSync(DIST)) {
   process.exit(1);
 }
 
-const htmlFiles = ['chancla-strike.html', 'match.html', 'slots.html', 'strike3d.html', 'crash.html', 'dia-de-los-muertos.html', 'lore.html'];
+const htmlFiles = ['chancla-strike.html', 'match.html', 'slots.html', 'strike3d.html', 'strike-vertical.html', 'crash.html', 'dia-de-los-muertos.html', 'lore.html'];
 for (const f of htmlFiles) {
   const src = join(GAMES, f);
   if (!existsSync(src)) {

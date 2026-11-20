@@ -39,3 +39,11 @@
 /og.png
   Cache-Control: public, max-age=3600
   Content-Type: image/png
+
+# Hidden preview: Chancla Strike Vertical (not in nav or sitemap)
+/strike-vertical
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-cache, no-store, must-revalidate
+/strike-vertical.html
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-cache, no-store, must-revalidate

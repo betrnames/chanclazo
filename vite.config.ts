@@ -35,6 +35,7 @@ function cleanGameUrls(): Plugin {
     "/lore": "/lore.html",
     "/privacy": "/privacy.html",
     "/strike3d": "/strike3d.html",
+    "/strike-vertical": "/strike-vertical.html",
     "/fling": "/chancla-strike.html",
   };
   return {
@@ -67,6 +68,7 @@ export default defineConfig({
         match: path.resolve(__dirname, 'match.html'),
         slots: path.resolve(__dirname, 'slots.html'),
         strike3d: path.resolve(__dirname, 'strike3d.html'),
+        strikeVertical: path.resolve(__dirname, 'strike-vertical.html'),
         crash: path.resolve(__dirname, 'crash.html'),
         waves: path.resolve(__dirname, 'dia-de-los-muertos.html'),
       },
